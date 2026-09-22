@@ -1,166 +1,96 @@
-import { NextResponse } from 'next/server';
-import Category from '@/models/Category';
-import { connectDB } from '@/lib/dbConnect';
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/dbConnect";
+import Category from "@/models/Category";
 
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
 
-// ========================================
-// GET ALL CATEGORIES
-// ========================================
+// GET - Show all categories
 export async function GET() {
-	try {
-		await connectDB();
+  try {
+    await connectDB();
 
-		const categories = await Category.find({})
-			.sort({ createdAt: -1 })
-			.lean();
+    const categories = await Category.find({})
+      .sort({ createdAt: -1 })
+      .lean();
 
-		return NextResponse.json(categories, {
-			status: 200,
-		});
-	} catch (error) {
-		console.error('GET /api/categories error:', error);
+    return NextResponse.json({
+      success: true,
+      categories,
+    });
+  } catch (error) {
+    console.error("GET CATEGORIES ERROR:", error);
 
-		return NextResponse.json(
-			{
-				success: false,
-				error: 'Failed to fetch categories',
-				message: error?.message || 'Database error',
-			},
-			{
-				status: 500,
-			}
-		);
-	}
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to fetch categories",
+      },
+      { status: 500 }
+    );
+  }
 }
 
-// ========================================
-// CREATE CATEGORY
-// ========================================
+// POST - Add category
 export async function POST(request) {
-	try {
-		await connectDB();
+  try {
+    await connectDB();
 
-		const body = await request.json();
+    const body = await request.json();
 
-		if (!body || typeof body !== 'object') {
-			return NextResponse.json(
-				{
-					success: false,
-					error: 'Invalid request body',
-				},
-				{
-					status: 400,
-				}
-			);
-		}
+    const name = body.name?.trim();
 
-		const name = String(body.name || '').trim();
+    if (!name) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Category name is required",
+        },
+        { status: 400 }
+      );
+    }
 
-		if (!name) {
-			return NextResponse.json(
-				{
-					success: false,
-					error: 'Category name is required',
-				},
-				{
-					status: 400,
-				}
-			);
-		}
+    const existingCategory = await Category.findOne({
+      name: { $regex: `^${name}$`, $options: "i" },
+    });
 
-		let subCategories = [];
+    if (existingCategory) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Category already exists",
+        },
+        { status: 409 }
+      );
+    }
 
-		if (Array.isArray(body.subCategories)) {
-			subCategories = body.subCategories
-				.map((item) => String(item).trim())
-				.filter(Boolean);
-		}
+    const subCategories = Array.isArray(body.subCategories)
+      ? body.subCategories
+          .map((item) => String(item).trim())
+          .filter(Boolean)
+      : [];
 
-		// Remove duplicate subcategories
-		subCategories = [...new Set(subCategories)];
+    const category = await Category.create({
+      name,
+      subCategories,
+    });
 
-		// Check duplicate category
-		const existingCategory = await Category.findOne({
-			name: {
-				$regex: `^${escapeRegex(name)}$`,
-				$options: 'i',
-			},
-		});
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Category added successfully",
+        category,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("CREATE CATEGORY ERROR:", error);
 
-		if (existingCategory) {
-			return NextResponse.json(
-				{
-					success: false,
-					error: 'Category already exists',
-				},
-				{
-					status: 409,
-				}
-			);
-		}
-
-		const category = await Category.create({
-			name,
-			subCategories,
-		});
-
-		return NextResponse.json(
-			{
-				success: true,
-				message: 'Category created successfully',
-				category,
-			},
-			{
-				status: 201,
-			}
-		);
-	} catch (error) {
-		console.error('POST /api/categories error:', error);
-
-		// MongoDB duplicate key
-		if (error?.code === 11000) {
-			return NextResponse.json(
-				{
-					success: false,
-					error: 'Category already exists',
-				},
-				{
-					status: 409,
-				}
-			);
-		}
-
-		// Mongoose validation
-		if (error?.name === 'ValidationError') {
-			return NextResponse.json(
-				{
-					success: false,
-					error: 'Validation failed',
-					message: error.message,
-				},
-				{
-					status: 400,
-				}
-			);
-		}
-
-		return NextResponse.json(
-			{
-				success: false,
-				error: 'Failed to create category',
-				message: error?.message || 'Unknown server error',
-			},
-			{
-				status: 500,
-			}
-		);
-	}
-}
-
-// ========================================
-// ESCAPE REGEX
-// ========================================
-function escapeRegex(value) {
-	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to create category",
+      },
+      { status: 500 }
+    );
+  }
 }
