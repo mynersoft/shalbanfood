@@ -16,7 +16,10 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useSelector } from 'react-redux';
-import { initCartFromStorage } from '@/redux/store/slices/cartSlice';
+import {
+	initCartFromStorage,
+	selectCartTotalItems,
+} from '@/redux/store/slices/cartSlice';
 import CardDrawer from './CardDrawer';
 
 /* ---------------- OVERLAY ---------------- */
@@ -143,14 +146,13 @@ const MobileMenu = ({ isOpen, onClose }) => {
 
 /* ---------------- HEADER ---------------- */
 export default function Header() {
-	const { items: cartItems, initCartFromStorage } = useSelector(
+	const { items: cartItems } = useSelector(
 		(state) => state.cart
 	);
 
-	console.log(initCartFromStorage);
-	
+	const cartQty = useSelector(selectCartTotalItems);
 
-	const totalCartItems = cartItems.reduce((sum, i) => i.quantity, 0);
+	
 
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [cartOpen, setCartOpen] = useState(false);
@@ -174,7 +176,7 @@ export default function Header() {
 						className="relative">
 						<ShoppingBag size={26} />
 						<span className="absolute -top-1 -right-2 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-							{totalCartItems || 0}
+							{cartQty || 0}
 						</span>
 					</button>
 				</div>

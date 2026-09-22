@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Loader from '@/components/Loader';
 
 export default function InitialLoader({ children }) {
 	const [loading, setLoading] = useState(true);
@@ -15,7 +14,11 @@ export default function InitialLoader({ children }) {
 	}, []);
 
 	if (loading) {
-		return <Loader />;
+		return (
+			<div className="fixed inset-0 bg-black flex items-center justify-center z-[9999]">
+				<div className="animate-spin w-12 h-12 border-4 border-gray-300 border-t-transparent rounded-full"></div>
+			</div>
+		);
 	}
 
 	return children;

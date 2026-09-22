@@ -10,6 +10,7 @@ import CategoryForm from '@/components/dashboard/CategoryForm';
 import Modal from '@/components/Modal';
 import { addCategory } from '@/redux/categorySlice';
 import { useProducts } from '@/hooks/useProducts';
+import Image from 'next/image';
 
 export default function ProductsPage() {
 	  const { isLoading, isFetching } = useProducts();
@@ -153,8 +154,10 @@ export default function ProductsPage() {
 									className="border-b border-gray-800 hover:bg-gray-800/40">
 									<td className="p-3">
 										{p.image && (
-											<img
-												src={p.image}
+											<Image
+												height={50}
+												width={50}
+												src={p.featureImg}
 												alt={p.name || ''}
 												className="w-14 h-14 object-cover rounded"
 											/>

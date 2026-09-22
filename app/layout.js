@@ -1,25 +1,25 @@
-import "./globals.css";
+import './globals.css';
 
-import InternetStatus from "@/components/InternetStatus";
-import { GlobalInitializer } from "@/components/fetch/GlobalInitializer";
-import Header from "@/components/header/HeaderNew";
-import InitialLoader from "@/components/InitialLoader";
-import Footer from "@/components/footer/Footer";
-import { Toaster } from "react-hot-toast";
-import Providers from "./providers";
-import InitData from "@/components/InitData";
+import InternetStatus from '@/components/InternetStatus';
+import { GlobalInitializer } from '@/components/fetch/GlobalInitializer';
+import Header from '@/components/header/HeaderNew';
+import Footer from '@/components/footer/Footer';
+import { Toaster } from 'react-hot-toast';
+import Providers from './providers';
+import InitialLoader from '@/components/InitialLoader';
+import InitData from '@/components/InitData';
 
 /* Site Configuration */
 
 const BASE_URL =
-	process.env.NEXT_PUBLIC_SITE_URL || "https://shalbanfood.vercel.app";
+	process.env.NEXT_PUBLIC_SITE_URL || 'https://shalbanfood.vercel.app';
 
-const SITE_NAME = "Shalban Food";
+const SITE_NAME = 'Shalban Food';
 
 const SITE_DESCRIPTION =
-	"Shop pure honey, ghee, dry fruits, mustard oil and quality natural food products online at Shalban Food. Trusted products with delivery across Bangladesh.";
+	'Shop pure honey, ghee, dry fruits, mustard oil and quality natural food products online at Shalban Food. Trusted products with delivery across Bangladesh.';
 
-const OG_IMAGE = "/og-image.png";
+const OG_IMAGE = '/og-image.png';
 
 /* SEO Metadata */
 
@@ -28,36 +28,36 @@ export const metadata = {
 
 	title: {
 		default:
-			"Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Foods in Bangladesh",
-		template: "%s | Shalban Food",
+			'Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Foods in Bangladesh',
+		template: '%s | Shalban Food',
 	},
 
 	description: SITE_DESCRIPTION,
 
 	keywords: [
-		"Shalban Food",
-		"Shalban",
-		"শালবন ফুড",
-		"শালবন",
-		"Pure Honey Bangladesh",
-		"খাঁটি মধু",
-		"Sundarban Honey",
-		"Litchi Flower Honey",
-		"Black Seed Honey",
-		"Natural Honey Bangladesh",
-		"Honey Online Bangladesh",
-		"Buy Honey Bangladesh",
-		"Ghee Bangladesh",
-		"Pure Ghee Bangladesh",
-		"Desi Ghee Bangladesh",
-		"Dry Fruits Bangladesh",
-		"Mustard Oil Bangladesh",
-		"Pure Mustard Oil",
-		"Natural Food Bangladesh",
-		"Organic Food Bangladesh",
-		"Healthy Food Bangladesh",
-		"Natural Products Bangladesh",
-		"Online Food Shop Bangladesh",
+		'Shalban Food',
+		'Shalban',
+		'শালবন ফুড',
+		'শালবন',
+		'Pure Honey Bangladesh',
+		'খাঁটি মধু',
+		'Sundarban Honey',
+		'Litchi Flower Honey',
+		'Black Seed Honey',
+		'Natural Honey Bangladesh',
+		'Honey Online Bangladesh',
+		'Buy Honey Bangladesh',
+		'Ghee Bangladesh',
+		'Pure Ghee Bangladesh',
+		'Desi Ghee Bangladesh',
+		'Dry Fruits Bangladesh',
+		'Mustard Oil Bangladesh',
+		'Pure Mustard Oil',
+		'Natural Food Bangladesh',
+		'Organic Food Bangladesh',
+		'Healthy Food Bangladesh',
+		'Natural Products Bangladesh',
+		'Online Food Shop Bangladesh',
 	],
 
 	authors: [
@@ -70,10 +70,10 @@ export const metadata = {
 	creator: SITE_NAME,
 	publisher: SITE_NAME,
 
-	category: "Food & Beverage",
+	category: 'Food & Beverage',
 
 	alternates: {
-		canonical: "/",
+		canonical: '/',
 	},
 
 	robots: {
@@ -83,20 +83,19 @@ export const metadata = {
 		googleBot: {
 			index: true,
 			follow: true,
-			"max-video-preview": -1,
-			"max-image-preview": "large",
-			"max-snippet": -1,
+			'max-video-preview': -1,
+			'max-image-preview': 'large',
+			'max-snippet': -1,
 		},
 	},
 
 	openGraph: {
-		type: "website",
-		locale: "en_BD",
+		type: 'website',
+		locale: 'en_BD',
 		url: BASE_URL,
 		siteName: SITE_NAME,
 
-		title:
-			"Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Foods",
+		title: 'Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Foods',
 
 		description: SITE_DESCRIPTION,
 
@@ -105,18 +104,16 @@ export const metadata = {
 				url: OG_IMAGE,
 				width: 1200,
 				height: 630,
-				alt:
-					"Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Food Products",
-				type: "image/png",
+				alt: 'Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Food Products',
+				type: 'image/png',
 			},
 		],
 	},
 
 	twitter: {
-		card: "summary_large_image",
+		card: 'summary_large_image',
 
-		title:
-			"Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Foods",
+		title: 'Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Foods',
 
 		description: SITE_DESCRIPTION,
 
@@ -126,59 +123,59 @@ export const metadata = {
 	icons: {
 		icon: [
 			{
-				url: "/favicon.ico",
+				url: '/favicon.ico',
 			},
 			{
-				url: "/icon.png",
-				type: "image/png",
+				url: '/icon.png',
+				type: 'image/png',
 			},
 		],
 
 		apple: [
 			{
-				url: "/apple-icon.png",
+				url: '/apple-icon.png',
 			},
 		],
 	},
 
-	manifest: "/manifest.webmanifest",
+	manifest: '/manifest.webmanifest',
 };
 
 /* Root Layout */
 
 export default function RootLayout({ children }) {
 	const organizationSchema = {
-		"@context": "https://schema.org",
-		"@type": "Organization",
-		"@id": `${BASE_URL}/#organization`,
+		'@context': 'https://schema.org',
+		'@type': 'Organization',
+		'@id': `${BASE_URL}/#organization`,
 		name: SITE_NAME,
-		alternateName: "শালবন ফুড",
+		alternateName: 'শালবন ফুড',
 		url: BASE_URL,
 
 		logo: {
-			"@type": "ImageObject",
+			'@type': 'ImageObject',
 			url: `${BASE_URL}/logo.png`,
 		},
 
 		description:
-			"Shalban Food is an online food brand in Bangladesh offering honey, ghee, dry fruits, mustard oil and quality natural food products.",
+			'Shalban Food is an online food brand in Bangladesh offering honey, ghee, dry fruits, mustard oil and quality natural food products.',
 
-		sameAs: ["https://www.facebook.com/shalbanfood"],
+		sameAs: ['https://www.facebook.com/shalbanfood'],
 	};
 
 	const websiteSchema = {
-		"@context": "https://schema.org",
-		"@type": "WebSite",
-		"@id": `${BASE_URL}/#website`,
+		'@context': 'https://schema.org',
+		'@type': 'WebSite',
+		'@id': `${BASE_URL}/#website`,
 		url: BASE_URL,
 		name: SITE_NAME,
 		description: SITE_DESCRIPTION,
 
 		publisher: {
-			"@id": `${BASE_URL}/#organization`,
+			'@id': `${BASE_URL}/#organization`,
 		},
 
-		inLanguage: ["en-BD", "bn-BD"],
+		inLanguage: ['en-BD', 'bn-BD'],
 	};
 
 	return (
@@ -212,11 +209,7 @@ export default function RootLayout({ children }) {
 
 			<body className="dark bg-gray-900 text-gray-100">
 				<InitialLoader>
-
-					<Toaster
-						position="top-right"
-						reverseOrder={false}
-					/>
+					<Toaster position="top-right" reverseOrder={false} />
 
 					<InternetStatus />
 
@@ -231,8 +224,6 @@ export default function RootLayout({ children }) {
 						<Footer />
 					</Providers>
 				</InitialLoader>
-
-		
 			</body>
 		</html>
 	);

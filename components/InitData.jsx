@@ -8,9 +8,6 @@ import { initWishlistFromStorage } from '@/redux/store/slices/wishlistSlice';
 import { useWishlists } from '@/hooks/useWishlist';
 import { useProducts } from '@/hooks/useProducts';
 import { useBlogs } from '@/hooks/useBlog';
-import { useInitializeCart } from '@/hooks/useCart';
-import { useStatCard } from '@/hooks/useStatCard';
-
 import { useCategories } from '@/hooks/useCategory';
 import { useBrands } from '@/hooks/useBrands';
 import { useShipping } from '@/hooks/useShipping';
@@ -46,8 +43,6 @@ export default function InitData() {
 			});
 	}, [isLoggedIn]);
 
-	// 🔹 Other initial data
-	useInitializeCart(session?.user?.id);
 	useProducts();
 	useBrands();
 	useCategories();
