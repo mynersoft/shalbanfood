@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Shield -->
+  <path d="M32 2L6 14v18c0 16 26 28 26 28s26-12 26-28V14L32 2z" fill="#4CAF50"/>
+  <!-- Lock -->
+  <rect x="22" y="26" width="20" height="20" rx="3" ry="3" fill="#fff"/>
+  <path d="M32 26v-6a5 5 0 0 1 10 0v6" fill="none" stroke="#4CAF50" stroke-width="2"/>
+  <!-- Checkmark -->
+  <path d="M26 36l6 6 12-12" fill="none" stroke="#4CAF50" stroke-width="3"/>
+</svg>

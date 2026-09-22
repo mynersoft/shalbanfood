@@ -1,0 +1,9 @@
+6) Quick tests you can run (Postman / browser)
+
+Add some SaleProfit docs (তুমি ইতিমধ্যেই sale creation করে ফেললে এই collection পূর্ণ থাকবে)
+
+Open (browser) http://localhost:3000/api/stats?type=daily
+
+Open http://localhost:3000/api/stats?type=monthly&year=2025&month=11
+
+Open http://localhost:3000/api/stats?type=monthlyBreakdown&year=2025&month=11
