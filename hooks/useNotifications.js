@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useDispatch } from "react-redux";
-import { setNotifications } from "@/store/slices/notificationSlice";
+import { setNotifications } from "@/redux/store/slices/notificationSlice";
 
 export const useNotifications = () => {
   const dispatch = useDispatch();

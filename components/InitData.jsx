@@ -4,13 +4,13 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
-import { initWishlistFromStorage } from '@/store/slices/wishlistSlice';
+import { initWishlistFromStorage } from '@/redux/store/slices/wishlistSlice';
 import { useWishlists } from '@/hooks/useWishlist';
-import { useProducts } from '@/hooks/useDashboard';
+import { useProducts } from '@/hooks/useProducts';
 import { useBlogs } from '@/hooks/useBlog';
 import { useInitializeCart } from '@/hooks/useCart';
 import { useStatCard } from '@/hooks/useStatCard';
-import { useCombos } from '@/hooks/useCombo';
+
 import { useCategories } from '@/hooks/useCategory';
 import { useBrands } from '@/hooks/useBrands';
 import { useShipping } from '@/hooks/useShipping';
@@ -51,9 +51,7 @@ export default function InitData() {
 	useProducts();
 	useBrands();
 	useCategories();
-	useCombos();
 	useBlogs();
-	useStatCard();
 	useShipping();
 
 	// 🔹 Visitor tracking

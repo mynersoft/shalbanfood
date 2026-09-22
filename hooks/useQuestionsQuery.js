@@ -8,7 +8,7 @@ import {
   markBestAnswer,
   voteQuestion,
   voteAnswer,
-} from '@/store/slices/questionsSlice';
+} from '@/redux/store/slices/questionsSlice';
 
 // Create axios instance with auth token
 const api = axios.create({

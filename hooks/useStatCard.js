@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
-import { setStatcards } from '@/store/slices/statCardSlice';
+import { setStatcards } from '@/redux/store/slices/statCardSlice';
 
 export const useStatCard = () => {
   const dispatch = useDispatch();

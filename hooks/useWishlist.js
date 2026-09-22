@@ -7,7 +7,7 @@ import {
   setWishlist,
   removeFromWishlist,
   addToWishlist,
-} from '@/store/slices/wishlistSlice';
+} from '@/redux/store/slices/wishlistSlice';
 import toast from 'react-hot-toast';
 
 export function useWishlists(isLoggedIn) {

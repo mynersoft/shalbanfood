@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
-import { setShipping } from '@/store/slices/shippingSlice';
+import { setShipping } from '@/redux/store/slices/shippingSlice';
 import toast from 'react-hot-toast';
 
 export function useShipping() {

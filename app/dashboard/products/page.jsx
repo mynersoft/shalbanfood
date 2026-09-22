@@ -1,83 +1,96 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchProducts, deleteProduct } from "@/redux/productSlice";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchProducts, deleteProduct } from '@/redux/productSlice';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-import ProductFormModal from "@/components/ProductFormModal";
-import CategoryForm from "@/components/CategoryForm";
-import Modal from "@/components/Modal";
-import { addCategory } from "@/redux/categorySlice";
+import ProductFormModal from '@/components/dashboard/ProductFormModal';
+import CategoryForm from '@/components/dashboard/CategoryForm';
+import Modal from '@/components/Modal';
+import { addCategory } from '@/redux/categorySlice';
+import { useProducts } from '@/hooks/useProducts';
 
 export default function ProductsPage() {
-    const dispatch = useDispatch();
-    const router = useRouter();
-    const searchParams = useSearchParams();
+	  const { isLoading, isFetching } = useProducts();
+	
+	const { products } = useSelector((state) => state.product.products);
+	
+	
+	const dispatch = useDispatch();
+	const router = useRouter();
+	const searchParams = useSearchParams();
 
-    const { items, total, page: reduxPage, limit } = useSelector((s) => s.products);
+	const {
+		items,
+		total,
+		page: reduxPage,
+		limit,
+	} = useSelector((s) => s.product);
 
-    const [pageLocal, setPageLocal] = useState(reduxPage || 1);
-    const [showModal, setShowModal] = useState(false);
-    const [showCatModal, setShowCatModal] = useState(false);
-    const [editingProduct, setEditingProduct] = useState(null);
+	const [pageLocal, setPageLocal] = useState(reduxPage || 1);
+	const [showModal, setShowModal] = useState(false);
+	const [showCatModal, setShowCatModal] = useState(false);
+	const [editingProduct, setEditingProduct] = useState(null);
 
-    // Initialize search from URL query param `search` (or empty if none)
-    const initialSearch = searchParams?.get("search") || "";
-    const [search, setSearch] = useState(initialSearch);
-    const [filteredItems, setFilteredItems] = useState([]);
+	// Initialize search from URL query param `search` (or empty if none)
+	const initialSearch = searchParams?.get('search') || '';
+	const [search, setSearch] = useState(initialSearch);
+	const [filteredItems, setFilteredItems] = useState([]);
 
-    // Fetch products when page changes
-    useEffect(() => {
-        dispatch(fetchProducts({ page: pageLocal, limit }));
-    }, [dispatch, pageLocal, limit]);
+	// Fetch products when page changes
+	useEffect(() => {
+		dispatch(fetchProducts({ page: pageLocal, limit }));
+	}, [dispatch, pageLocal, limit]);
 
-    // Delete product
-    const handleDelete = async (id) => {
-        if (!confirm("Delete product?")) return;
-        await dispatch(deleteProduct(id)).unwrap();
-        dispatch(fetchProducts({ page: pageLocal, limit }));
-    };
+	// Delete product
+	const handleDelete = async (id) => {
+		if (!confirm('Delete product?')) return;
+		await dispatch(deleteProduct(id)).unwrap();
+		dispatch(fetchProducts({ page: pageLocal, limit }));
+	};
 
-    // Update filtered items when `items` or `search` changes
-    useEffect(() => {
-        if (!Array.isArray(items)) {
-            setFilteredItems([]);
-            return;
-        }
+	// Update filtered items when `items` or `search` changes
+	useEffect(() => {
+		if (!Array.isArray(products)) {
+			setFilteredItems([]);
+			return;
+		}
 
-        const result = items.filter((p) => {
-            if (!p.name) return false;
-            if (!search) return true;
-            return p.name.toLowerCase().includes(search.toLowerCase());
-        });
+		const result = products.filter((p) => {
+			if (!p.name) return false;
+			if (!search) return true;
+			return p.name.toLowerCase().includes(search.toLowerCase());
+		});
 
-        setFilteredItems(result);
-    }, [items, search]);
+		setFilteredItems(result);
+	}, [products, search]);
 
-    // Update URL query dynamically when search changes
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        if (search) {
-            params.set("search", search);
-        } else {
-            params.delete("search");
-        }
-        const queryString = params.toString();
-        router.replace(`/products${queryString ? `?${queryString}` : ""}`);
-    }, [search, router]);
+	// Update URL query dynamically when search changes
+	useEffect(() => {
+		const params = new URLSearchParams(window.location.search);
+		if (search) {
+			params.set('search', search);
+		} else {
+			params.delete('search');
+		}
+		const queryString = params.toString();
+		router.replace(
+			`/dashboard/products${queryString ? `?${queryString}` : ''}`
+		);
+	}, [search, router]);
 
-    const totalPages = Math.max(1, Math.ceil((total || 0) / (limit || 1)));
+	const totalPages = Math.max(1, Math.ceil((total || 0) / (limit || 1)));
 
-    const handleCancel = () => setShowCatModal(false);
+	const handleCancel = () => setShowCatModal(false);
 
-    const handleCatSubmit = (payload) => {
-        dispatch(addCategory(payload));
-        setShowCatModal(false);
-        alert("Category added successfully!");
-    };
+	const handleCatSubmit = (payload) => {
+		dispatch(addCategory(payload));
+		setShowCatModal(false);
+		alert('Category added successfully!');
+	};
 
-    return (
+	return (
 		<div className="p-4 min-h-screen bg-gray-950 text-gray-300">
 			{/* HEADER */}
 			<div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-6">
@@ -109,7 +122,7 @@ export default function ProductsPage() {
 					</button>
 
 					<button
-						onClick={() => router.push("/products/list")}
+						onClick={() => router.push('/products/list')}
 						className="px-4 py-2 bg-blue-600 text-white rounded">
 						List
 					</button>
@@ -142,7 +155,7 @@ export default function ProductsPage() {
 										{p.image && (
 											<img
 												src={p.image}
-												alt={p.name || ""}
+												alt={p.name || ''}
 												className="w-14 h-14 object-cover rounded"
 											/>
 										)}
@@ -195,7 +208,7 @@ export default function ProductsPage() {
 								{p.image && (
 									<img
 										src={p.image}
-										alt={p.name || ""}
+										alt={p.name || ''}
 										className="w-10 h-20 object-cover rounded"
 									/>
 								)}
@@ -245,8 +258,8 @@ export default function ProductsPage() {
 						onClick={() => setPageLocal(i + 1)}
 						className={`px-3 py-1 rounded ${
 							pageLocal === i + 1
-								? "bg-green-600 text-white"
-								: "bg-gray-800 text-gray-400"
+								? 'bg-green-600 text-white'
+								: 'bg-gray-800 text-gray-400'
 						}`}>
 						{i + 1}
 					</button>

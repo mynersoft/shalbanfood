@@ -10,7 +10,7 @@ import {
   setLoading,
   setError,
   addActivity,
-} from '@/store/slices/vendorSlice';
+} from '@/redux/store/slices/vendorSlice';
 
 const API_BASE = '/api/vendor';
 

@@ -1,236 +1,165 @@
-"use client";
+import {
+	Package,
+	ShoppingCart,
+	Users,
+	DollarSign,
+	TrendingUp,
+} from 'lucide-react';
 
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import StatCard from "@/components/StatCard";
-import { useSelector } from "react-redux";
-import { getTopProducts, getStockOutProducts } from "@/lib/dashboardUtils";
+const stats = [
+	{
+		title: 'Total Sales',
+		value: '৳125,500',
+		icon: DollarSign,
+		change: '+12.5%',
+	},
+	{
+		title: 'Orders',
+		value: '248',
+		icon: ShoppingCart,
+		change: '+8.2%',
+	},
+	{
+		title: 'Products',
+		value: '86',
+		icon: Package,
+		change: '+4.6%',
+	},
+	{
+		title: 'Customers',
+		value: '1,240',
+		icon: Users,
+		change: '+15.4%',
+	},
+];
 
 export default function DashboardPage() {
-	const router = useRouter();
-
-	const bestSelling = useSelector((state) => state.dashboard.bestSelling);
-
-	const products = useSelector((state) => state?.products?.items || []);
-	const dues = useSelector((state) => state?.dues?.items || []);
-	const { daily, monthly, prevMonthly } = useSelector(
-		(state) => state.saleprofit
-	);
-
-	const { list, stats, lastMonth } = useSelector((s) => s.service);
-	const { toolsAmount } = useSelector((state) => state.invest);
-	const { totalAmount } = useSelector((state) => state.products);
-
-	const stockOutProducts = products.filter((p) => p.stock == 0);
-
-	const [topProducts, setTopProducts] = useState([]);
-	const [stockOut, setStockOut] = useState([]);
-	const [totalDue, setTotalDue] = useState(0);
-	const [totalAmountProducts, setTotalAmountProducts] = useState(0);
-
-	// services bills
-	const totalBill = stats?.totalBills ?? 0;
-
-	const [salesData] = useState([
-		{ date: "2025-10-01", sales: 300, profit: 100 },
-		{ date: "2025-10-02", sales: 450, profit: 150 },
-		{ date: "2025-10-03", sales: 500, profit: 200 },
-		{ date: "2025-10-04", sales: 200, profit: 80 },
-	]);
-
-	useEffect(() => {
-		setTopProducts(getTopProducts(products));
-		setStockOut(getStockOutProducts(products));
-
-		const dueSum = Array.isArray(dues)
-			? dues.reduce((sum, d) => sum + Number(d.amount || 0), 0)
-			: 0;
-
-		setTotalDue(dueSum);
-		setTotalAmountProducts(totalAmount);
-	}, [salesData, products, dues, totalAmount]);
-
 	return (
-		<div className="p-6 space-y-6 bg-gray-800 text-white">
-			<div className="">
-				{/* Stat Cards */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-gray-200">
-					<StatCard
-						title="Daily Sale"
-						value={`${daily.totalSale || 0} tk`}
-						color="red"
-					/>
-					<StatCard
-						title="Daily Profit"
-						value={`${daily.totalProfit || 0} tk`}
-						color="red"
-					/>
+		<div>
+			{/* Header */}
+			<div className="mb-8">
+				<h1 className="text-2xl font-bold md:text-3xl">Dashboard</h1>
 
-					<StatCard
-						title="Monthly Sale"
-						value={
-							<>
-								<span className="!text-red-500">
-									{prevMonthly.totalSale || 0}
+				<p className="mt-1 text-sm text-gray-400">
+					Welcome back! Here's what's happening with your store.
+				</p>
+			</div>
+
+			{/* Stats */}
+			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				{stats.map((stat) => {
+					const Icon = stat.icon;
+
+					return (
+						<div
+							key={stat.title}
+							className="rounded-2xl border border-white/10 bg-[#151821] p-5">
+							<div className="flex items-center justify-between">
+								<div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600/10 text-blue-500">
+									<Icon size={22} />
+								</div>
+
+								<span className="flex items-center gap-1 text-xs font-medium text-green-400">
+									<TrendingUp size={14} />
+									{stat.change}
 								</span>
-								{" / "}
-								<span>{monthly.totalSale || 0} tk</span>
-							</>
-						}
-						color="red"
-					/>
+							</div>
 
-					<StatCard
-						title="Monthly Profit"
-						value={
-							<>
-								<span className="!text-red-500">
-									{prevMonthly.totalProfit || 0}
-								</span>
-								{" / "}
-								<span>{monthly.totalProfit || 0} tk</span>
-							</>
-						}
-						color="red"
-					/>
+							<p className="mt-5 text-sm text-gray-400">
+								{stat.title}
+							</p>
 
-					<StatCard
-						title="Monthly Service"
-						value={
-							<>
-								<span className="!text-red-500">
-									{lastMonth?.totalBill || 0}
-								</span>
-								{" / "}
-								<span>{totalBill || 0} tk</span>
-							</>
-						}
-						color="red"
-					/>
+							<h2 className="mt-1 text-2xl font-bold">
+								{stat.value}
+							</h2>
+						</div>
+					);
+				})}
+			</div>
 
-					<StatCard
-						title="Total Due"
-						value={`${totalDue} tk`}
-						color="red"
-					/>
-					<StatCard
-						title="Total Amount of Products"
-						value={`${totalAmountProducts} tk`}
-						color="green"
-					/>
-					<StatCard
-						title="Invest for tools"
-						value={`${toolsAmount || 0} tk`}
-						color="green"
-					/>
+			{/* Content */}
+			<div className="mt-6 grid gap-6 lg:grid-cols-2">
+				{/* Recent Orders */}
+				<div className="rounded-2xl border border-white/10 bg-[#151821]">
+					<div className="flex items-center justify-between border-b border-white/10 p-5">
+						<div>
+							<h2 className="font-semibold">Recent Orders</h2>
+							<p className="mt-1 text-xs text-gray-500">
+								Latest customer orders
+							</p>
+						</div>
+
+						<button className="text-sm text-blue-500 hover:text-blue-400">
+							View All
+						</button>
+					</div>
+
+					<div className="divide-y divide-white/5">
+						{[
+							['#ORD-1001', 'Rahim', '৳2,450'],
+							['#ORD-1002', 'Karim', '৳1,850'],
+							['#ORD-1003', 'Hasan', '৳3,200'],
+							['#ORD-1004', 'Nadia', '৳950'],
+						].map(([id, name, amount]) => (
+							<div
+								key={id}
+								className="flex items-center justify-between p-4">
+								<div>
+									<p className="text-sm font-medium">{id}</p>
+									<p className="mt-1 text-xs text-gray-500">
+										{name}
+									</p>
+								</div>
+
+								<span className="font-medium">{amount}</span>
+							</div>
+						))}
+					</div>
 				</div>
 
-				{/* Best Selling Product */}
-				{bestSelling?.soldCount > 0 && (
-					<div className="p-4 bg-gray-800 rounded-lg text-white">
-						<h2 className="text-xl font-bold mb-3">
-							🔥 Best Selling Product
-						</h2>
+				{/* Overview */}
+				<div className="rounded-2xl border border-white/10 bg-[#151821] p-5">
+					<h2 className="font-semibold">Store Overview</h2>
 
-						<table className="w-full border border-gray-700 text-left">
-							<thead>
-								<tr className="bg-gray-700">
-									<th className="p-2 border border-gray-600">
-										Image
-									</th>
-									<th className="p-2 border border-gray-600">
-										Name
-									</th>
-									<th className="p-2 border border-gray-600">
-										Brand
-									</th>
-									<th className="p-2 border border-gray-600">
-										Sold
-									</th>
-								</tr>
-							</thead>
+					<div className="mt-6 space-y-5">
+						<div>
+							<div className="mb-2 flex justify-between text-sm">
+								<span className="text-gray-400">
+									Products Sold
+								</span>
+								<span>72%</span>
+							</div>
 
-							<tbody>
-								<tr>
-									<td className="p-2 border border-gray-700">
-										{bestSelling.image ? (
-											<Image
-												src={bestSelling.image}
-												alt={bestSelling.name}
-												width={60}
-												height={60}
-												className="rounded object-cover"
-											/>
-										) : (
-											"N/A"
-										)}
-									</td>
-									<td className="p-2 border border-gray-700">
-										{bestSelling.name}
-									</td>
-									<td className="p-2 border border-gray-700">
-										{bestSelling.brand}
-									</td>
-									<td className="p-2 border border-gray-700 text-green-400 font-bold">
-										{bestSelling.soldCount} pcs
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				)}
+							<div className="h-2 overflow-hidden rounded-full bg-white/10">
+								<div className="h-full w-[72%] rounded-full bg-blue-600" />
+							</div>
+						</div>
 
-				{/* Stock Out Products */}
-				<div className="bg-gray-900 rounded-2xl shadow p-6 text-red-500">
-					<h2 className="text-xl font-semibold mb-4 text-red-400">
-						⚠️ Stock Out Products
-					</h2>
+						<div>
+							<div className="mb-2 flex justify-between text-sm">
+								<span className="text-gray-400">
+									Orders Completed
+								</span>
+								<span>84%</span>
+							</div>
 
-					<div className="overflow-x-auto">
-						<table className="min-w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700">
-							<thead>
-								<tr className="bg-gray-800 text-gray-200">
-									<th className="p-3 text-left">
-										Product Name
-									</th>
+							<div className="h-2 overflow-hidden rounded-full bg-white/10">
+								<div className="h-full w-[84%] rounded-full bg-green-500" />
+							</div>
+						</div>
 
-									<th className="p-3 text-center">Action</th>
-								</tr>
-							</thead>
+						<div>
+							<div className="mb-2 flex justify-between text-sm">
+								<span className="text-gray-400">
+									Customer Satisfaction
+								</span>
+								<span>91%</span>
+							</div>
 
-							<tbody>
-								{stockOutProducts?.map((p) => (
-									<tr
-										key={p._id}
-										className="border-b border-gray-700 hover:bg-gray-800 transition">
-										<td className="p-3">{p.name}</td>
-
-										<td className="p-3 text-center">
-											<button
-												onClick={() =>
-													router.push(
-														`/products?${p.name}`
-													)
-												}
-												className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded">
-												✏️ Edit
-											</button>
-										</td>
-									</tr>
-								))}
-
-								{!stockOutProducts?.length && (
-									<tr>
-										<td
-											colSpan="3"
-											className="text-center text-gray-400 p-4">
-											No stock-out products found
-										</td>
-									</tr>
-								)}
-							</tbody>
-						</table>
+							<div className="h-2 overflow-hidden rounded-full bg-white/10">
+								<div className="h-full w-[91%] rounded-full bg-purple-500" />
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>

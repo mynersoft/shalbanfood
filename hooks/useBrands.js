@@ -7,7 +7,7 @@ import {
   setBrands,
   addBrand,
   removeBrand,
-} from '@/store/slices/brandsSlice';
+} from '@/redux/store/slices/brandsSlice';
 import toast from 'react-hot-toast';
 
 export function useBrands() {

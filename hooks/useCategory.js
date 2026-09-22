@@ -1,4 +1,4 @@
-import { setCategories } from '@/store/slices/categorySlice';
+import { setCategories } from '@/redux/store/slices/categorySlice';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useDispatch } from 'react-redux';

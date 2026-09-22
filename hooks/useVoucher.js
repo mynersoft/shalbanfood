@@ -9,7 +9,7 @@ import {
   addVoucher,
   removeVoucher,
   applyVoucher,
-} from '@/store/slices/voucherSlice';
+} from '@/redux/store/slices/voucherSlice';
 
 export function useVoucher() {
   const dispatch = useDispatch();

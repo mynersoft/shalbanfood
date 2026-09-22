@@ -7,7 +7,7 @@ import InitialLoader from "@/components/InitialLoader";
 import Footer from "@/components/footer/Footer";
 import { Toaster } from "react-hot-toast";
 import Providers from "./providers";
-import { Analytics } from "@vercel/analytics/next";
+import InitData from "@/components/InitData";
 
 /* Site Configuration */
 
@@ -212,6 +212,7 @@ export default function RootLayout({ children }) {
 
 			<body className="dark bg-gray-900 text-gray-100">
 				<InitialLoader>
+
 					<Toaster
 						position="top-right"
 						reverseOrder={false}
@@ -223,6 +224,7 @@ export default function RootLayout({ children }) {
 						<Header />
 
 						<GlobalInitializer />
+						<InitData/>
 
 						{children}
 
@@ -230,7 +232,7 @@ export default function RootLayout({ children }) {
 					</Providers>
 				</InitialLoader>
 
-				<Analytics />
+		
 			</body>
 		</html>
 	);

@@ -57,7 +57,7 @@ export default function ProductFormModal({
   currentPage = 1,
 }) {
   const dispatch = useDispatch();
-  const { list: categories } = useSelector((state) => state.categories);
+  const { list: categories } = useSelector((state) => state.category);
 
   const [form, setForm] = useState({
     name: "",

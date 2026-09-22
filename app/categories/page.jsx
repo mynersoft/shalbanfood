@@ -11,7 +11,7 @@ import {
 	deleteCategory,
 } from '@/redux/categorySlice';
 
-import CategoryForm from '@/components/CategoryForm';
+import CategoryForm from '@/components/dashboard/CategoryForm';
 import AddCategoryButton from '@/components/AddCategoryButton';
 
 import toast from 'react-hot-toast';

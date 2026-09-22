@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { getAllUsers } from '@/store/slices/userSlice';
+import { getAllUsers } from '@/redux/store/slices/userSlice';
 import { useDispatch } from 'react-redux';
 
 // Fetch all users

@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
 	fetchDailyStats,
 	fetchMonthlyStats,
 	fetchMonthlyBreakdown,
-} from "@/redux/saleprofitSlice";
+} from '@/redux/store/slices/saleprofitSlice';
 
 export default function DashboardStats({ year, month }) {
 	const dispatch = useDispatch();

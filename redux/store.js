@@ -7,7 +7,7 @@ import saleReducer from './saleSlice';
 import serviceReducer from './serviceSlice';
 import categoryReducer from './categorySlice';
 import brandReducer from './brandsSlice';
-import saleprofitReducer from './saleprofitSlice';
+import saleprofitReducer from './store/slices/saleprofitSlice';
 import billReducer from './billSlice';
 import cartReducer from './cartSlice';
 =======
