@@ -1,22 +1,24 @@
 'use client';
 
 import { useSelector } from 'react-redux';
-
 import { useEffect, useState } from 'react';
 import { useAddOrder } from '@/hooks/useOrder';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import useLoginUser from '@/hooks/useAuth';
+
 import ShippingInfo from './ShippingInfo';
-import { shippingCost, tax } from '@/utils/shippingCost';
+import { shippingCost } from '@/utils/shippingCost';
+
 import {
 	ArrowLeft,
-	CreditCard,
+	CheckCircle2,
 	Loader2,
+	Mail,
+	Phone,
 	ShoppingBag,
 	Truck,
-	Wallet,
-	CheckCircle2,
+	User,
 	Lock,
 } from 'lucide-react';
 
@@ -25,21 +27,40 @@ import CheckEmptyCart from '@/components/Cart/CheckEmptyCart';
 
 export default function CheckoutClient() {
 	const { user } = useLoginUser();
+
 	const cart = useSelector((state) => state.cart.items);
 	const { applyVoucher } = useSelector((state) => state.voucher);
 
 	const router = useRouter();
 	const mutation = useAddOrder();
+
 	const [processing, setProcessing] = useState(false);
 
 	const [parentVoucher, setParentVoucher] = useState('');
 
+	/*
+	|--------------------------------------------------------------------------
+	| Customer + Order State
+	|--------------------------------------------------------------------------
+	*/
+
 	const [orderData, setOrderData] = useState({
-		address: { area: '', city: '', thana: '' },
-		phone: '',
+		customer: {
+			name: '',
+			email: '',
+			phone: '',
+		},
+
+		address: {
+			area: '',
+			city: '',
+			thana: '',
+		},
+
 		cartItems: [],
-		totalAmount: 0,
-		voucherCode: parentVoucher || '',
+
+		voucherCode: '',
+
 		payment: {
 			method: 'COD',
 			status: 'unpaid',
@@ -47,7 +68,12 @@ export default function CheckoutClient() {
 		},
 	});
 
-	/* ================= PRODUCTS ================= */
+	/*
+	|--------------------------------------------------------------------------
+	| Cart Items
+	|--------------------------------------------------------------------------
+	*/
+
 	useEffect(() => {
 		setOrderData((prev) => ({
 			...prev,
@@ -55,52 +81,86 @@ export default function CheckoutClient() {
 		}));
 	}, [cart]);
 
-	/* ================= AUTOFILL ================= */
+	/*
+	|--------------------------------------------------------------------------
+	| Logged-in User Auto Fill
+	|--------------------------------------------------------------------------
+	*/
+
 	useEffect(() => {
 		if (!user) return;
 
-		if (!orderData.phone) {
-			setOrderData((prev) => ({
-				...prev,
-				phone: user.phone || '',
-				address: {
-					area: user.address?.area || '',
-					city: user.address?.city || '',
-					thana: user.address?.thana || '',
-				},
-			}));
-		}
-	}, [orderData.phone, user]);
+		setOrderData((prev) => ({
+			...prev,
 
-	/* ================= TOTAL ================= */
+			customer: {
+				name: prev.customer.name || user.name || user.username || '',
+
+				email: prev.customer.email || user.email || '',
+
+				phone: prev.customer.phone || user.phone || '',
+			},
+
+			address: {
+				area: prev.address.area || user.address?.area || '',
+
+				city: prev.address.city || user.address?.city || '',
+
+				thana: prev.address.thana || user.address?.thana || '',
+			},
+		}));
+	}, [user]);
+
+	/*
+	|--------------------------------------------------------------------------
+	| Subtotal
+	|--------------------------------------------------------------------------
+	*/
+
 	const subtotal = cart.reduce((sum, item) => {
-		let price = item.salePrice;
+		let price = Number(item.salePrice) || 0;
 
 		if (item.discount) {
 			if (item.discount.type === 'percentage') {
-				price = price - (price * item.discount.value) / 100;
+				price =
+					price - (price * Number(item.discount.value || 0)) / 100;
 			}
 
 			if (item.discount.type === 'fixed') {
-				price = price - item.discount.value;
+				price = price - Number(item.discount.value || 0);
 			}
 		}
 
-		// negative price avoid
 		price = Math.max(price, 0);
 
-		return sum + price * item.quantity;
+		return sum + price * Number(item.quantity || 1);
 	}, 0);
 
-	const grandTotal =
-		subtotal + shippingCost + (applyVoucher ? applyVoucher.discount : 0);
+	/*
+	|--------------------------------------------------------------------------
+	| Discount
+	|--------------------------------------------------------------------------
+	*/
 
-	useEffect(() => {
-		setOrderData((prev) => ({
-			...prev,
-			totalAmount: grandTotal,
-		}));
-	}, [grandTotal]);
+	const discount = Number(applyVoucher?.discount || 0);
+
+	/*
+	|--------------------------------------------------------------------------
+	| Total
+	|--------------------------------------------------------------------------
+	|
+	| Total = Subtotal - Discount + Shipping
+	|
+	*/
+
+	const grandTotal = subtotal - discount + Number(shippingCost || 0);
+
+	/*
+	|--------------------------------------------------------------------------
+	| Voucher
+	|--------------------------------------------------------------------------
+	*/
+
 	useEffect(() => {
 		setOrderData((prev) => ({
 			...prev,
@@ -108,357 +168,606 @@ export default function CheckoutClient() {
 		}));
 	}, [parentVoucher]);
 
-	/* ================= CHANGE ================= */
+	/*
+	|--------------------------------------------------------------------------
+	| Input Change
+	|--------------------------------------------------------------------------
+	*/
+
 	const handleChange = (e) => {
 		const { name, value } = e.target;
 
 		if (name.includes('.')) {
 			const [parent, child] = name.split('.');
+
 			setOrderData((prev) => ({
 				...prev,
-				[parent]: { ...prev[parent], [child]: value },
+				[parent]: {
+					...prev[parent],
+					[child]: value,
+				},
 			}));
-		} else {
-			setOrderData((prev) => ({ ...prev, [name]: value }));
-		}
-	};
 
-	const handlePaymentChange = (method) => {
+			return;
+		}
+
 		setOrderData((prev) => ({
 			...prev,
-			payment: { ...prev.payment, method },
+			[name]: value,
 		}));
 	};
 
-	/* ================= PLACE ORDER ================= */
-	const placeOrder = (data) => {
-		mutation.mutate(data, {
+	/*
+	|--------------------------------------------------------------------------
+	| Place Order
+	|--------------------------------------------------------------------------
+	*/
+
+	const placeOrder = (payload) => {
+		mutation.mutate(payload, {
 			onSuccess: (res) => {
 				router.push(`/checkout/success?orderId=${res._id}`);
 			},
-			onError: () => {
-				toast.error('Order failed');
+
+			onError: (error) => {
+				console.error(error);
+
+				toast.error(
+					error?.response?.data?.message ||
+						'Order failed. Please try again.'
+				);
+
 				setProcessing(false);
 			},
 		});
 	};
 
-	/* ================= CONFIRM ================= */
+	/*
+	|--------------------------------------------------------------------------
+	| Confirm Order
+	|--------------------------------------------------------------------------
+	*/
+
 	const handleConfirmOrder = () => {
-		if (!orderData.address.area || !orderData.phone) {
-			toast.error('Please fill required fields');
+		const name = orderData.customer.name.trim();
+		const email = orderData.customer.email.trim();
+		const phone = orderData.customer.phone.trim();
+
+		const area = orderData.address.area.trim();
+		const city = orderData.address.city.trim();
+		const thana = orderData.address.thana.trim();
+
+		/*
+		|--------------------------------------------------------------------------
+		| Required Validation
+		|--------------------------------------------------------------------------
+		*/
+
+		if (!name) {
+			toast.error('Please enter your name');
 			return;
 		}
 
+		if (!phone) {
+			toast.error('Please enter your phone number');
+			return;
+		}
+
+		if (!area) {
+			toast.error('Please enter your delivery area');
+			return;
+		}
+
+		if (!cart.length) {
+			toast.error('Your cart is empty');
+			return;
+		}
+
+		/*
+		|--------------------------------------------------------------------------
+		| Create Order Items According To Order Model
+		|--------------------------------------------------------------------------
+		*/
+
+		const orderItems = cart.map((item) => {
+			let price = Number(item.salePrice) || 0;
+
+			if (item.discount) {
+				if (item.discount.type === 'percentage') {
+					price =
+						price -
+						(price * Number(item.discount.value || 0)) / 100;
+				}
+
+				if (item.discount.type === 'fixed') {
+					price = price - Number(item.discount.value || 0);
+				}
+			}
+
+			price = Math.max(price, 0);
+
+			return {
+				productId: item.productId || item._id || item.id || '',
+
+				name: item.name || '',
+
+				quantity: Number(item.quantity) || 1,
+
+				price,
+
+				image: item.image || item.images?.[0] || '',
+			};
+		});
+
+		/*
+		|--------------------------------------------------------------------------
+		| Exact Order Model Payload
+		|--------------------------------------------------------------------------
+		*/
+
+		const payload = {
+			...(user?._id || user?.id
+				? {
+						userId: user._id || user.id,
+					}
+				: {}),
+
+			customer: {
+				name,
+				email,
+				phone,
+			},
+
+			shippingAddress: {
+				thana,
+				area,
+				city,
+			},
+
+			orderItems,
+
+			voucherCode: orderData.voucherCode,
+
+			payment: {
+				method: 'COD',
+				status: 'unpaid',
+			},
+		};
+
+		console.log('ORDER PAYLOAD:', payload);
+
 		setProcessing(true);
 
-		if (orderData.payment.method === 'COD') {
-			placeOrder({
-				...orderData,
-				payment: {
-					method: 'COD',
-					status: 'unpaid',
-					transactionId: null,
-				},
-			});
-		} else {
-			toast.error('bKash flow handled separately');
-			setProcessing(false);
-		}
+		placeOrder(payload);
 	};
 
-	if (cart.length === 0) return <CheckEmptyCart />;
+	/*
+	|--------------------------------------------------------------------------
+	| Empty Cart
+	|--------------------------------------------------------------------------
+	*/
+
+	if (cart.length === 0) {
+		return <CheckEmptyCart />;
+	}
 
 	return (
-		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-			<div className="flex items-center gap-3 mb-2">
-				<button
-					onClick={() => router.back()}
-					className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-					aria-label="Go back">
-					<ArrowLeft size={20} />
-				</button>
-				<h1 className="text-2xl font-bold text-gray-900">Checkout</h1>
-			</div>
-			<p className="text-gray-600 mb-8 ml-12">Complete your order</p>
+		<div className="min-h-screen bg-[#fafafa]">
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+				{/* =====================================================
+				    HEADER
+				===================================================== */}
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-				{/* Left Column - Order Details */}
-				<div className="space-y-8">
-					{/* Shipping Information */}
+				<div className="mb-7">
+					<button
+						type="button"
+						onClick={() => router.back()}
+						className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition mb-4">
+						<ArrowLeft size={17} />
+						Back to cart
+					</button>
 
-					<ShippingInfo
-						orderData={orderData}
-						handleChange={handleChange}
-					/>
+					<h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+						Checkout
+					</h1>
 
-					{/* Payment Method */}
-					<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-						<div className="flex items-center gap-3 mb-6">
-							<div className="p-2 bg-blue-100 rounded-lg">
-								<CreditCard
-									className="text-blue-600"
-									size={20}
-								/>
-							</div>
-							<h2 className="text-xl font-bold text-gray-900">
-								Payment Method
-							</h2>
-						</div>
+					<p className="text-sm text-gray-500 mt-1">
+						Complete your order and pay when you receive it.
+					</p>
+				</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							{/* Cash on Delivery */}
-							<button
-								onClick={() => handlePaymentChange('COD')}
-								className={`p-4 border-2 rounded-xl transition-all ${
-									orderData.payment.method === 'COD'
-										? 'border-green-500 bg-green-50'
-										: 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-								}`}>
-								<div className="flex items-center gap-3">
-									<div
-										className={`p-2 rounded-lg ${
-											orderData.payment.method === 'COD'
-												? 'bg-green-100 text-green-600'
-												: 'bg-gray-100 text-gray-600'
-										}`}>
-										<Truck size={20} />
-									</div>
-									<div className="text-left">
-										<div className="flex items-center gap-2">
-											<span className="font-semibold">
-												Cash on Delivery
-											</span>
-											{orderData.payment.method ===
-												'COD' && (
-												<CheckCircle2
-													size={16}
-													className="text-green-500"
-												/>
-											)}
-										</div>
-										<p className="text-sm text-gray-500 mt-1">
-											Pay when you receive
-										</p>
-									</div>
+				{/* =====================================================
+				    MAIN GRID
+				===================================================== */}
+
+				<div className="grid grid-cols-1 lg:grid-cols-[1fr_410px] gap-6 lg:gap-8">
+					{/* =================================================
+					    LEFT
+					================================================= */}
+
+					<div className="space-y-6">
+						{/* =============================================
+						    CUSTOMER INFORMATION
+						============================================= */}
+
+						<div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
+							<div className="flex items-center gap-3 mb-6">
+								<div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+									<User size={19} className="text-gray-700" />
 								</div>
-							</button>
 
-							{/* bKash */}
-							<button
-								onClick={() => handlePaymentChange('bKash')}
-								className={`p-4 border-2 rounded-xl transition-all ${
-									orderData.payment.method === 'bKash'
-										? 'border-pink-500 bg-pink-50'
-										: 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-								}`}>
-								<div className="flex items-center gap-3">
-									<div
-										className={`p-2 rounded-lg ${
-											orderData.payment.method === 'bKash'
-												? 'bg-pink-100 text-pink-600'
-												: 'bg-gray-100 text-gray-600'
-										}`}>
-										<Wallet size={20} />
-									</div>
-									<div className="text-left">
-										<div className="flex items-center gap-2">
-											<span className="font-semibold">
-												bKash
-											</span>
-											{orderData.payment.method ===
-												'bKash' && (
-												<CheckCircle2
-													size={16}
-													className="text-pink-500"
-												/>
-											)}
-										</div>
-										<p className="text-sm text-gray-500 mt-1">
-											Pay with mobile wallet
-										</p>
-									</div>
-								</div>
-							</button>
-						</div>
+								<div>
+									<h2 className="font-semibold text-gray-900">
+										Customer Information
+									</h2>
 
-						{orderData.payment.method === 'bKash' && (
-							<div className="mt-4 p-4 bg-blue-50 rounded-lg">
-								<div className="flex items-center gap-3">
-									<Lock size={16} className="text-blue-600" />
-									<p className="text-sm text-blue-700">
-										You will be redirected to bKash for
-										secure payment
+									<p className="text-xs text-gray-500 mt-0.5">
+										{user
+											? 'Your account information'
+											: 'You can order without creating an account'}
 									</p>
 								</div>
 							</div>
-						)}
-					</div>
-				</div>
 
-				{/* Right Column - Order Summary & Checkout */}
-				<div className="space-y-8">
-					<div className="border border-gray-100 p-2 rounded">
-						<div className="flex items-center gap-3 mb-6">
-							<div className="p-2 bg-blue-100 rounded-lg">
-								<ShoppingBag
-									className="text-blue-600"
-									size={20}
-								/>
-							</div>
-							<h2 className="text-xl font-bold text-gray-900">
-								Order Items
-							</h2>
-							<span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium">
-								{cart.length} items
-							</span>
-						</div>
-						<CartItems subtotal={subtotal} />
-					</div>
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+								{/* NAME */}
 
-					{/* Order Summary */}
-					<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
-						<h2 className="text-xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">
-							Order Summary
-						</h2>
+								<div className="sm:col-span-2">
+									<label className="block text-sm font-medium text-gray-700 mb-1.5">
+										Full Name
+									</label>
 
-						<div className="space-y-3 mb-4">
-							<div className="flex justify-between">
-								<span className="text-gray-600">Subtotal</span>
-								<span className="font-medium">
-									৳{subtotal.toFixed(2)}
-								</span>
-							</div>
+									<div className="relative">
+										<User
+											size={17}
+											className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+										/>
 
-							{applyVoucher !== null && (
-								<div className="flex justify-between">
-									<span className="text-gray-600">
-										Discount
-									</span>
-									<span className="font-medium">
-										৳{applyVoucher.discount}
-									</span>
+										<input
+											type="text"
+											name="customer.name"
+											value={orderData.customer.name}
+											onChange={handleChange}
+											placeholder="Enter your full name"
+											className="w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+										/>
+									</div>
 								</div>
-							)}
 
-							<div className="flex justify-between">
-								<span className="text-gray-600">Shipping</span>
-								<span
-									className={
-										shippingCost === 0
-											? 'text-green-600 font-medium'
-											: 'font-medium'
-									}>
-									{shippingCost === 0
-										? 'FREE'
-										: `৳${shippingCost.toFixed(2)}`}
-								</span>
-							</div>
-						</div>
+								{/* EMAIL */}
 
-						<div className="border-t border-gray-200 pt-4 mb-6">
-							<div className="flex justify-between items-center">
-								<span className="text-lg font-bold text-gray-900">
-									Total Amount
-								</span>
-								<div className="text-right">
-									<div className="text-2xl font-bold text-blue-600">
-										৳{grandTotal.toFixed(2)}
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1.5">
+										Email
+									</label>
+
+									<div className="relative">
+										<Mail
+											size={17}
+											className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+										/>
+
+										<input
+											type="email"
+											name="customer.email"
+											value={orderData.customer.email}
+											onChange={handleChange}
+											placeholder="you@example.com"
+											className="w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+										/>
+									</div>
+								</div>
+
+								{/* PHONE */}
+
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1.5">
+										Phone Number
+									</label>
+
+									<div className="relative">
+										<Phone
+											size={17}
+											className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+										/>
+
+										<input
+											type="tel"
+											name="customer.phone"
+											value={orderData.customer.phone}
+											onChange={handleChange}
+											placeholder="01XXXXXXXXX"
+											className="w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+										/>
 									</div>
 								</div>
 							</div>
-							<div>
-								<ApplyVoucher
-									subtotal={subtotal}
-									cartItems={cart}
-									setVoucherInParent={setParentVoucher}
-								/>
-							</div>
 						</div>
 
-						{/* Terms & Conditions */}
-						<div className="mb-6">
-							<label className="flex items-start gap-3">
-								<input
-									type="checkbox"
-									className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-									required
-								/>
-								<span className="text-sm text-gray-600">
-									I agree to the{' '}
-									<a
-										href="/terms"
-										className="text-blue-600 hover:underline">
-										Terms & Conditions
-									</a>{' '}
-									and{' '}
-									<a
-										href="/privacy"
-										className="text-blue-600 hover:underline">
-										Privacy Policy
-									</a>
-								</span>
-							</label>
-						</div>
+						{/* =============================================
+						    SHIPPING
+						============================================= */}
 
-						{/* Confirm Order Button */}
-						<button
-							onClick={handleConfirmOrder}
-							disabled={processing || cart.length === 0}
-							className="w-full flex items-center justify-center gap-3 bg-green-600 text-white py-4 rounded-xl hover:bg-green-700 transition-colors font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed">
-							{processing ? (
-								<>
-									<Loader2
-										size={20}
-										className="animate-spin"
+						<div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
+							<div className="flex items-center gap-3 mb-6">
+								<div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+									<Truck
+										size={19}
+										className="text-gray-700"
 									/>
-									Processing...
-								</>
-							) : (
-								<>
-									{orderData.payment.method === 'COD' ? (
-										<>
-											<Truck size={20} />
-											Place Order (Cash on Delivery)
-										</>
-									) : (
-										<>
-											<Wallet size={20} />
-											Pay with bKash
-										</>
-									)}
-								</>
-							)}
-						</button>
+								</div>
 
-						{/* Security Badge */}
-						<div className="mt-6 pt-6 border-t border-gray-100">
-							<div className="flex items-center justify-center gap-2">
-								<Lock size={16} className="text-gray-400" />
-								<p className="text-sm text-gray-500">
-									Secure checkout • 256-bit SSL encryption
-								</p>
+								<div>
+									<h2 className="font-semibold text-gray-900">
+										Delivery Information
+									</h2>
+
+									<p className="text-xs text-gray-500 mt-0.5">
+										Where should we deliver your order?
+									</p>
+								</div>
 							</div>
+
+							<ShippingInfo
+								orderData={{
+									...orderData,
+									phone: orderData.customer.phone,
+								}}
+								handleChange={(e) => {
+									const { name, value } = e.target;
+
+									if (name === 'phone') {
+										setOrderData((prev) => ({
+											...prev,
+											customer: {
+												...prev.customer,
+												phone: value,
+											},
+										}));
+
+										return;
+									}
+
+									if (name.includes('.')) {
+										const [parent, child] = name.split('.');
+
+										setOrderData((prev) => ({
+											...prev,
+											[parent]: {
+												...prev[parent],
+												[child]: value,
+											},
+										}));
+
+										return;
+									}
+
+									setOrderData((prev) => ({
+										...prev,
+										[name]: value,
+									}));
+								}}
+							/>
+						</div>
+
+						{/* =============================================
+						    COD
+						============================================= */}
+
+						<div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
+							<div className="flex items-center gap-3 mb-5">
+								<div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+									<CheckCircle2
+										size={20}
+										className="text-green-600"
+									/>
+								</div>
+
+								<div>
+									<h2 className="font-semibold text-gray-900">
+										Payment
+									</h2>
+
+									<p className="text-xs text-gray-500 mt-0.5">
+										Only Cash on Delivery is available
+									</p>
+								</div>
+							</div>
+
+							<div className="border border-green-200 bg-green-50/70 rounded-xl p-4">
+								<div className="flex items-center justify-between gap-4">
+									<div className="flex items-center gap-3">
+										<div className="w-11 h-11 rounded-xl bg-white border border-green-200 flex items-center justify-center">
+											<Truck
+												size={21}
+												className="text-green-600"
+											/>
+										</div>
+
+										<div>
+											<p className="font-semibold text-gray-900">
+												Cash on Delivery
+											</p>
+
+											<p className="text-sm text-gray-500 mt-0.5">
+												Pay when you receive your order
+											</p>
+										</div>
+									</div>
+
+									<div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center">
+										<CheckCircle2
+											size={15}
+											className="text-white"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div className="flex items-center gap-2 mt-4 text-xs text-gray-500">
+								<Lock size={13} />
+
+								<span>No online payment required.</span>
+							</div>
+						</div>
+
+						{/* =============================================
+						    MOBILE ITEMS
+						============================================= */}
+
+						<div className="lg:hidden bg-white border border-gray-200 rounded-2xl p-5">
+							<div className="flex items-center justify-between mb-5">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+										<ShoppingBag
+											size={19}
+											className="text-gray-700"
+										/>
+									</div>
+
+									<h2 className="font-semibold text-gray-900">
+										Your Items
+									</h2>
+								</div>
+
+								<span className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full">
+									{cart.length} items
+								</span>
+							</div>
+
+							<CartItems subtotal={subtotal} />
 						</div>
 					</div>
 
-					{/* Need Help */}
-					<div className="bg-blue-50 rounded-xl p-6">
-						<h3 className="font-bold text-gray-900 mb-3">
-							Need Help?
-						</h3>
-						<div className="space-y-2">
-							<p className="text-sm text-gray-600">
-								<span className="font-medium">Phone:</span>{' '}
-								09678-123456
-							</p>
-							<p className="text-sm text-gray-600">
-								<span className="font-medium">Email:</span>{' '}
-								support@store.com
-							</p>
-							<p className="text-sm text-gray-600">
-								<span className="font-medium">Hours:</span> 9AM
-								- 11PM, 7 days a week
+					{/* =================================================
+					    RIGHT
+					================================================= */}
+
+					<div className="space-y-6">
+						{/* DESKTOP ITEMS */}
+
+						<div className="hidden lg:block bg-white border border-gray-200 rounded-2xl p-5">
+							<div className="flex items-center justify-between mb-5">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+										<ShoppingBag
+											size={19}
+											className="text-gray-700"
+										/>
+									</div>
+
+									<h2 className="font-semibold text-gray-900">
+										Your Items
+									</h2>
+								</div>
+
+								<span className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full">
+									{cart.length} items
+								</span>
+							</div>
+
+							<CartItems subtotal={subtotal} />
+						</div>
+
+						{/* =============================================
+						    SUMMARY
+						============================================= */}
+
+						<div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 lg:sticky lg:top-6">
+							<h2 className="font-semibold text-gray-900 text-lg mb-5">
+								Order Summary
+							</h2>
+
+							<div className="space-y-3 text-sm">
+								<div className="flex justify-between">
+									<span className="text-gray-500">
+										Subtotal
+									</span>
+
+									<span className="font-medium text-gray-900">
+										৳{subtotal.toFixed(2)}
+									</span>
+								</div>
+
+								{discount > 0 && (
+									<div className="flex justify-between">
+										<span className="text-gray-500">
+											Discount
+										</span>
+
+										<span className="font-medium text-green-600">
+											-৳
+											{discount.toFixed(2)}
+										</span>
+									</div>
+								)}
+
+								<div className="flex justify-between">
+									<span className="text-gray-500">
+										Delivery
+									</span>
+
+									<span
+										className={
+											shippingCost === 0
+												? 'font-medium text-green-600'
+												: 'font-medium text-gray-900'
+										}>
+										{shippingCost === 0
+											? 'FREE'
+											: `৳${Number(shippingCost).toFixed(
+													2
+												)}`}
+									</span>
+								</div>
+							</div>
+
+							<div className="border-t border-gray-200 mt-5 pt-5">
+								<div className="flex items-end justify-between">
+									<div>
+										<p className="text-sm text-gray-500">
+											Total Amount
+										</p>
+
+										<p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
+											৳{grandTotal.toFixed(2)}
+										</p>
+									</div>
+
+									<div className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
+										<Truck size={14} />
+										COD
+									</div>
+								</div>
+							</div>
+
+							{/* =========================================
+							    PLACE ORDER
+							========================================= */}
+
+							<button
+								type="button"
+								onClick={handleConfirmOrder}
+								disabled={processing || cart.length === 0}
+								className="w-full mt-6 flex items-center justify-center gap-2 bg-gray-900 text-white py-4 px-5 rounded-xl font-semibold text-base hover:bg-black active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+								{processing ? (
+									<>
+										<Loader2
+											size={19}
+											className="animate-spin"
+										/>
+										Placing Order...
+									</>
+								) : (
+									<>
+										<Truck size={19} />
+										Place Order
+									</>
+								)}
+							</button>
+
+							<p className="text-center text-xs text-gray-400 mt-3">
+								Pay cash when your order arrives
 							</p>
 						</div>
 					</div>

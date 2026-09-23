@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import ShopFilters from '@/components/shop/ShopFillters';
 import ShopList from '@/components/shop/ShopLists';
-import { useProducts } from '@/hooks/useDashboard';
+import { useProducts } from '@/hooks/useProducts';
 
 export default function ShopPage() {
 	const { isLoading, isFetching } = useProducts();
