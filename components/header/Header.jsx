@@ -6,16 +6,13 @@ import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Menu, X, ShoppingCart, ChevronRight, Trash2 } from 'lucide-react';
 
-
-import {
-	selectCartItems,
-	selectCartTotalItems,
-} from '@/redux/store/slices/cartSlice';
+import { selectCartTotalItems } from '@/redux/store/slices/cartSlice';
 
 export default function Header() {
+	const { items: cartItems } = useSelector((state) => state.cart);
+
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [cartOpen, setCartOpen] = useState(false);
-	
 
 	const cartQty = useSelector(selectCartTotalItems);
 
@@ -56,13 +53,16 @@ export default function Header() {
 							className="text-sm font-medium text-gray-700 hover:text-black">
 							Shop
 						</Link>
-
 						<Link
-							href="/about"
+							href="/honey"
 							className="text-sm font-medium text-gray-700 hover:text-black">
-							About
+							Honey
 						</Link>
-
+						<Link
+							href="/ghee"
+							className="text-sm font-medium text-gray-700 hover:text-black">
+							Ghee
+						</Link>
 						<Link
 							href="/contact"
 							className="text-sm font-medium text-gray-700 hover:text-black">

@@ -6,11 +6,13 @@ import ShopFilters from '@/components/shop/ShopFillters';
 import ShopList from '@/components/shop/ShopLists';
 import { useProducts } from '@/hooks/useProducts';
 
+
 export default function ShopPage() {
 	const { isLoading, isFetching } = useProducts();
 
-	const products = useSelector((state) => state.product.products);
+	const {products} = useSelector((state) => state.product.products);
 
+	
 	const [filtered, setFiltered] = useState([]);
 
 	useEffect(() => {

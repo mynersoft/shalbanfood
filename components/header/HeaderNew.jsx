@@ -152,7 +152,6 @@ export default function Header() {
 
 	const cartQty = useSelector(selectCartTotalItems);
 
-	
 
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [cartOpen, setCartOpen] = useState(false);
