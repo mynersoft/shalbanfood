@@ -11,7 +11,7 @@ const TabContent = ({ product }) => {
   return (
     <div className="border-t border-gray-100">
       <div className="flex overflow-x-auto">
-        {['description', 'specifications', 'reviews'].map(
+        {['description', 'specifications'].map(
           (tab) => (
             <button
               key={tab}
