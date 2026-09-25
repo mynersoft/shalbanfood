@@ -27,7 +27,7 @@ export default function ProductCard({ product }) {
 	return (
 		<div className="group overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md">
 			{/* Image */}
-			<Link href={`/product/${product.slug}`}>
+			<Link href={`/${product.slug}`}>
 				<div className="relative aspect-square overflow-hidden bg-gray-100">
 					{product.featureImg ? (
 						<Image

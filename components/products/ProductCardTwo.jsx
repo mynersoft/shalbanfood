@@ -8,6 +8,7 @@ import { toggleWishlist } from '@/redux/store/slices/wishlistSlice';
 import ProductQuickView from './ProductQuickView';
 import Link from 'next/link';
 
+
 export default function ProductCard({ product }) {
 	const dispatch = useDispatch();
 	const wishlist = useSelector((state) => state.wishlist.items);
