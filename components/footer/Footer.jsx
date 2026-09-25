@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { socailMediaLinks, contactInfo } from '@/constants';
 import { FaWhatsapp } from 'react-icons/fa';
 
+//fjkjd
+
 const Footer = () => {
 	const [openSection, setOpenSection] = useState(null);
 
