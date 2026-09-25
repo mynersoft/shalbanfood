@@ -103,7 +103,7 @@ export const deleteCategory = createAsyncThunk(
 );
 
 const initialState = {
-  list: [],
+  categories: [],
   loading: false,
   error: null,
 };
@@ -130,7 +130,7 @@ const categorySlice = createSlice({
 
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.loading = false;
-        state.list = action.payload;
+        state.categories = action.payload;
       })
 
       .addCase(fetchCategories.rejected, (state, action) => {
@@ -147,7 +147,7 @@ const categorySlice = createSlice({
       .addCase(addCategory.fulfilled, (state, action) => {
         state.loading = false;
 
-        state.list.unshift(action.payload);
+        state.categories.unshift(action.payload);
       })
 
       .addCase(addCategory.rejected, (state, action) => {
@@ -164,12 +164,12 @@ const categorySlice = createSlice({
       .addCase(updateCategory.fulfilled, (state, action) => {
         state.loading = false;
 
-        const index = state.list.findIndex(
+        const index = state.categories.findIndex(
           (item) => item._id === action.payload._id
         );
 
         if (index !== -1) {
-          state.list[index] = action.payload;
+          state.categories[index] = action.payload;
         }
       })
 
@@ -187,9 +187,9 @@ const categorySlice = createSlice({
       .addCase(deleteCategory.fulfilled, (state, action) => {
         state.loading = false;
 
-        state.list = state.list.filter(
-          (item) => item._id !== action.payload
-        );
+        state.categories = state.categories.filter(
+			(item) => item._id !== action.payload
+		);
       })
 
       .addCase(deleteCategory.rejected, (state, action) => {

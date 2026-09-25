@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { addProduct, updateProduct, fetchProducts } from "@/redux/productSlice";
-import { fetchCategories } from "@/redux/categorySlice";
+import { fetchCategories } from "@/redux/store/slices/categorySlice";
 import toast from "react-hot-toast";
 
 // ===============================
@@ -57,7 +57,11 @@ export default function ProductFormModal({
   currentPage = 1,
 }) {
   const dispatch = useDispatch();
-  const { list: categories } = useSelector((state) => state.category);
+  const {categories}  = useSelector((state) => state.category);
+
+
+  console.log(categories);
+  
 
   const [form, setForm] = useState({
     name: "",

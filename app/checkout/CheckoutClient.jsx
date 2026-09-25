@@ -136,31 +136,15 @@ export default function CheckoutClient() {
 		return sum + price * Number(item.quantity || 1);
 	}, 0);
 
-	/*
-	|--------------------------------------------------------------------------
-	| Discount
-	|--------------------------------------------------------------------------
-	*/
+	/* Discount */
 
 	const discount = Number(applyVoucher?.discount || 0);
 
-	/*
-	|--------------------------------------------------------------------------
-	| Total
-	|--------------------------------------------------------------------------
-	|
-	| Total = Subtotal - Discount + Shipping
-	|
-	*/
+
 
 	const grandTotal = subtotal - discount + Number(shippingCost || 0);
 
-	/*
-	|--------------------------------------------------------------------------
-	| Voucher
-	|--------------------------------------------------------------------------
-	*/
-
+	
 	useEffect(() => {
 		setOrderData((prev) => ({
 			...prev,
@@ -168,11 +152,7 @@ export default function CheckoutClient() {
 		}));
 	}, [parentVoucher]);
 
-	/*
-	|--------------------------------------------------------------------------
-	| Input Change
-	|--------------------------------------------------------------------------
-	*/
+	
 
 	const handleChange = (e) => {
 		const { name, value } = e.target;
@@ -197,16 +177,70 @@ export default function CheckoutClient() {
 		}));
 	};
 
-	/*
-	|--------------------------------------------------------------------------
-	| Place Order
-	|--------------------------------------------------------------------------
-	*/
-
+	/* Place Order 	*/
 	const placeOrder = (payload) => {
 		mutation.mutate(payload, {
 			onSuccess: (res) => {
-				router.push(`/checkout/success?orderId=${res._id}`);
+				try {
+					const whatsappNumber = '01603816721';
+
+					const itemsText = payload.orderItems
+						.map(
+							(item, index) =>
+								`${index + 1}. ${item.name}
+   পরিমাণ: ${item.quantity}
+   দাম: ৳${Number(item.price).toFixed(0)}`
+						)
+						.join('\n\n');
+
+					const address = payload.shippingAddress;
+
+					const message = `🛒 শালবন ফুডে নতুন অর্ডার
+
+👤 নাম: ${payload.customer.name}
+📞 ফোন: ${payload.customer.phone}
+
+📍 ঠিকানা:
+থানা: ${address.thana || '-'}
+এলাকা: ${address.area || '-'}
+জেলা: ${address.city || '-'}
+
+📦 পণ্য:
+${itemsText}
+
+💰 মোট: ৳${Number(grandTotal).toFixed(0)}
+
+💳 পেমেন্ট: ক্যাশ অন ডেলিভারি
+
+অর্ডারটি কনফার্ম করার জন্য ধন্যবাদ ❤️`;
+
+					const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+						message
+					)}`;
+
+					// Show success toast
+					toast.success('অর্ডার সফল হয়েছে! whatsapp চেক করুন ');
+
+					// Open WhatsApp
+					const whatsappWindow = window.open(
+						whatsappUrl,
+						'_blank',
+						'noopener,noreferrer'
+					);
+
+					if (!whatsappWindow) {
+						toast.error(
+							'WhatsApp খুলতে পারেনি। Browser popup allow করুন।'
+						);
+					}
+					setProcessing(false);
+				} catch (error) {
+					console.error('WhatsApp error:', error);
+
+					toast.success('অর্ডার সফল হয়েছে! whatsapp চেক করুন ');
+
+					setProcessing(false);
+				}
 			},
 
 			onError: (error) => {
@@ -237,11 +271,7 @@ export default function CheckoutClient() {
 		const city = orderData.address.city.trim();
 		const thana = orderData.address.thana.trim();
 
-		/*
-		|--------------------------------------------------------------------------
-		| Required Validation
-		|--------------------------------------------------------------------------
-		*/
+		/* Required Validation */
 
 		if (!name) {
 			toast.error('Please enter your name');
@@ -299,12 +329,6 @@ export default function CheckoutClient() {
 			};
 		});
 
-		/*
-		|--------------------------------------------------------------------------
-		| Exact Order Model Payload
-		|--------------------------------------------------------------------------
-		*/
-
 		const payload = {
 			...(user?._id || user?.id
 				? {
@@ -333,8 +357,6 @@ export default function CheckoutClient() {
 				status: 'unpaid',
 			},
 		};
-
-		console.log('ORDER PAYLOAD:', payload);
 
 		setProcessing(true);
 

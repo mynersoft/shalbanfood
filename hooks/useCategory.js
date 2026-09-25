@@ -1,100 +1,167 @@
-import { setCategories } from '@/redux/store/slices/categorySlice';
+'use client';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
 
+import {
+	fetchCategories,
+	addCategory,
+	updateCategory,
+	deleteCategory,
+} from '@/redux/store/slices/categorySlice';
+
 const API_URL = '/api/categories';
 
-// Get all categories with subcategories
+// ========================================
+// GET ALL CATEGORIES
+// ========================================
 export const useCategories = () => {
-  const dispatch = useDispatch();
-  return useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      try {
-        const { data } = await axios.get(API_URL);
-        dispatch(setCategories(data));
-        return data;
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        // Return empty array on error
-        return [];
-      }
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+	const dispatch = useDispatch();
+
+	return useQuery({
+		queryKey: ['categories'],
+
+		queryFn: async () => {
+			const result = await dispatch(fetchCategories()).unwrap();
+
+			return Array.isArray(result) ? result : [];
+		},
+
+		staleTime: 5 * 60 * 1000,
+	});
 };
 
-
-
-
-// Add main category
+// ========================================
+// ADD CATEGORY
+// ========================================
 export const useAddCategory = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (categoryData) => {
-      const { data } = await axios.post(API_URL, categoryData);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['categories']);
-    },
-  });
+	const dispatch = useDispatch();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (categoryData) => {
+			const result = await dispatch(addCategory(categoryData)).unwrap();
+
+			return result;
+		},
+
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ['categories'],
+			});
+		},
+	});
 };
 
-// Add subcategory (this can also handle nested subcategories)
+// ========================================
+// ADD SUBCATEGORY
+// ========================================
+// Only keep this if your API supports:
+// POST /api/categories/:parentId/subcategories
 export const useAddSubCategory = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ parentId, subCategoryData }) => {
-      const { data } = await axios.post(
-        `${API_URL}/${parentId}/subcategories`,
-        subCategoryData
-      );
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['categories']);
-    },
-  });
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({ parentId, subCategoryData }) => {
+			if (!parentId) {
+				throw new Error('Parent category ID is required');
+			}
+
+			const { data } = await axios.post(
+				`${API_URL}/${parentId}/subcategories`,
+				subCategoryData
+			);
+
+			return data;
+		},
+
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ['categories'],
+			});
+		},
+	});
 };
 
-// Delete category
-export const useDeleteCategory = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id) => {
-      await axios.delete(`${API_URL}/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['categories']);
-    },
-  });
-};
-
-// Delete subcategory
-export const useDeleteSubCategory = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ slug, parentId }) => {
-      await axios.delete(`${API_URL}/subcategories/${slug}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['categories']);
-    },
-  });
-};
-
-// Update category (if needed)
+// ========================================
+// UPDATE CATEGORY
+// ========================================
 export const useUpdateCategory = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, data }) => {
-      const response = await axios.put(`${API_URL}/${id}`, data);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['categories']);
-    },
-  });
+	const dispatch = useDispatch();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({ id, ...data }) => {
+			if (!id) {
+				throw new Error('Category ID is required');
+			}
+
+			const result = await dispatch(
+				updateCategory({
+					id,
+					...data,
+				})
+			).unwrap();
+
+			return result;
+		},
+
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ['categories'],
+			});
+		},
+	});
+};
+
+// ========================================
+// DELETE CATEGORY
+// ========================================
+export const useDeleteCategory = () => {
+	const dispatch = useDispatch();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (id) => {
+			if (!id) {
+				throw new Error('Category ID is required');
+			}
+
+			return await dispatch(deleteCategory(id)).unwrap();
+		},
+
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ['categories'],
+			});
+		},
+	});
+};
+
+// ========================================
+// DELETE SUBCATEGORY
+// ========================================
+export const useDeleteSubCategory = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({ slug }) => {
+			if (!slug) {
+				throw new Error('Subcategory slug is required');
+			}
+
+			const { data } = await axios.delete(
+				`${API_URL}/subcategories/${slug}`
+			);
+
+			return data;
+		},
+
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ['categories'],
+			});
+		},
+	});
 };
