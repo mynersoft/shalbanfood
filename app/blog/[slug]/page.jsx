@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { connectDB } from '../../../lib/mongodb';
-import Blog from '../../../models/Blog';
+import { connectDB } from '@/lib/dbConnect;
+import Blog from '@/models/Blog';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://shalbanfood.com';
 
