@@ -1,5 +1,5 @@
 import {connectDB} from "@/lib/dbConnect";
-import AyBay from "@/models/Aybay";
+import AyBay from "@/models/AyBay";
 
 export async function GET() {
   await connectDB();
