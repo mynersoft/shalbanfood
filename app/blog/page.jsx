@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { connectDB } from "@/lib/db";
+import { connectDB } from "@/lib/dbConnect";
 import Blog from "@/models/Blog";
 
 const SITE_URL =
