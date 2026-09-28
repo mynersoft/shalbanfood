@@ -9,7 +9,7 @@ import {
 	addBlog,
 	updateBlog,
 	deleteBlog,
-} from '../store/slices/blogSlice';
+} from '@/redux/store/slices/blogSlice';
 
 async function fetchBlogs({ status = '', search = '', page = 1, limit = 10 }) {
 	const params = new URLSearchParams();
