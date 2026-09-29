@@ -23,7 +23,7 @@ export default function CategoriesPage() {
   const dispatch = useDispatch();
 
   const { list, loading, error } = useSelector(
-    (state) => state.categories
+    (state) => state.category
   );
 
   const [editingCategory, setEditingCategory] = useState(null);

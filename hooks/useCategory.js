@@ -21,6 +21,7 @@ export const useCategories = () => {
 
 	return useQuery({
 		queryKey: ['categories'],
+		
 
 		queryFn: async () => {
 			const result = await dispatch(fetchCategories()).unwrap();
