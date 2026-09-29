@@ -124,6 +124,7 @@ export default function CategoriesPage() {
           )}
         </div>
 
+        
         {/* Error */}
         {error && (
           <div className="mb-5 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
