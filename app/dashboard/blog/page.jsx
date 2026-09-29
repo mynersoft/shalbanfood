@@ -13,14 +13,14 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import BlogForm from '../../../../components/blog/BlogForm';
+import BlogForm from '@/components/blog/BlogForm';
 
 import {
 	useBlogs,
 	useCreateBlog,
 	useUpdateBlog,
 	useDeleteBlog,
-} from '../../../../hooks/useBlogs';
+} from '@/hooks/useBlogs';
 
 export default function AdminBlogsPage() {
 	const [showForm, setShowForm] = useState(false);

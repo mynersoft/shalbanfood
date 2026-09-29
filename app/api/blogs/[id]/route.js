@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '../../../../lib/mongodb';
-import Blog from '../../../../models/Blog';
+import { connectDB } from '@/lib/dbConnect';
+import Blog from '@/models/Blog';
 
 export const runtime = 'nodejs';
 
