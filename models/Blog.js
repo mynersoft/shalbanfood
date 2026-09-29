@@ -6,30 +6,34 @@ const BlogSchema = new mongoose.Schema(
 			type: String,
 			required: true,
 			trim: true,
-			maxlength: 180,
 		},
 
 		slug: {
 			type: String,
 			required: true,
 			unique: true,
-			lowercase: true,
 			trim: true,
-			index: true,
+			lowercase: true,
 		},
 
 		excerpt: {
 			type: String,
+			default: '',
 			trim: true,
-			maxlength: 300,
 		},
 
 		content: {
 			type: String,
 			required: true,
+			default: '',
 		},
 
 		featuredImage: {
+			type: String,
+			default: '',
+		},
+
+		featuredImagePublicId: {
 			type: String,
 			default: '',
 		},
@@ -48,18 +52,19 @@ const BlogSchema = new mongoose.Schema(
 		author: {
 			type: String,
 			default: 'Shalban Food',
+			trim: true,
 		},
 
 		seoTitle: {
 			type: String,
+			default: '',
 			trim: true,
-			maxlength: 70,
 		},
 
 		seoDescription: {
 			type: String,
+			default: '',
 			trim: true,
-			maxlength: 160,
 		},
 
 		keywords: {
@@ -77,29 +82,16 @@ const BlogSchema = new mongoose.Schema(
 			type: String,
 			enum: ['draft', 'published'],
 			default: 'draft',
-			index: true,
 		},
 
 		publishedAt: {
 			type: Date,
 			default: null,
 		},
-
-		views: {
-			type: Number,
-			default: 0,
-		},
 	},
 	{
 		timestamps: true,
 	}
 );
-
-BlogSchema.index({
-	title: 'text',
-	excerpt: 'text',
-	content: 'text',
-	tags: 'text',
-});
 
 export default mongoose.models.Blog || mongoose.model('Blog', BlogSchema);

@@ -1,19 +1,25 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/dbConnect';
+import {connectDB} from '@/lib/dbConnect';
 import Blog from '@/models/Blog';
 
 export const runtime = 'nodejs';
 
-function makeSlug(text) {
-	return text
-		.toString()
-		.trim()
+function cleanArray(value) {
+	if (!Array.isArray(value)) return [];
+
+	return value.map((item) => String(item).trim()).filter(Boolean);
+}
+
+function slugify(text) {
+	return String(text)
 		.toLowerCase()
+		.trim()
 		.replace(/[^\w\s-]/g, '')
 		.replace(/\s+/g, '-')
 		.replace(/-+/g, '-');
 }
 
+// GET /api/blogs
 export async function GET(request) {
 	try {
 		await connectDB();
@@ -21,66 +27,54 @@ export async function GET(request) {
 		const { searchParams } = new URL(request.url);
 
 		const status = searchParams.get('status');
-		const search = searchParams.get('search');
-		const page = Math.max(parseInt(searchParams.get('page') || '1'), 1);
+		const slug = searchParams.get('slug');
 
-		const limit = Math.min(
-			Math.max(parseInt(searchParams.get('limit') || '10'), 1),
-			50
-		);
+		if (slug) {
+			const blog = await Blog.findOne({ slug }).lean();
 
-		const skip = (page - 1) * limit;
+			if (!blog) {
+				return NextResponse.json(
+					{
+						success: false,
+						message: 'Blog not found',
+					},
+					{ status: 404 }
+				);
+			}
 
-		const query = {};
-
-		if (status) {
-			query.status = status;
+			return NextResponse.json({
+				success: true,
+				blog,
+			});
 		}
 
-		if (search) {
-			query.$or = [
-				{ title: { $regex: search, $options: 'i' } },
-				{ excerpt: { $regex: search, $options: 'i' } },
-				{ tags: { $regex: search, $options: 'i' } },
-			];
+		const filter = {};
+
+		if (status === 'published' || status === 'draft') {
+			filter.status = status;
 		}
 
-		const [blogs, total] = await Promise.all([
-			Blog.find(query)
-				.sort({
-					publishedAt: -1,
-					createdAt: -1,
-				})
-				.skip(skip)
-				.limit(limit)
-				.lean(),
-
-			Blog.countDocuments(query),
-		]);
+		const blogs = await Blog.find(filter).sort({ createdAt: -1 }).lean();
 
 		return NextResponse.json({
 			success: true,
-			data: blogs,
-			pagination: {
-				page,
-				limit,
-				total,
-				totalPages: Math.ceil(total / limit),
-			},
+			count: blogs.length,
+			blogs,
 		});
 	} catch (error) {
-		console.error('GET BLOGS ERROR:', error);
+		console.error('GET /api/blogs error:', error);
 
 		return NextResponse.json(
 			{
 				success: false,
-				message: 'Failed to fetch blogs',
+				message: error.message || 'Failed to fetch blogs',
 			},
 			{ status: 500 }
 		);
 	}
 }
 
+// POST /api/blogs
 export async function POST(request) {
 	try {
 		await connectDB();
@@ -93,6 +87,7 @@ export async function POST(request) {
 			excerpt,
 			content,
 			featuredImage,
+			featuredImagePublicId,
 			category,
 			tags,
 			author,
@@ -103,58 +98,97 @@ export async function POST(request) {
 			status,
 		} = body;
 
-		if (!title || !content) {
+		if (!title?.trim()) {
 			return NextResponse.json(
 				{
 					success: false,
-					message: 'Title and content are required',
+					message: 'Blog title is required',
 				},
 				{ status: 400 }
 			);
 		}
 
-		let finalSlug = slug ? makeSlug(slug) : makeSlug(title);
+		if (!content?.trim()) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'Blog content is required',
+				},
+				{ status: 400 }
+			);
+		}
 
-		const existing = await Blog.findOne({
+		const finalSlug = slugify(slug || title);
+
+		if (!finalSlug) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'Valid slug is required',
+				},
+				{ status: 400 }
+			);
+		}
+
+		const existingBlog = await Blog.findOne({
 			slug: finalSlug,
 		});
 
-		if (existing) {
-			finalSlug = `${finalSlug}-${Date.now()}`;
+		if (existingBlog) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'A blog with this slug already exists',
+				},
+				{ status: 409 }
+			);
 		}
 
+		const finalStatus = status === 'published' ? 'published' : 'draft';
+
 		const blog = await Blog.create({
-			title,
+			title: title.trim(),
 			slug: finalSlug,
-			excerpt: excerpt || '',
-			content,
+			excerpt: excerpt?.trim() || '',
+			content: content.trim(),
 			featuredImage: featuredImage || '',
-			category: category || 'Food & Nutrition',
-			tags: Array.isArray(tags) ? tags : [],
-			author: author || 'Shalban Food',
-			seoTitle: seoTitle || title,
-			seoDescription: seoDescription || excerpt || title,
-			keywords: Array.isArray(keywords) ? keywords : [],
-			canonicalUrl: canonicalUrl || '',
-			status: status || 'draft',
-			publishedAt: status === 'published' ? new Date() : null,
+			featuredImagePublicId: featuredImagePublicId || '',
+			category: category?.trim() || 'Food & Nutrition',
+			tags: cleanArray(tags),
+			author: author?.trim() || 'Shalban Food',
+			seoTitle: seoTitle?.trim() || title.trim(),
+			seoDescription: seoDescription?.trim() || excerpt?.trim() || '',
+			keywords: cleanArray(keywords),
+			canonicalUrl: canonicalUrl?.trim() || '',
+			status: finalStatus,
+			publishedAt: finalStatus === 'published' ? new Date() : null,
 		});
 
 		return NextResponse.json(
 			{
 				success: true,
 				message: 'Blog created successfully',
-				data: blog,
+				blog,
 			},
 			{ status: 201 }
 		);
 	} catch (error) {
-		console.error('CREATE BLOG ERROR:', error);
+		console.error('POST /api/blogs error:', error);
+
+		if (error.code === 11000) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'Blog slug already exists',
+				},
+				{ status: 409 }
+			);
+		}
 
 		return NextResponse.json(
 			{
 				success: false,
-				message: 'Failed to create blog',
+				message: error.message || 'Failed to create blog',
 			},
 			{ status: 500 }
 		);
