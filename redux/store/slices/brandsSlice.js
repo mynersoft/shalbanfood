@@ -1,33 +1,50 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+const initialState = {
+    items: [],
+};
 
-/* ================= SLICE ================= */
-const brandSlice = createSlice({
-  name: 'brand',
-  initialState: {
-    loading: false,
-    success: false,
-    error: null,
-    brands: [],
-    brand: {},
-  },
+const brandsSlice = createSlice({
+    name: 'brands',
 
-  reducers: {
-    removeBrand: (state, action) => {
-      state.brands = state.brands.filter(
-        (brand) => brand._id !== action.payload
-      );
+    initialState,
+
+    reducers: {
+        setBrands: (state, action) => {
+            state.items = action.payload || [];
+        },
+
+        addBrand: (state, action) => {
+            if (action.payload) {
+                state.items.unshift(action.payload);
+            }
+        },
+
+        updateBrand: (state, action) => {
+            const updatedBrand = action.payload;
+
+            const index = state.items.findIndex(
+                (brand) => brand._id === updatedBrand._id
+            );
+
+            if (index !== -1) {
+                state.items[index] = updatedBrand;
+            }
+        },
+
+        removeBrand: (state, action) => {
+            state.items = state.items.filter(
+                (brand) => brand._id !== action.payload
+            );
+        },
     },
-    setBrands(state, action) {
-      state.brands = action.payload.brands;
-    },
-    addBrand(state, action) {
-      state.brands = [...state.brands, action.payload.brand];
-    },
-  },
-  extraReducers: () => {},
 });
 
-export const { setBrands, addBrand, removeBrand } =
-  brandSlice.actions;
-export default brandSlice.reducer;
+export const {
+    setBrands,
+    addBrand,
+    updateBrand,
+    removeBrand,
+} = brandsSlice.actions;
+
+export default brandsSlice.reducer;
