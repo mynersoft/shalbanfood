@@ -24,7 +24,7 @@ import {
     useDeleteCategory,
     useAddSubCategory,
     useDeleteSubCategory,
-} from '@/hooks/useCategories';
+} from '@/hooks/useCategory';
 
 export default function CategoriesPage() {
     const [search, setSearch] = useState('');
