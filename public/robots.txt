@@ -1,8 +1,13 @@
 User-agent: *
 Allow: /
 
+# Prevent crawling private/admin areas
 Disallow: /admin/
+Disallow: /dashboard/
 Disallow: /api/
+Disallow: /login/
+Disallow: /register/
+Disallow: /account/
 
-Sitemap: https://tomartbd.vercel
-app/sitemap.xml
+# Sitemap
+Sitemap: https://shalbanfood.vercel.app/sitemap.xml
