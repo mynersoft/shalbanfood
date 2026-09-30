@@ -1,22 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <urlset
-      xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://tomartbd.vercel.app</loc>
-    <lastmod>2025-12-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://tomartbd.vercel.app/products</loc>
-    <lastmod>2025-12-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://tomartbd.vercel.app/categories</loc>
-    <lastmod>2025-12-14</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
+    xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+    <!-- Homepage -->
+    <url>
+        <loc>https://shalbanfood.vercel.app/</loc>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+
+    <!-- Shop -->
+    <url>
+        <loc>https://shalbanfood.vercel.app/shop</loc>
+        <changefreq>daily</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <!-- About Us -->
+    <url>
+        <loc>https://shalbanfood.vercel.app/about-us</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <!-- Contact Us -->
+    <url>
+        <loc>https://shalbanfood.vercel.app/contact-us</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.6</priority>
+    </url>
+
+    <!-- Privacy Policy -->
+    <url>
+        <loc>https://shalbanfood.vercel.app/privacy-policy</loc>
+        <changefreq>yearly</changefreq>
+        <priority>0.4</priority>
+    </url>
+
+    <!-- Terms & Conditions -->
+    <url>
+        <loc>https://shalbanfood.vercel.app/terms-conditions</loc>
+        <changefreq>yearly</changefreq>
+        <priority>0.4</priority>
+    </url>
+
 </urlset>
