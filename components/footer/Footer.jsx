@@ -353,4 +353,94 @@ const Footer = () => {
                                                                                                         }
                                                                                                 </Link>
                                                                                         </li>
-                                                                               
+                                                                                )
+                                                                        )}
+                                                                </ul>
+                                                        )}
+                                                </div>
+
+                                                {/* Company */}
+                                                <div className="border-t border-gray-200 pt-4">
+                                                        <button
+                                                                onClick={() =>
+                                                                        toggleSection('company')
+                                                                }
+                                                                className="w-full flex items-center justify-between text-left"
+                                                        >
+                                                                <span className="font-bold text-gray-900">
+                                                                        Shalban Food
+                                                                </span>
+
+                                                                {openSection === 'company' ? (
+                                                                        <ChevronUp className="w-5 h-5 text-gray-500" />
+                                                                ) : (
+                                                                        <ChevronDown className="w-5 h-5 text-gray-500" />
+                                                                )}
+                                                        </button>
+
+                                                        {openSection === 'company' && (
+                                                                <ul className="mt-4 space-y-3">
+                                                                        {company.map((item) => (
+                                                                                <li
+                                                                                        key={item.slug}
+                                                                                >
+                                                                                        <Link
+                                                                                                href={`/${item.slug}`}
+                                                                                                className="text-gray-500 hover:text-green-600 text-sm block"
+                                                                                        >
+                                                                                                {
+                                                                                                        item.name
+                                                                                                }
+                                                                                        </Link>
+                                                                                </li>
+                                                                        ))}
+                                                                </ul>
+                                                        )}
+                                                </div>
+                                        </div>
+                                </div>
+                        </div>
+
+                        {/* Bottom Footer */}
+                        <div className="border-t border-gray-200 bg-gray-50">
+                                <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-5">
+
+                                        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+
+                                                <p className="text-gray-500 text-xs md:text-sm text-center md:text-left">
+                                                        © {new Date().getFullYear()} Shalban Food.
+                                                        All rights reserved.
+                                                </p>
+
+                                                <div className="flex flex-wrap justify-center items-center gap-4 md:gap-6">
+
+                                                        <img
+                                                                src="/secure.svg"
+                                                                alt="SSL Secure"
+                                                                className="h-6 md:h-8 w-auto"
+                                                                loading="lazy"
+                                                        />
+
+                                                        <img
+                                                                src="/mastercard.svg"
+                                                                alt="Mastercard"
+                                                                className="h-6 md:h-8 w-auto"
+                                                                loading="lazy"
+                                                        />
+
+                                                        <img
+                                                                src="/cod.svg"
+                                                                alt="Cash on Delivery"
+                                                                className="h-6 md:h-8 w-auto"
+                                                                loading="lazy"
+                                                        />
+
+                                                </div>
+                                        </div>
+                                </div>
+                        </div>
+                </footer>
+        );
+};
+
+export default Footer;
