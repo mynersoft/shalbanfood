@@ -23,11 +23,21 @@ const menuItems = [
 		href: '/dashboard',
 		icon: LayoutDashboard,
 	},
+
+
 	{
 		name: 'Products',
 		href: '/dashboard/products',
 		icon: Package,
 	},
+
+{
+		name: 'Brands',
+		href: '/dashboard/brands',
+		icon: Package,
+	},
+
+
 	{
 		name: 'Categories',
 		href: '/dashboard/categories',
