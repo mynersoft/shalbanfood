@@ -4,9 +4,9 @@ import { useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
 import { useAddOrder } from '@/hooks/useOrder';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import useLoginUser from '@/hooks/useAuth';
-
 import ShippingInfo from './ShippingInfo';
 import { shippingCost } from '@/utils/shippingCost';
 
@@ -26,23 +26,31 @@ import CartItems from '@/components/Cart/CartItems';
 import CheckEmptyCart from '@/components/Cart/CheckEmptyCart';
 
 export default function CheckoutClient() {
+	const router = useRouter();
+
+	/* =========================================================
+	   AUTH
+	========================================================= */
+
+	const { status } = useSession();
 	const { user } = useLoginUser();
+
+	/* =========================================================
+	   REDUX
+	========================================================= */
 
 	const cart = useSelector((state) => state.cart.items);
 	const { applyVoucher } = useSelector((state) => state.voucher);
 
-	const router = useRouter();
+	/* =========================================================
+	   ORDER
+	========================================================= */
+
 	const mutation = useAddOrder();
 
 	const [processing, setProcessing] = useState(false);
 
 	const [parentVoucher, setParentVoucher] = useState('');
-
-	/*
-	|--------------------------------------------------------------------------
-	| Customer + Order State
-	|--------------------------------------------------------------------------
-	*/
 
 	const [orderData, setOrderData] = useState({
 		customer: {
@@ -68,11 +76,30 @@ export default function CheckoutClient() {
 		},
 	});
 
-	/*
-	|--------------------------------------------------------------------------
-	| Cart Items
-	|--------------------------------------------------------------------------
-	*/
+	/* =========================================================
+	   LOGIN CHECK
+	========================================================= */
+
+	useEffect(() => {
+		if (status === 'unauthenticated') {
+			toast.error('Checkout করতে প্রথমে Login করুন', {
+				id: 'checkout-login-required',
+				duration: 2500,
+			});
+
+			const timer = setTimeout(() => {
+				router.replace(
+					`/auth/login?callbackUrl=${encodeURIComponent('/checkout')}`
+				);
+			}, 1200);
+
+			return () => clearTimeout(timer);
+		}
+	}, [status, router]);
+
+	/* =========================================================
+	   CART ITEMS
+	========================================================= */
 
 	useEffect(() => {
 		setOrderData((prev) => ({
@@ -81,11 +108,9 @@ export default function CheckoutClient() {
 		}));
 	}, [cart]);
 
-	/*
-	|--------------------------------------------------------------------------
-	| Logged-in User Auto Fill
-	|--------------------------------------------------------------------------
-	*/
+	/* =========================================================
+	   AUTO FILL LOGGED-IN USER
+	========================================================= */
 
 	useEffect(() => {
 		if (!user) return;
@@ -111,11 +136,9 @@ export default function CheckoutClient() {
 		}));
 	}, [user]);
 
-	/*
-	|--------------------------------------------------------------------------
-	| Subtotal
-	|--------------------------------------------------------------------------
-	*/
+	/* =========================================================
+	   SUBTOTAL
+	========================================================= */
 
 	const subtotal = cart.reduce((sum, item) => {
 		let price = Number(item.salePrice) || 0;
@@ -136,15 +159,18 @@ export default function CheckoutClient() {
 		return sum + price * Number(item.quantity || 1);
 	}, 0);
 
-	/* Discount */
+	/* =========================================================
+	   DISCOUNT
+	========================================================= */
 
 	const discount = Number(applyVoucher?.discount || 0);
 
-
-
 	const grandTotal = subtotal - discount + Number(shippingCost || 0);
 
-	
+	/* =========================================================
+	   VOUCHER
+	========================================================= */
+
 	useEffect(() => {
 		setOrderData((prev) => ({
 			...prev,
@@ -152,7 +178,9 @@ export default function CheckoutClient() {
 		}));
 	}, [parentVoucher]);
 
-	
+	/* =========================================================
+	   HANDLE CHANGE
+	========================================================= */
 
 	const handleChange = (e) => {
 		const { name, value } = e.target;
@@ -162,6 +190,7 @@ export default function CheckoutClient() {
 
 			setOrderData((prev) => ({
 				...prev,
+
 				[parent]: {
 					...prev[parent],
 					[child]: value,
@@ -177,10 +206,13 @@ export default function CheckoutClient() {
 		}));
 	};
 
-	/* Place Order 	*/
+	/* =========================================================
+	   PLACE ORDER
+	========================================================= */
+
 	const placeOrder = (payload) => {
 		mutation.mutate(payload, {
-			onSuccess: (res) => {
+			onSuccess: () => {
 				try {
 					const whatsappNumber = '01603816721';
 
@@ -188,8 +220,8 @@ export default function CheckoutClient() {
 						.map(
 							(item, index) =>
 								`${index + 1}. ${item.name}
-   পরিমাণ: ${item.quantity}
-   দাম: ৳${Number(item.price).toFixed(0)}`
+পরিমাণ: ${item.quantity}
+দাম: ৳${Number(item.price).toFixed(0)}`
 						)
 						.join('\n\n');
 
@@ -214,14 +246,12 @@ ${itemsText}
 
 অর্ডারটি কনফার্ম করার জন্য ধন্যবাদ ❤️`;
 
-					const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-						message
-					)}`;
+					const whatsappUrl =
+						`https://wa.me/${whatsappNumber}` +
+						`?text=${encodeURIComponent(message)}`;
 
-					// Show success toast
-					toast.success('অর্ডার সফল হয়েছে! whatsapp চেক করুন ');
+					toast.success('অর্ডার সফল হয়েছে! WhatsApp চেক করুন');
 
-					// Open WhatsApp
 					const whatsappWindow = window.open(
 						whatsappUrl,
 						'_blank',
@@ -233,11 +263,12 @@ ${itemsText}
 							'WhatsApp খুলতে পারেনি। Browser popup allow করুন।'
 						);
 					}
+
 					setProcessing(false);
 				} catch (error) {
 					console.error('WhatsApp error:', error);
 
-					toast.success('অর্ডার সফল হয়েছে! whatsapp চেক করুন ');
+					toast.success('অর্ডার সফল হয়েছে!');
 
 					setProcessing(false);
 				}
@@ -256,22 +287,38 @@ ${itemsText}
 		});
 	};
 
-	/*
-	|--------------------------------------------------------------------------
-	| Confirm Order
-	|--------------------------------------------------------------------------
-	*/
+	/* =========================================================
+	   CONFIRM ORDER
+	========================================================= */
 
 	const handleConfirmOrder = () => {
+		/* Extra security check */
+
+		if (status !== 'authenticated' || !user) {
+			toast.error('অর্ডার করতে প্রথমে Login করুন', {
+				id: 'order-login-required',
+			});
+
+			router.replace(
+				`/auth/login?callbackUrl=${encodeURIComponent('/checkout')}`
+			);
+
+			return;
+		}
+
 		const name = orderData.customer.name.trim();
+
 		const email = orderData.customer.email.trim();
+
 		const phone = orderData.customer.phone.trim();
 
 		const area = orderData.address.area.trim();
+
 		const city = orderData.address.city.trim();
+
 		const thana = orderData.address.thana.trim();
 
-		/* Required Validation */
+		/* Required validation */
 
 		if (!name) {
 			toast.error('Please enter your name');
@@ -293,11 +340,9 @@ ${itemsText}
 			return;
 		}
 
-		/*
-		|--------------------------------------------------------------------------
-		| Create Order Items According To Order Model
-		|--------------------------------------------------------------------------
-		*/
+		/* =====================================================
+		   ORDER ITEMS
+		===================================================== */
 
 		const orderItems = cart.map((item) => {
 			let price = Number(item.salePrice) || 0;
@@ -329,12 +374,12 @@ ${itemsText}
 			};
 		});
 
+		/* =====================================================
+		   PAYLOAD
+		===================================================== */
+
 		const payload = {
-			...(user?._id || user?.id
-				? {
-						userId: user._id || user.id,
-					}
-				: {}),
+			userId: user?.id || user?._id || undefined,
 
 			customer: {
 				name,
@@ -363,22 +408,80 @@ ${itemsText}
 		placeOrder(payload);
 	};
 
-	/*
-	|--------------------------------------------------------------------------
-	| Empty Cart
-	|--------------------------------------------------------------------------
-	*/
+	/* =========================================================
+	   SESSION LOADING
+	========================================================= */
+
+	if (status === 'loading') {
+		return (
+			<div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+				<div className="flex flex-col items-center gap-3">
+					<Loader2
+						size={32}
+						className="animate-spin text-emerald-600"
+					/>
+
+					<p className="text-sm text-gray-500">
+						Checkout যাচাই করা হচ্ছে...
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	/* =========================================================
+	   NOT LOGGED IN
+	========================================================= */
+
+	if (status === 'unauthenticated') {
+		return (
+			<div className="min-h-screen bg-[#fafafa] flex items-center justify-center px-4">
+				<div className="w-full max-w-md bg-white border border-gray-200 rounded-2xl p-8 text-center shadow-sm">
+					<div className="w-16 h-16 mx-auto rounded-full bg-emerald-50 flex items-center justify-center">
+						<Lock size={28} className="text-emerald-600" />
+					</div>
+
+					<h2 className="text-xl font-bold text-gray-900 mt-5">
+						Login Required
+					</h2>
+
+					<p className="text-sm text-gray-500 mt-2">
+						Checkout করতে প্রথমে Login করতে হবে।
+					</p>
+
+					<button
+						type="button"
+						onClick={() =>
+							router.replace(
+								`/auth/login?callbackUrl=${encodeURIComponent(
+									'/checkout'
+								)}`
+							)
+						}
+						className="mt-6 w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition">
+						Login করুন
+					</button>
+				</div>
+			</div>
+		);
+	}
+
+	/* =========================================================
+	   EMPTY CART
+	========================================================= */
 
 	if (cart.length === 0) {
 		return <CheckEmptyCart />;
 	}
 
+	/* =========================================================
+	   CHECKOUT
+	========================================================= */
+
 	return (
 		<div className="min-h-screen bg-[#fafafa]">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
-				{/* =====================================================
-				    HEADER
-				===================================================== */}
+				{/* HEADER */}
 
 				<div className="mb-7">
 					<button
@@ -398,19 +501,13 @@ ${itemsText}
 					</p>
 				</div>
 
-				{/* =====================================================
-				    MAIN GRID
-				===================================================== */}
+				{/* MAIN GRID */}
 
 				<div className="grid grid-cols-1 lg:grid-cols-[1fr_410px] gap-6 lg:gap-8">
-					{/* =================================================
-					    LEFT
-					================================================= */}
+					{/* LEFT */}
 
 					<div className="space-y-6">
-						{/* =============================================
-						    CUSTOMER INFORMATION
-						============================================= */}
+						{/* CUSTOMER */}
 
 						<div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
 							<div className="flex items-center gap-3 mb-6">
@@ -424,9 +521,7 @@ ${itemsText}
 									</h2>
 
 									<p className="text-xs text-gray-500 mt-0.5">
-										{user
-											? 'Your account information'
-											: 'You can order without creating an account'}
+										Your account information
 									</p>
 								</div>
 							</div>
@@ -506,9 +601,7 @@ ${itemsText}
 							</div>
 						</div>
 
-						{/* =============================================
-						    SHIPPING
-						============================================= */}
+						{/* SHIPPING */}
 
 						<div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
 							<div className="flex items-center gap-3 mb-6">
@@ -541,8 +634,10 @@ ${itemsText}
 									if (name === 'phone') {
 										setOrderData((prev) => ({
 											...prev,
+
 											customer: {
 												...prev.customer,
+
 												phone: value,
 											},
 										}));
@@ -550,31 +645,12 @@ ${itemsText}
 										return;
 									}
 
-									if (name.includes('.')) {
-										const [parent, child] = name.split('.');
-
-										setOrderData((prev) => ({
-											...prev,
-											[parent]: {
-												...prev[parent],
-												[child]: value,
-											},
-										}));
-
-										return;
-									}
-
-									setOrderData((prev) => ({
-										...prev,
-										[name]: value,
-									}));
+									handleChange(e);
 								}}
 							/>
 						</div>
 
-						{/* =============================================
-						    COD
-						============================================= */}
+						{/* PAYMENT */}
 
 						<div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
 							<div className="flex items-center gap-3 mb-5">
@@ -628,14 +704,11 @@ ${itemsText}
 
 							<div className="flex items-center gap-2 mt-4 text-xs text-gray-500">
 								<Lock size={13} />
-
 								<span>No online payment required.</span>
 							</div>
 						</div>
 
-						{/* =============================================
-						    MOBILE ITEMS
-						============================================= */}
+						{/* MOBILE ITEMS */}
 
 						<div className="lg:hidden bg-white border border-gray-200 rounded-2xl p-5">
 							<div className="flex items-center justify-between mb-5">
@@ -661,9 +734,7 @@ ${itemsText}
 						</div>
 					</div>
 
-					{/* =================================================
-					    RIGHT
-					================================================= */}
+					{/* RIGHT */}
 
 					<div className="space-y-6">
 						{/* DESKTOP ITEMS */}
@@ -691,9 +762,7 @@ ${itemsText}
 							<CartItems subtotal={subtotal} />
 						</div>
 
-						{/* =============================================
-						    SUMMARY
-						============================================= */}
+						{/* SUMMARY */}
 
 						<div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 lg:sticky lg:top-6">
 							<h2 className="font-semibold text-gray-900 text-lg mb-5">
@@ -763,9 +832,7 @@ ${itemsText}
 								</div>
 							</div>
 
-							{/* =========================================
-							    PLACE ORDER
-							========================================= */}
+							{/* PLACE ORDER */}
 
 							<button
 								type="button"

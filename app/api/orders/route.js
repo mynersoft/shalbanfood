@@ -12,6 +12,7 @@ import { shippingCost } from '@/utils/shippingCost';
 
 export const runtime = 'nodejs';
 
+
 export async function GET(req) {
 	try {
 		const url = new URL(req.url);

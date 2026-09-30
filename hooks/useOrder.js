@@ -30,6 +30,28 @@ export function useOrders() {
   });
 }
 
+
+
+
+// get all single user orders 
+
+export const useUserOrders = (userId) => {
+	return useQuery({
+		queryKey: ['user-orders', userId],
+		queryFn: async () => {
+			const { data } = await axios.get(`/api/orders/user/${userId}`);
+			return data;
+		},
+		enabled: !!userId,
+	});
+};
+
+
+
+
+
+
+
 // single order  by userId
 export function useSingleOrder(userId) {
   const dispatch = useDispatch();
@@ -40,7 +62,7 @@ export function useSingleOrder(userId) {
         throw new Error('Order ID is required');
       }
       try {
-        const res = await axios.get(`/api/orders/userid/${userId}`);
+        const res = await axios.get(`/api/orders/userId/${userId}`);
 
         if (!res.data.success) {
           throw new Error(res.data.error || 'Failed to fetch order');

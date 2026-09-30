@@ -1,44 +1,44 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose from 'mongoose';
 
-const UserSchema = new Schema(
+const UserSchema = new mongoose.Schema(
 	{
-		name: { type: String, required: true, trim: true },
-		email: {
+		name: {
 			type: String,
 			required: true,
-			unique: true,
-			lowercase: true,
-			index: true,
 			trim: true,
 		},
-		phone: { type: String, unique: true, sparse: true, trim: true },
-		password: { type: String, required: true, select: false },
+
+		email: {
+			type: String,
+			lowercase: true,
+			trim: true,
+			unique: true,
+			sparse: true,
+			default: undefined,
+		},
+
+		phone: {
+			type: String,
+			trim: true,
+			unique: true,
+			sparse: true,
+			default: undefined,
+		},
+
+		password: {
+			type: String,
+			required: true,
+		},
+
 		role: {
 			type: String,
-			enum: ['user', 'admin', 'seller'],
+			enum: ['user', 'admin'],
 			default: 'user',
 		},
-		address: {
-			area: { type: String, trim: true },
-			thana: { type: String, trim: true },
-			city: { type: String, trim: true },
-		},
-		products: [
-			{ type: Schema.Types.ObjectId, ref: 'Product', default: [] },
-		],
-		shopName: String,
-		shopAddress: String,
-		bankAccount: String,
-		bankName: String,
-		bankBranch: String,
-		avatar: String,
-		isVerified: { type: Boolean, default: false },
-		otp: { type: String, select: false },
-		otpExpiresAt: { type: Date, select: false },
 	},
-	{ timestamps: true }
+	{
+		timestamps: true,
+	}
 );
 
-const User = mongoose.models.User || mongoose.model('User', UserSchema);
-
-export default User;
+export default mongoose.models.User || mongoose.model('User', UserSchema);
