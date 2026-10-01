@@ -2,7 +2,7 @@ import './globals.css';
 
 import InternetStatus from '@/components/InternetStatus';
 import { GlobalInitializer } from '@/components/fetch/GlobalInitializer';
-import Header from '@/components/header/Header';
+import Header from '@/components/header/HeaderNew';
 import Footer from '@/components/footer/Footer';
 import { Toaster } from 'react-hot-toast';
 import Providers from './providers';
