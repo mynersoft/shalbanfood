@@ -1,199 +1,562 @@
 'use client';
 
-import { useState } from 'react';
-import {
-	Menu,
-	ShoppingBag,
-	X,
-	Search,
-	Heart,
-	GitCompare,
-	User,
-	Home,
-	Info,
-	Mail,
-	Youtube,
-} from 'lucide-react';
+import Link from 'next/link';
 import Image from 'next/image';
-import { useSelector } from 'react-redux';
+import { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import {
-	initCartFromStorage,
-	selectCartTotalItems,
+    Menu,
+    X,
+    ShoppingCart,
+    ChevronRight,
+    Trash2,
+    Search,
+    User,
+    Heart,
+    ArrowRight,
+} from 'lucide-react';
+
+import {
+    selectCartTotalItems,
+    removeFromCart,
 } from '@/redux/store/slices/cartSlice';
-import CardDrawer from './CardDrawer';
 
-/* ---------------- OVERLAY ---------------- */
-const Overlay = ({ onClick }) => (
-	<div
-		onClick={onClick}
-		className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
-	/>
-);
-
-/* ---------------- CART ---------------- */
-const ShoppingCart = ({ isOpen, onClose, cartItems }) => {
-	if (!isOpen) return null;
-
-	const subtotal = cartItems.reduce(
-		(sum, i) => sum + i.salePrice * i.quantity,
-		0
-	);
-
-	return (
-		<>
-			<Overlay onClick={onClose} />
-			<aside className="fixed top-0 right-0 h-full w-[360px] bg-white z-40 shadow-2xl animate-slideIn flex flex-col">
-				{/* Header */}
-				<div className="flex justify-between items-center p-4 border-b">
-					<h2 className="font-semibold text-lg">Your Cart</h2>
-					<button onClick={onClose}>
-						<X />
-					</button>
-				</div>
-
-				{/* Items */}
-				<div className="flex-1 overflow-y-auto p-4 space-y-4">
-					{cartItems.map((item) => (
-						<div
-							key={item.id}
-							className="flex gap-3 border rounded-lg p-3">
-							<Image
-								src={item.image}
-								alt={item.name}
-								width={60}
-								height={60}
-								className="rounded"
-							/>
-							<div className="flex-1">
-								<p className="font-medium text-sm leading-snug">
-									{item.name}
-								</p>
-								<p className="text-xs text-gray-500">
-									{item.quantity} × ৳{item.salePrice}
-								</p>
-							</div>
-							<X
-								size={18}
-								className="text-gray-400 cursor-pointer"
-							/>
-						</div>
-					))}
-				</div>
-
-				{/* Footer */}
-				<div className="border-t p-4 space-y-3">
-					<div className="flex justify-between font-semibold">
-						<span>Total</span>
-						<span>৳ {subtotal}</span>
-					</div>
-
-					<button className="w-full py-2 rounded bg-gray-200 font-medium hover:bg-gray-300">
-						View Cart
-					</button>
-					<button className="w-full py-2 rounded bg-green-600 text-white font-medium hover:bg-green-700">
-						Checkout
-					</button>
-				</div>
-			</aside>
-		</>
-	);
-};
-
-/* ---------------- MOBILE MENU ---------------- */
-const MobileMenu = ({ isOpen, onClose }) => {
-	if (!isOpen) return null;
-
-	const menuItems = [
-		{ icon: Home, label: 'Home' },
-		{ icon: ShoppingBag, label: 'Shop' },
-		{ icon: Info, label: 'About Us' },
-		{ icon: Mail, label: 'Contact' },
-		{ icon: Youtube, label: 'Videos' },
-		{ icon: Heart, label: 'Wishlist' },
-		{ icon: User, label: 'Login / Register' },
-	];
-
-	return (
-		<>
-			<Overlay onClick={onClose} />
-			<aside className="fixed top-0 left-0 h-full w-[280px] bg-white z-40 shadow-2xl animate-slideLeft">
-				{/* Search */}
-				<div className="p-4 border-b">
-					<div className="relative">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-						<input
-							placeholder="Search products..."
-							className="w-full pl-10 pr-4 py-2 border rounded-lg"
-						/>
-					</div>
-				</div>
-
-				{/* Menu */}
-				<nav className="p-2">
-					{menuItems.map((item, i) => (
-						<div
-							key={i}
-							className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 cursor-pointer">
-							<item.icon size={20} />
-							<span className="font-medium">{item.label}</span>
-						</div>
-					))}
-				</nav>
-			</aside>
-		</>
-	);
-};
-
-/* ---------------- HEADER ---------------- */
 export default function Header() {
-	const { items: cartItems } = useSelector(
-		(state) => state.cart
-	);
+    const dispatch = useDispatch();
 
-	const cartQty = useSelector(selectCartTotalItems);
+    const { items: cartItems } = useSelector((state) => state.cart);
 
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [cartOpen, setCartOpen] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
 
-	const [menuOpen, setMenuOpen] = useState(false);
-	const [cartOpen, setCartOpen] = useState(false);
+    const cartQty = useSelector(selectCartTotalItems);
 
-	return (
-		<>
-			<header className="sticky top-0 z-20 bg-white border-b">
-				<div className="flex items-center justify-between px-4 h-16">
-					<button onClick={() => setMenuOpen(true)}>
-						<Menu size={26} />
-					</button>
+    const closeMenu = () => setMenuOpen(false);
+    const closeCart = () => setCartOpen(false);
 
-					<div className="flex items-center gap-2">
-						<div>
-							<p className="font-bold text-sm">Shalban Food</p>
-						</div>
-					</div>
+    const openCart = () => {
+        setMenuOpen(false);
+        setCartOpen(true);
+    };
 
-					<button
-						onClick={() => setCartOpen(true)}
-						className="relative">
-						<ShoppingBag size={26} />
-						<span className="absolute -top-1 -right-2 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-							{cartQty || 0}
-						</span>
-					</button>
-				</div>
-			</header>
+    return (
+        <>
+            {/* =====================================================
+                TOP ANNOUNCEMENT BAR
+            ====================================================== */}
+            <div className="bg-[#1f5d3b] px-4 py-2 text-center text-[11px] font-medium text-white sm:text-xs">
+                প্রাকৃতিক ও মানসম্মত খাবার • Shalban Food
+                <span className="mx-2 hidden sm:inline">|</span>
+                <span className="hidden sm:inline">
+                    অর্ডার করুন অনলাইনে
+                </span>
+            </div>
 
-			<MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+            {/* =====================================================
+                MAIN HEADER
+            ====================================================== */}
+            <header className="sticky top-0 z-40 border-b border-gray-100 bg-white">
+                <div className="mx-auto max-w-7xl px-4">
+                    <div className="flex h-[68px] items-center justify-between gap-4">
 
-			{/* <ShoppingCart
-				isOpen={cartOpen}
-				cartItems={cartItems}
-				onClose={() => setCartOpen(false)}
-			/> */}
+                        {/* MOBILE MENU */}
+                        <button
+                            type="button"
+                            onClick={() => setMenuOpen(true)}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:bg-gray-100 md:hidden"
+                            aria-label="Open menu"
+                        >
+                            <Menu size={22} strokeWidth={1.8} />
+                        </button>
 
-			<CardDrawer
-				items={cartItems}
-				isCartOpen={cartOpen}
-				setIsCartOpen={() => setCartOpen(false)}
-			/>
-		</>
-	);
+                        {/* LOGO */}
+                        <Link
+                            href="/"
+                            className="flex min-w-fit items-center"
+                        >
+                            <div>
+                                <div className="text-[21px] font-bold leading-none tracking-tight text-[#1f5d3b]">
+                                    Shalban Food
+                                </div>
+
+                                <div className="mt-1 text-[9px] tracking-[2px] text-gray-500">
+                                    SHALBAN FOOD
+                                </div>
+                            </div>
+                        </Link>
+
+                        {/* DESKTOP NAVIGATION */}
+                        <nav className="hidden items-center gap-6 lg:flex">
+                            <Link
+                                href="/"
+                                className="text-sm font-medium text-gray-700 transition hover:text-[#1f5d3b]"
+                            >
+                                Home
+                            </Link>
+
+                            <Link
+                                href="/shop"
+                                className="text-sm font-medium text-gray-700 transition hover:text-[#1f5d3b]"
+                            >
+                                Shop
+                            </Link>
+
+                            <Link
+                                href="/honey"
+                                className="text-sm font-medium text-gray-700 transition hover:text-[#1f5d3b]"
+                            >
+                                Honey
+                            </Link>
+
+                            <Link
+                                href="/ghee"
+                                className="text-sm font-medium text-gray-700 transition hover:text-[#1f5d3b]"
+                            >
+                                Ghee
+                            </Link>
+
+                            <Link
+                                href="/blog"
+                                className="text-sm font-medium text-gray-700 transition hover:text-[#1f5d3b]"
+                            >
+                                Blog
+                            </Link>
+
+                            <Link
+                                href="/about"
+                                className="text-sm font-medium text-gray-700 transition hover:text-[#1f5d3b]"
+                            >
+                                About
+                            </Link>
+
+                            <Link
+                                href="/contact"
+                                className="text-sm font-medium text-gray-700 transition hover:text-[#1f5d3b]"
+                            >
+                                Contact
+                            </Link>
+                        </nav>
+
+                        {/* RIGHT ACTIONS */}
+                        <div className="flex items-center gap-1">
+
+                            {/* SEARCH */}
+                            <button
+                                type="button"
+                                onClick={() => setSearchOpen(true)}
+                                className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-gray-100"
+                                aria-label="Search"
+                            >
+                                <Search size={20} strokeWidth={1.8} />
+                            </button>
+
+                            {/* USER */}
+                            <Link
+                                href="/user"
+                                className="hidden h-10 w-10 items-center justify-center rounded-full transition hover:bg-gray-100 sm:flex"
+                                aria-label="Account"
+                            >
+                                <User size={20} strokeWidth={1.8} />
+                            </Link>
+
+                            {/* CART */}
+                            <button
+                                type="button"
+                                onClick={openCart}
+                                className="relative flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-gray-100"
+                                aria-label="Open cart"
+                            >
+                                <ShoppingCart
+                                    size={21}
+                                    strokeWidth={1.8}
+                                />
+
+                                {cartQty > 0 && (
+                                    <span className="absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#1f5d3b] px-1 text-[9px] font-bold text-white">
+                                        {cartQty > 99 ? '99+' : cartQty}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* MOBILE CATEGORY/NAV BAR */}
+                    <div className="flex items-center gap-5 overflow-x-auto border-t border-gray-50 py-3 scrollbar-hide md:hidden">
+                        <Link
+                            href="/shop"
+                            className="whitespace-nowrap text-xs font-medium text-gray-700"
+                        >
+                            Shop
+                        </Link>
+
+                        <Link
+                            href="/honey"
+                            className="whitespace-nowrap text-xs font-medium text-gray-700"
+                        >
+                            মধু
+                        </Link>
+
+                        <Link
+                            href="/ghee"
+                            className="whitespace-nowrap text-xs font-medium text-gray-700"
+                        >
+                            ঘি
+                        </Link>
+
+                        <Link
+                            href="/combo"
+                            className="whitespace-nowrap text-xs font-medium text-gray-700"
+                        >
+                            Combo
+                        </Link>
+
+                        <Link
+                            href="/blog"
+                            className="whitespace-nowrap text-xs font-medium text-gray-700"
+                        >
+                            Blog
+                        </Link>
+                    </div>
+                </div>
+            </header>
+
+            {/* =====================================================
+                SEARCH OVERLAY
+            ====================================================== */}
+            {searchOpen && (
+                <div className="fixed inset-0 z-[100] bg-black/40">
+                    <div className="bg-white shadow-xl">
+                        <div className="mx-auto max-w-3xl px-4 py-5">
+
+                            <div className="flex items-center gap-3">
+                                <Search
+                                    size={21}
+                                    className="shrink-0 text-gray-400"
+                                />
+
+                                <input
+                                    autoFocus
+                                    type="search"
+                                    placeholder="Search products..."
+                                    className="h-12 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-gray-400"
+                                />
+
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchOpen(false)}
+                                    className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="mt-5 border-t pt-4">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                    Popular
+                                </p>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <Link
+                                        href="/honey"
+                                        onClick={() => setSearchOpen(false)}
+                                        className="rounded-full border px-4 py-2 text-xs hover:bg-gray-50"
+                                    >
+                                        মধু
+                                    </Link>
+
+                                    <Link
+                                        href="/ghee"
+                                        onClick={() => setSearchOpen(false)}
+                                        className="rounded-full border px-4 py-2 text-xs hover:bg-gray-50"
+                                    >
+                                        গাওয়া ঘি
+                                    </Link>
+
+                                    <Link
+                                        href="/shop"
+                                        onClick={() => setSearchOpen(false)}
+                                        className="rounded-full border px-4 py-2 text-xs hover:bg-gray-50"
+                                    >
+                                        সব পণ্য
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* =====================================================
+                OVERLAY
+            ====================================================== */}
+            {(menuOpen || cartOpen) && (
+                <div
+                    onClick={() => {
+                        closeMenu();
+                        closeCart();
+                    }}
+                    className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px]"
+                />
+            )}
+
+            {/* =====================================================
+                MOBILE MENU
+            ====================================================== */}
+            <aside
+                className={`fixed left-0 top-0 z-[60] h-full w-[300px] max-w-[86vw] bg-white shadow-2xl transition-transform duration-300 ${
+                    menuOpen
+                        ? 'translate-x-0'
+                        : '-translate-x-full'
+                }`}
+            >
+                {/* Menu Header */}
+                <div className="flex h-[72px] items-center justify-between border-b px-5">
+                    <div>
+                        <p className="font-bold text-[#1f5d3b]">
+                            Shalban Food
+                        </p>
+
+                        <p className="mt-0.5 text-[10px] text-gray-400">
+                            Natural Food Store
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={closeMenu}
+                        className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Menu */}
+                <nav className="p-4">
+
+                    {[
+                        ['Home', '/'],
+                        ['Shop', '/shop'],
+                        ['Honey', '/honey'],
+                        ['Ghee', '/ghee'],
+                        ['Combo', '/combo'],
+                        ['Blog', '/blog'],
+                        ['About', '/about'],
+                        ['Contact', '/contact'],
+                    ].map(([label, href]) => (
+                        <Link
+                            key={href}
+                            href={href}
+                            onClick={closeMenu}
+                            className="flex items-center justify-between border-b border-gray-100 py-4 text-sm font-medium text-gray-800 transition hover:text-[#1f5d3b]"
+                        >
+                            {label}
+
+                            <ChevronRight
+                                size={17}
+                                className="text-gray-400"
+                            />
+                        </Link>
+                    ))}
+
+                    {/* Account */}
+                    <Link
+                        href="/user"
+                        onClick={closeMenu}
+                        className="mt-4 flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-sm font-medium"
+                    >
+                        <User size={18} />
+
+                        My Account
+                    </Link>
+                </nav>
+            </aside>
+
+            {/* =====================================================
+                CART DRAWER
+            ====================================================== */}
+            <aside
+                className={`fixed right-0 top-0 z-[60] flex h-full w-[400px] max-w-[94vw] flex-col bg-white shadow-2xl transition-transform duration-300 ${
+                    cartOpen
+                        ? 'translate-x-0'
+                        : 'translate-x-full'
+                }`}
+            >
+                {/* Cart Header */}
+                <div className="flex h-[72px] shrink-0 items-center justify-between border-b px-5">
+                    <div>
+                        <h2 className="font-bold text-gray-900">
+                            Your Cart
+                        </h2>
+
+                        <p className="mt-0.5 text-xs text-gray-500">
+                            {cartQty} item
+                            {cartQty !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={closeCart}
+                        className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Cart Items */}
+                <div className="flex-1 overflow-y-auto p-5">
+                    {cartItems.length === 0 ? (
+                        <div className="flex h-full flex-col items-center justify-center text-center">
+
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-50">
+                                <ShoppingCart
+                                    size={28}
+                                    className="text-gray-300"
+                                />
+                            </div>
+
+                            <h3 className="mt-5 font-semibold text-gray-900">
+                                Your cart is empty
+                            </h3>
+
+                            <p className="mt-1 text-sm text-gray-500">
+                                Add some products to your cart.
+                            </p>
+
+                            <Link
+                                href="/shop"
+                                onClick={closeCart}
+                                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#1f5d3b] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#174a2f]"
+                            >
+                                Start Shopping
+                                <ArrowRight size={16} />
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+
+                            {cartItems.map((item) => {
+                                const price = Number(
+                                    item.price ??
+                                        item.salePrice ??
+                                        item.regularPrice ??
+                                        0
+                                );
+
+                                const safePrice =
+                                    Number.isFinite(price)
+                                        ? price
+                                        : 0;
+
+                                return (
+                                    <div
+                                        key={item._id}
+                                        className="flex gap-3 border-b border-gray-100 pb-4"
+                                    >
+                                        {/* Product Image */}
+                                        <Link
+                                            href={`/product/${item.slug}`}
+                                            onClick={closeCart}
+                                            className="h-[76px] w-[76px] shrink-0 overflow-hidden rounded-xl bg-gray-100"
+                                        >
+                                            {item.featureImg ? (
+                                                <Image
+                                                    src={item.featureImg}
+                                                    alt={
+                                                        item.name ||
+                                                        'Product'
+                                                    }
+                                                    width={76}
+                                                    height={76}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex h-full items-center justify-center">
+                                                    <ShoppingCart
+                                                        size={20}
+                                                        className="text-gray-300"
+                                                    />
+                                                </div>
+                                            )}
+                                        </Link>
+
+                                        {/* Info */}
+                                        <div className="min-w-0 flex-1">
+                                            <Link
+                                                href={`/product/${item.slug}`}
+                                                onClick={closeCart}
+                                                className="line-clamp-2 text-sm font-medium leading-5 text-gray-900 hover:text-[#1f5d3b]"
+                                            >
+                                                {item.name}
+                                            </Link>
+
+                                            <p className="mt-1 text-sm font-bold text-[#1f5d3b]">
+                                                ৳
+                                                {safePrice.toLocaleString(
+                                                    'en-BD'
+                                                )}
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                Quantity: {item.quantity}
+                                            </p>
+                                        </div>
+
+                                        {/* Remove */}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                dispatch(
+                                                    removeFromCart(
+                                                        item._id
+                                                    )
+                                                )
+                                            }
+                                            className="self-start rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                                            aria-label={`Remove ${item.name}`}
+                                        >
+                                            <Trash2 size={17} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* Cart Footer */}
+                {cartItems.length > 0 && (
+                    <div className="shrink-0 border-t bg-white p-5">
+
+                        <div className="mb-4 flex items-center justify-between">
+                            <span className="text-sm text-gray-500">
+                                Items
+                            </span>
+
+                            <span className="text-sm font-semibold text-gray-900">
+                                {cartQty}
+                            </span>
+                        </div>
+
+                        <Link
+                            href="/cart"
+                            onClick={closeCart}
+                            className="mb-3 flex w-full items-center justify-center rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold transition hover:bg-gray-50"
+                        >
+                            View Cart
+                        </Link>
+
+                        <Link
+                            href="/checkout"
+                            onClick={closeCart}
+                            className="flex w-full items-center justify-center rounded-xl bg-[#1f5d3b] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#174a2f]"
+                        >
+                            Checkout
+                        </Link>
+                    </div>
+                )}
+            </aside>
+        </>
+    );
 }
