@@ -4,7 +4,7 @@ import { apiSlice } from './slices/apiSlice';
 
 import productReducer from './slices/productSlice';
 import cartReducer from './slices/cartSlice';
-import wishlistReducer from './slices/wishlistSlice';
+
 import voucherReducer from './slices/voucherSlice';
 import orderReducer from './slices/orderSlice';
 import userReducer from './slices/userSlice';
