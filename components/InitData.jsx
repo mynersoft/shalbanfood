@@ -4,8 +4,7 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
-import { initWishlistFromStorage } from '@/redux/store/slices/wishlistSlice';
-import { useWishlists } from '@/hooks/useWishlist';
+
 import { useProducts } from '@/hooks/useProducts';
 import { useBlogs } from '@/hooks/useBlog';
 import { useCategories } from '@/hooks/useCategory';
@@ -18,30 +17,7 @@ export default function InitData() {
 
 	const isLoggedIn = !!session?.user;
 
-	// 🔹 Init wishlist from localStorage (ONCE)
-	useEffect(() => {
-		dispatch(initWishlistFromStorage());
-	}, [dispatch]);
-
-	// 🔹 Fetch server wishlist (only if logged in)
-	useWishlists(isLoggedIn);
-
-	// 🔹 Merge guest wishlist → server after login
-	useEffect(() => {
-		if (!isLoggedIn) return;
-
-		const local = JSON.parse(localStorage.getItem('wishlist')) || [];
-
-		if (!local.length) return;
-
-		axios
-			.post('/api/wishlists/merge', {
-				productIds: local.map((p) => p._id),
-			})
-			.then(() => {
-				localStorage.removeItem('wishlist');
-			});
-	}, [isLoggedIn]);
+	
 
 	useProducts();
 	useBrands();
