@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
 import { setSidebar } from '@/redux/store/slices/uiSlice';
-import UserHeader from '@/components/Header/UserHeader';
+import UserHeader from '@/components/user/UserHeader';
 import UserSidebar from '@/components/user/UserSidebar';
 
 const Layout = ({ children }) => {
