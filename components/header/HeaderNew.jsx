@@ -42,16 +42,7 @@ export default function Header() {
 
     return (
         <>
-            {/* =====================================================
-                TOP ANNOUNCEMENT BAR
-            ====================================================== */}
-            <div className="bg-[#1f5d3b] px-4 py-2 text-center text-[11px] font-medium text-white sm:text-xs">
-                প্রাকৃতিক ও মানসম্মত খাবার • Shalban Food
-                <span className="mx-2 hidden sm:inline">|</span>
-                <span className="hidden sm:inline">
-                    অর্ডার করুন অনলাইনে
-                </span>
-            </div>
+          
 
             {/* =====================================================
                 MAIN HEADER

@@ -71,11 +71,6 @@ const ProductSchema = new mongoose.Schema(
             trim: true,
         },
 
-        dealerName: {
-            type: String,
-            default: "",
-            trim: true,
-        },
 
         image: {
             type: String,
