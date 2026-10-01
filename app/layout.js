@@ -10,7 +10,7 @@ import InitialLoader from '@/components/InitialLoader';
 import InitData from '@/components/InitData';
 
 /* =========================================================
-   Site Configuration
+   SITE CONFIGURATION
 ========================================================= */
 
 const BASE_URL =
@@ -19,55 +19,150 @@ const BASE_URL =
 
 const SITE_NAME = 'Shalban Food';
 
+const SITE_NAME_BN = 'শালবন ফুড';
+
+const SITE_DESCRIPTION_EN =
+    'Shalban Food is a Bangladeshi online food store offering quality honey, ghee, dry fruits, mustard oil and natural food products with delivery across Bangladesh.';
+
+const SITE_DESCRIPTION_BN =
+    'শালবন ফুড থেকে সংগ্রহ করুন মধু, গাওয়া ঘি, ড্রাই ফ্রুটস, সরিষার তেল ও মানসম্মত প্রাকৃতিক খাবার। বাংলাদেশজুড়ে ডেলিভারি সুবিধা।';
+
 const SITE_DESCRIPTION =
-    'Shop pure honey, ghee, dry fruits, mustard oil and quality natural food products online at Shalban Food. Trusted products with delivery across Bangladesh.';
+    'Shalban Food | শালবন ফুড — মধু, ঘি, ড্রাই ফ্রুটস, সরিষার তেল ও মানসম্মত প্রাকৃতিক খাবারের অনলাইন স্টোর। বাংলাদেশজুড়ে ডেলিভারি।';
 
 const OG_IMAGE = '/og-image.png';
 
+const LOGO_URL = `${BASE_URL}/logo.png`;
+
+const FACEBOOK_URL =
+    'https://www.facebook.com/shalbanfood';
+
 /* =========================================================
-   SEO Metadata
+   SEO METADATA
 ========================================================= */
 
 export const metadata = {
     metadataBase: new URL(BASE_URL),
 
+    /* -------------------------------------------------------
+       Title
+    ------------------------------------------------------- */
+
     title: {
         default:
-            'Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Foods in Bangladesh',
-        template: '%s | Shalban Food',
+            'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food in Bangladesh',
+
+        template:
+            '%s | Shalban Food – শালবন ফুড',
     },
+
+    /* -------------------------------------------------------
+       Description
+    ------------------------------------------------------- */
 
     description: SITE_DESCRIPTION,
 
+    /* -------------------------------------------------------
+       Keywords
+       Bangla + English
+    ------------------------------------------------------- */
+
     keywords: [
+        /* Brand */
         'Shalban Food',
         'Shalban',
+        'Shalban Food Bangladesh',
+        'Shalban Food Tangail',
         'শালবন ফুড',
         'শালবন',
+        'শালবন ফুড বাংলাদেশ',
 
-        'Pure Honey Bangladesh',
+        /* Honey - English */
+        'pure honey Bangladesh',
+        'natural honey Bangladesh',
+        'honey online Bangladesh',
+        'buy honey online Bangladesh',
+        'best honey Bangladesh',
+        'Sundarban honey',
+        'Sundarban honey Bangladesh',
+        'litchi flower honey',
+        'litchi flower honey Bangladesh',
+        'black seed honey',
+        'kalojira flower honey',
+        'raw honey Bangladesh',
+        'organic honey Bangladesh',
+
+        /* Honey - Bangla */
         'খাঁটি মধু',
-        'Sundarban Honey',
-        'Litchi Flower Honey',
-        'Black Seed Honey',
-        'Natural Honey Bangladesh',
-        'Honey Online Bangladesh',
-        'Buy Honey Bangladesh',
+        'মধু',
+        'বাংলাদেশের খাঁটি মধু',
+        'সুন্দরবনের মধু',
+        'সুন্দরবনের খলিশা মধু',
+        'লিচু ফুলের মধু',
+        'কালোজিরা ফুলের মধু',
+        'কালোজিরা মধু',
+        'অনলাইনে মধু',
+        'মধু কিনুন',
 
-        'Ghee Bangladesh',
-        'Pure Ghee Bangladesh',
-        'Desi Ghee Bangladesh',
+        /* Ghee - English */
+        'pure ghee Bangladesh',
+        'ghee Bangladesh',
+        'desi ghee Bangladesh',
+        'cow ghee Bangladesh',
+        'buy ghee online Bangladesh',
+        'ghee online Bangladesh',
+        'premium ghee Bangladesh',
 
-        'Dry Fruits Bangladesh',
-        'Mustard Oil Bangladesh',
-        'Pure Mustard Oil',
+        /* Ghee - Bangla */
+        'খাঁটি ঘি',
+        'গাওয়া ঘি',
+        'গাওয়া ঘি',
+        'দেশি ঘি',
+        'গরুর ঘি',
+        'খাঁটি গাওয়া ঘি',
+        'অনলাইনে ঘি',
+        'ঘি কিনুন',
 
-        'Natural Food Bangladesh',
-        'Organic Food Bangladesh',
-        'Healthy Food Bangladesh',
-        'Natural Products Bangladesh',
-        'Online Food Shop Bangladesh',
+        /* Dry Food - English */
+        'dry fruits Bangladesh',
+        'dry fruits online Bangladesh',
+        'nuts Bangladesh',
+        'mixed nuts Bangladesh',
+        'healthy snacks Bangladesh',
+        'natural snacks Bangladesh',
+
+        /* Dry Food - Bangla */
+        'ড্রাই ফ্রুটস',
+        'ড্রাই ফুড',
+        'নাটমিক্স',
+        'বাদাম',
+        'মিশ্র বাদাম',
+        'স্বাস্থ্যকর খাবার',
+        'প্রাকৃতিক খাবার',
+
+        /* Mustard Oil */
+        'mustard oil Bangladesh',
+        'pure mustard oil Bangladesh',
+        'সরিষার তেল',
+        'খাঁটি সরিষার তেল',
+
+        /* General */
+        'natural food Bangladesh',
+        'natural food products Bangladesh',
+        'quality food Bangladesh',
+        'online food shop Bangladesh',
+        'online grocery Bangladesh',
+        'food store Bangladesh',
+        'healthy food Bangladesh',
+        'প্রাকৃতিক খাবার',
+        'মানসম্মত খাবার',
+        'অনলাইন ফুড শপ',
+        'অনলাইন খাবারের দোকান',
     ],
+
+    /* -------------------------------------------------------
+       Author / Publisher
+    ------------------------------------------------------- */
 
     authors: [
         {
@@ -77,13 +172,30 @@ export const metadata = {
     ],
 
     creator: SITE_NAME,
+
     publisher: SITE_NAME,
 
-    category: 'Food & Beverage',
+    applicationName:
+        'Shalban Food | শালবন ফুড',
+
+    category:
+        'Food & Beverage',
+
+    /* -------------------------------------------------------
+       Canonical
+    ------------------------------------------------------- */
 
     alternates: {
         canonical: '/',
+        languages: {
+            'bn-BD': '/',
+            'en-BD': '/',
+        },
     },
+
+    /* -------------------------------------------------------
+       Robots
+    ------------------------------------------------------- */
 
     robots: {
         index: true,
@@ -92,45 +204,72 @@ export const metadata = {
         googleBot: {
             index: true,
             follow: true,
+
             'max-video-preview': -1,
+
             'max-image-preview': 'large',
+
             'max-snippet': -1,
         },
     },
 
+    /* -------------------------------------------------------
+       Open Graph
+    ------------------------------------------------------- */
+
     openGraph: {
         type: 'website',
+
         locale: 'bn_BD',
+
+        alternateLocale: ['en_US'],
+
         url: BASE_URL,
-        siteName: SITE_NAME,
+
+        siteName:
+            'Shalban Food | শালবন ফুড',
 
         title:
-            'Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Foods',
+            'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food',
 
-        description: SITE_DESCRIPTION,
+        description:
+            SITE_DESCRIPTION,
 
         images: [
             {
                 url: OG_IMAGE,
+
                 width: 1200,
+
                 height: 630,
+
                 alt:
-                    'Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Food Products',
+                    'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food Products',
+
                 type: 'image/png',
             },
         ],
     },
 
+    /* -------------------------------------------------------
+       Twitter / X
+    ------------------------------------------------------- */
+
     twitter: {
         card: 'summary_large_image',
 
         title:
-            'Shalban Food – Pure Honey, Ghee, Dry Fruits & Natural Foods',
+            'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food',
 
-        description: SITE_DESCRIPTION,
+        description:
+            SITE_DESCRIPTION,
 
         images: [OG_IMAGE],
     },
+
+    /* -------------------------------------------------------
+       Icons
+    ------------------------------------------------------- */
 
     icons: {
         icon: [
@@ -150,101 +289,204 @@ export const metadata = {
         ],
     },
 
-    manifest: '/manifest.webmanifest',
+    /* -------------------------------------------------------
+       Web App Manifest
+    ------------------------------------------------------- */
+
+    manifest:
+        '/manifest.webmanifest',
 };
 
+
 /* =========================================================
-   Root Layout
+   ROOT LAYOUT
 ========================================================= */
 
 export default function RootLayout({ children }) {
+
     /* =====================================================
-       Organization Schema
+       ORGANIZATION SCHEMA
     ===================================================== */
 
     const organizationSchema = {
         '@context': 'https://schema.org',
+
         '@type': 'Organization',
 
-        '@id': `${BASE_URL}/#organization`,
+        '@id':
+            `${BASE_URL}/#organization`,
 
-        name: SITE_NAME,
+        name:
+            SITE_NAME,
 
-        alternateName: 'শালবন ফুড',
+        alternateName:
+            SITE_NAME_BN,
 
-        url: BASE_URL,
+        url:
+            BASE_URL,
 
         logo: {
             '@type': 'ImageObject',
-            url: `${BASE_URL}/logo.png`,
+
+            url:
+                LOGO_URL,
+
+            width: 512,
+
+            height: 512,
         },
 
         description:
-            'Shalban Food is an online food brand in Bangladesh offering honey, ghee, dry fruits, mustard oil and quality natural food products.',
+            SITE_DESCRIPTION,
 
         sameAs: [
-            'https://www.facebook.com/shalbanfood',
+            FACEBOOK_URL,
         ],
     };
 
+
     /* =====================================================
-       Website Schema
+       WEBSITE SCHEMA
+
+       Important for Google Site Name
     ===================================================== */
 
     const websiteSchema = {
         '@context': 'https://schema.org',
+
         '@type': 'WebSite',
 
-        '@id': `${BASE_URL}/#website`,
+        '@id':
+            `${BASE_URL}/#website`,
 
-        url: BASE_URL,
+        url:
+            BASE_URL,
 
-        name: SITE_NAME,
+        name:
+            SITE_NAME,
 
-        description: SITE_DESCRIPTION,
+        alternateName: [
+            SITE_NAME_BN,
+            'Shalban Food Bangladesh',
+            'শালবন ফুড বাংলাদেশ',
+        ],
+
+        description:
+            SITE_DESCRIPTION,
 
         publisher: {
-            '@id': `${BASE_URL}/#organization`,
+            '@id':
+                `${BASE_URL}/#organization`,
         },
 
-        inLanguage: ['en-BD', 'bn-BD'],
+        inLanguage: [
+            'bn-BD',
+            'en-BD',
+        ],
     };
+
+
+    /* =====================================================
+       WEBPAGE SCHEMA
+    ===================================================== */
+
+    const webpageSchema = {
+        '@context': 'https://schema.org',
+
+        '@type': 'WebPage',
+
+        '@id':
+            `${BASE_URL}/#webpage`,
+
+        url:
+            BASE_URL,
+
+        name:
+            'Shalban Food | শালবন ফুড',
+
+        headline:
+            'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food',
+
+        description:
+            SITE_DESCRIPTION,
+
+        isPartOf: {
+            '@id':
+                `${BASE_URL}/#website`,
+        },
+
+        about: {
+            '@id':
+                `${BASE_URL}/#organization`,
+        },
+
+        inLanguage: [
+            'bn-BD',
+            'en-BD',
+        ],
+    };
+
+
+    /* =====================================================
+       RETURN
+    ===================================================== */
 
     return (
         <html lang="bn">
+
             <head>
+
                 {/* =================================================
-                   Google Search Console Verification
-                   Verification file:
-                   /public/google96271d41b3731f60.html
+                   ORGANIZATION JSON-LD
+                ================================================= */}
 
-                   No meta verification tag is required when
-                   using Google's HTML file verification method.
-                ================================================== */}
-
-                {/* Organization Schema */}
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{
-                        __html: JSON.stringify(
-                            organizationSchema
-                        ),
+                        __html:
+                            JSON.stringify(
+                                organizationSchema
+                            ),
                     }}
                 />
 
-                {/* Website Schema */}
+
+                {/* =================================================
+                   WEBSITE JSON-LD
+                ================================================= */}
+
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{
-                        __html: JSON.stringify(
-                            websiteSchema
-                        ),
+                        __html:
+                            JSON.stringify(
+                                websiteSchema
+                            ),
                     }}
                 />
+
+
+                {/* =================================================
+                   WEBPAGE JSON-LD
+                ================================================= */}
+
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html:
+                            JSON.stringify(
+                                webpageSchema
+                            ),
+                    }}
+                />
+
             </head>
 
+
             <body className="bg-white text-gray-900">
+
                 <InitialLoader>
+
                     <Toaster
                         position="top-right"
                         reverseOrder={false}
@@ -253,6 +495,7 @@ export default function RootLayout({ children }) {
                     <InternetStatus />
 
                     <Providers>
+
                         <Header />
 
                         <GlobalInitializer />
@@ -262,9 +505,13 @@ export default function RootLayout({ children }) {
                         {children}
 
                         <Footer />
+
                     </Providers>
+
                 </InitialLoader>
+
             </body>
+
         </html>
     );
 }
