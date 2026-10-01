@@ -43,7 +43,7 @@ export const store = configureStore({
 
 		statcard: statcardReducer,
 		questions: questionsReducer,
-		vendor: vendorReducer,
+	
 		notification: notificationReducer,
 
 		blog: blogReducer,
