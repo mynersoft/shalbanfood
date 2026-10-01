@@ -19,6 +19,7 @@
 		"dayjs": "^1.11.19",
 		"framer-motion": "^12.23.24",
 		"jspdf": "^4.2.1",
+"nodemailer":"10.0.13",
 		"jspdf-autotable": "^5.0.2",
 		"lucide-react": "^0.545.0",
 		"mongoose": "^8.19.1",
