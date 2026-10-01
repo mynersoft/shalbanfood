@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useMutation } from '@tanstack/react-query';
-import { updateUser } from '@/store/slices/authSlice';
+import { updateUser } from '@/redux/store/slices/authSlice';
 import { toast, Toaster } from 'react-hot-toast';
 import {
   Loader2,
