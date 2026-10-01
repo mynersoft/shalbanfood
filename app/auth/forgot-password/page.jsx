@@ -8,7 +8,7 @@ import {
   goToOtp,
   otpVerified,
   resetDone,
-} from '@/store/slices/authRecoverySlice'
+} from '@/redux/store/slices/authRecoverySlice'
 import { Mail, Phone, Lock, Key, CheckCircle, RotateCcw, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
