@@ -471,7 +471,7 @@ export default function OfferForm({
         >
             {/* Basic Information */}
 
-            <section className="rounded-2xl border bg-white p-5 shadow-sm">
+            <section className="rounded-2xl border p-5 shadow-sm">
                 <h2 className="text-lg font-bold text-gray-900">
                     Basic Information
                 </h2>
@@ -576,7 +576,7 @@ export default function OfferForm({
 
             {/* Combo Items */}
 
-            <section className="rounded-2xl border bg-white p-5 shadow-sm">
+            <section className="rounded-2xl border  p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-lg font-bold">
@@ -617,7 +617,7 @@ export default function OfferForm({
                                         )
                                     }
                                     placeholder="Item name"
-                                    className="rounded-lg border bg-white px-3 py-3 outline-none focus:border-green-600"
+                                    className="rounded-lg border  px-3 py-3 outline-none focus:border-green-600"
                                 />
 
                                 <input
@@ -632,7 +632,7 @@ export default function OfferForm({
                                         )
                                     }
                                     placeholder="1 KG"
-                                    className="rounded-lg border bg-white px-3 py-3 outline-none focus:border-green-600"
+                                    className="rounded-lg border  px-3 py-3 outline-none focus:border-green-600"
                                 />
 
                                 <button
@@ -656,7 +656,7 @@ export default function OfferForm({
 
             {/* Pricing */}
 
-            <section className="rounded-2xl border bg-white p-5 shadow-sm">
+            <section className="rounded-2xl border  p-5 shadow-sm">
                 <h2 className="text-lg font-bold">
                     Pricing
                 </h2>
@@ -724,7 +724,7 @@ export default function OfferForm({
 
             {/* Image */}
 
-            <section className="rounded-2xl border bg-white p-5 shadow-sm">
+            <section className="rounded-2xl border  p-5 shadow-sm">
                 <h2 className="text-lg font-bold">
                     Feature Image
                 </h2>
@@ -748,7 +748,7 @@ export default function OfferForm({
                                         ""
                                     )
                                 }
-                                className="absolute right-3 top-3 rounded-full bg-white p-2 text-red-600 shadow"
+                                className="absolute right-3 top-3 rounded-full  p-2 text-red-600 shadow"
                             >
                                 <X size={18} />
                             </button>
@@ -787,7 +787,7 @@ export default function OfferForm({
 
             {/* Stock + Schedule */}
 
-            <section className="rounded-2xl border bg-white p-5 shadow-sm">
+            <section className="rounded-2xl border  p-5 shadow-sm">
                 <h2 className="text-lg font-bold">
                     Stock & Schedule
                 </h2>
@@ -896,7 +896,7 @@ export default function OfferForm({
 
             {/* SEO */}
 
-            <section className="rounded-2xl border bg-white p-5 shadow-sm">
+            <section className="rounded-2xl border  p-5 shadow-sm">
                 <h2 className="text-lg font-bold">
                     SEO
                 </h2>

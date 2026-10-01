@@ -30,6 +30,11 @@ const menuItems = [
 		href: '/dashboard/products',
 		icon: Package,
 	},
+	{
+		name: 'Combo offer',
+		href: '/dashboard/combo',
+		icon: Package,
+	},
 
 {
 		name: 'Brands',

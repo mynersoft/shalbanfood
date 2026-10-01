@@ -9,7 +9,7 @@ export const metadata = {
 
 export default function CreateOfferPage() {
 	return (
-		<main className="min-h-screen bg-gray-50 p-4 sm:p-6">
+		<main className="min-h-screen  p-4 sm:p-6">
 			<div className="mx-auto max-w-5xl">
 				<Link
 					href="/dashboard/admin/offers"
