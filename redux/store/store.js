@@ -15,7 +15,7 @@ import authRecoveryReducer from './slices/authRecoverySlice';
 import notificationReducer from './slices/notificationSlice';
 import questionsReducer from './slices/questionsSlice';
 import comboReducer from './slices/comboSlice';
-import vendorReducer from './slices/vendorSlice';
+
 import uiReducer from './slices/uiSlice';
 import categoryReducer from './slices/categorySlice';
 import brandReducer from './slices/brandsSlice';
