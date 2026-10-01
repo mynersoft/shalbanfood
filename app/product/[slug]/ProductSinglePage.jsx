@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { addToCart } from '@/redux/store/slices/cartSlice';
-import { toggleWishlist } from '@/redux/store/slices/wishlistSlice';
+
 import { toast } from 'react-hot-toast';
 import {
 	Star,
@@ -30,7 +30,7 @@ export default function ProductSinglePage({ initialProduct }) {
 	const dispatch = useDispatch();
 	const router = useRouter();
 
-	const wishlist = useSelector((state) => state.wishlist?.items || []);
+
 	const [selectedImage, setSelectedImage] = useState(0);
 	const [quantity, setQuantity] = useState(1);
 
@@ -92,8 +92,7 @@ export default function ProductSinglePage({ initialProduct }) {
 		return 0;
 	};
 
-	const isWishlisted = wishlist.some((item) => item._id === product._id);
-
+	
 	const handleAddToCart = () => {
 		if (product.stock < 1) {
 			toast.error('Product is out of stock');
