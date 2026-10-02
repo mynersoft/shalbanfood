@@ -5,7 +5,7 @@ import { Check, Clock3, PackageCheck, ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
 
-import { addToCart } from '@/redux/store/slices/cart/cartSlice';
+import { addToCart } from '@/redux/store/slices/cartSlice';
 import OfferCountdown from '@/components/Combo/OfferCountdown';
 
 export default function OfferDetailsClient({ offer }) {
