@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
-import connectDB from '@/lib/dbConnect';
+import {connectDB} from '@/lib/dbConnect';
 import ComboOffer from '@/models/ComboOffer';
 
 import OfferForm from '@/components/Combo/OfferForm';
