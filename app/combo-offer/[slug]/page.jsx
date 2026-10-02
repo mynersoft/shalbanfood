@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import connectDB from "@/lib/dbConnect";
+import {connectDB} from "@/lib/dbConnect";
 import ComboOffer from "@/models/ComboOffer";
 
 import OfferDetailsClient from "./OfferDetailsClient";
