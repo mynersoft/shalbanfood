@@ -71,8 +71,8 @@ export default function Header() {
                                     Shalban Food
                                 </div>
 
-                                <div className="mt-1 text-[9px] tracking-[2px] text-gray-500">
-                                    SHALBAN FOOD
+                                <div className="mt-1 text-[12px] tracking-[1px] text-gray-500">
+                                    স্বাদের সাথে আস্থার বন্ধন
                                 </div>
                             </div>
                         </Link>

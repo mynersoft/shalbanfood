@@ -3,160 +3,240 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
-import {
-  setOrders,
-  addOrder,
-  removeOrder,
-  setSingleOrder,
-} from '@/redux/store/slices/orderSlice';
 import toast from 'react-hot-toast';
+
+import {
+	setOrders,
+	setAdminOrders,
+	setSingleOrder,
+	addOrder,
+	removeOrder,
+} from '@/redux/store/slices/orderSlice';
 import { clearCart } from '@/redux/store/slices/cartSlice';
 
-export function useOrders() {
-  const dispatch = useDispatch();
-  return useQuery({
-    queryKey: ['orders'],
-    queryFn: async () => {
-      const res = await axios.get('/api/orders');
-      dispatch(setOrders(res.data));
-      return res.data.orders;
-    },
-    onError: (error) => {
-      toast.error(`Failed to fetch Orders: ${error.message}`);
-    },
-    onSuccess: () => {
-      toast.success('Orders fetched successfully');
-    },
-  });
+// ==========================================
+// ADMIN: FETCH ALL ORDERS
+// ==========================================
+export function useAdminOrders() {
+	const dispatch = useDispatch();
+
+	return useQuery({
+		queryKey: ['orders'],
+		queryFn: async () => {
+			const { data } = await axios.get('/api/orders/all');
+
+			if (data.success === false) {
+				throw new Error(data.message || 'Failed to fetch orders');
+			}
+
+			const orders = Array.isArray(data.orders) ? data.orders : [];
+
+			dispatch(setAdminOrders(orders));
+
+			return orders;
+		},
+		staleTime: 30 * 1000,
+		refetchOnWindowFocus: true,
+	});
 }
 
+// ==========================================
+// GENERAL ORDERS
+// ==========================================
+export function useOrders() {
+	const dispatch = useDispatch();
 
+	return useQuery({
+		queryKey: ['orders'],
+		queryFn: async () => {
+			const { data } = await axios.get('/api/orders');
 
+			if (data.success === false) {
+				throw new Error(data.message || 'Failed to fetch orders');
+			}
 
-// get all single user orders 
+			const orders = Array.isArray(data.orders) ? data.orders : [];
 
-export const useUserOrders = (userId) => {
+			dispatch(setOrders(orders));
+
+			return orders;
+		},
+		staleTime: 30 * 1000,
+	});
+}
+
+// ==========================================
+// USER ORDERS
+// ==========================================
+export function useUserOrders(userId) {
 	return useQuery({
 		queryKey: ['user-orders', userId],
 		queryFn: async () => {
 			const { data } = await axios.get(`/api/orders/user/${userId}`);
 			return data;
 		},
-		enabled: !!userId,
+		enabled: Boolean(userId),
 	});
-};
-
-
-
-
-
-
-
-// single order  by userId
-export function useSingleOrder(userId) {
-  const dispatch = useDispatch();
-  return useQuery({
-    queryKey: ['order', userId],
-    queryFn: async () => {
-      if (!userId) {
-        throw new Error('Order ID is required');
-      }
-      try {
-        const res = await axios.get(`/api/orders/userId/${userId}`);
-
-        if (!res.data.success) {
-          throw new Error(res.data.error || 'Failed to fetch order');
-        }
-        // Dispatch to Redux store
-        if (res.data.order) {
-          dispatch(setSingleOrder(res.data.order));
-        }
-
-        return res.data.order;
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          throw new Error(
-            error.response?.data?.error ||
-              error.response?.data?.message ||
-              'Failed to fetch order'
-          );
-        }
-        throw error;
-      }
-    },
-    enabled: !!userId, // Only run query if orderId exists
-    retry: 1,
-    retryDelay: 1000,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (cacheTime in v4)
-    onError: (error) => {
-      toast.error(`Failed to fetch order: ${error.message}`);
-    },
-    onSuccess: (data) => {
-      if (data) {
-        toast.success('Order details loaded successfully');
-      }
-    },
-  });
 }
 
+// ==========================================
+// SINGLE ORDER
+// ==========================================
+export function useSingleOrder(orderId) {
+	const dispatch = useDispatch();
+
+	return useQuery({
+		queryKey: ['order', orderId],
+		queryFn: async () => {
+			if (!orderId) throw new Error('Order ID is required');
+
+			const { data } = await axios.get(`/api/orders/${orderId}`);
+
+			const order = data.order || data;
+
+			if (!order || data.success === false) {
+				throw new Error(data.message || 'Order not found');
+			}
+
+			dispatch(setSingleOrder(order));
+
+			return order;
+		},
+		enabled: Boolean(orderId),
+		retry: 1,
+		staleTime: 60 * 1000,
+	});
+}
+
+// ==========================================
+// CREATE ORDER
+// ==========================================
 export function useAddOrder() {
-  const queryClient = useQueryClient();
-  const dispatch = useDispatch();
-  return useMutation({
-    mutationFn: async (orderData) => {
-      const res = await axios.post('/api/orders', orderData);
-      dispatch(addOrder(res.data));
-      return res.data.order;
-    },
+	const queryClient = useQueryClient();
+	const dispatch = useDispatch();
 
-    onSuccess: (newOrder) => {
-      queryClient.invalidateQueries(['orders']);
-      dispatch(clearCart());
-      toast.success('Order added successfully!', { id: 'add-order' });
-    },
-    onError: (error) => {
-      let message = 'Failed to add Order';
-      if (axios.isAxiosError(error)) {
-        message =
-          error.response?.data?.error ||
-          error.response?.data?.message ||
-          error.message;
-      } else if (error instanceof Error) {
-        message = error.message;
-      }
-      toast.error(message, { id: 'add-order' });
-    },
-  });
+	return useMutation({
+		mutationFn: async (orderData) => {
+			const { data } = await axios.post('/api/orders', orderData);
+
+			if (data.success === false) {
+				throw new Error(data.message || 'Failed to create order');
+			}
+
+			return data.order || data;
+		},
+		onSuccess: (order) => {
+			dispatch(addOrder(order));
+			dispatch(clearCart());
+
+			queryClient.invalidateQueries({ queryKey: ['orders'] });
+			toast.success('Order placed successfully!');
+		},
+		onError: (error) => {
+			toast.error(
+				error.response?.data?.message ||
+					error.message ||
+					'Failed to create order'
+			);
+		},
+	});
 }
 
-export const useUpdateOrderStatus = () => {
-  const qc = useQueryClient();
+// ==========================================
+// ADMIN: UPDATE ORDER
+// Payload: status, paymentStatus, trackingNumber, adminNote
+// ==========================================
+export function useUpdateOrder() {
+	const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({ id, status }) =>
-      axios.patch(`/api/orders/${id}`, { status }),
-    onSuccess: () => qc.invalidateQueries(['orders']),
-  });
-};
+	return useMutation({
+		mutationFn: async ({ id, payload }) => {
+			if (!id) throw new Error('Order ID is required');
 
-export const useDeleteOrder = () => {
-  const qc = useQueryClient();
-  const dispatch = useDispatch();
-  return useMutation({
-    mutationFn: async (id) => {
-      const res = await axios.delete(`/api/orders/${id}`);
-      return res.data;
-    },
-    onSuccess: (_data, id) => {
-      // Invalidate react-query
-      qc.invalidateQueries(['orders']);
-      // Update redux slice
-      dispatch(removeOrder(id));
-      toast.success('Order deleted successfully');
-    },
-    onError: (err) => {
-      toast.error(`Failed to delete order: ${err.message}`);
-    },
-  });
-};
+			const { data } = await axios.patch(`/api/orders/${id}`, payload);
+
+			if (data.success === false) {
+				throw new Error(data.message || 'Order update failed');
+			}
+
+			return data.order || data;
+		},
+		onSuccess: async () => {
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ['orders'] }),
+				queryClient.invalidateQueries({ queryKey: ['user-orders'] }),
+			]);
+
+			toast.success('Order updated successfully');
+		},
+		onError: (error) => {
+			toast.error(
+				error.response?.data?.message ||
+					error.message ||
+					'Failed to update order'
+			);
+		},
+	});
+}
+
+// Backward-compatible status-only hook
+export function useUpdateOrderStatus() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({ id, status }) => {
+			const { data } = await axios.patch(`/api/orders/${id}`, {
+				status,
+			});
+			if (data.success === false) {
+				throw new Error(data.message || 'Status update failed');
+			}
+			return data.order || data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['orders'] });
+			toast.success('Order status updated');
+		},
+		onError: (error) => {
+			toast.error(
+				error.response?.data?.message ||
+					error.message ||
+					'Failed to update status'
+			);
+		},
+	});
+}
+
+// ==========================================
+// ADMIN: DELETE ORDER
+// ==========================================
+export function useDeleteOrder() {
+	const queryClient = useQueryClient();
+	const dispatch = useDispatch();
+
+	return useMutation({
+		mutationFn: async (id) => {
+			const { data } = await axios.delete(`/api/orders/${id}`);
+
+			if (data.success === false) {
+				throw new Error(data.message || 'Delete failed');
+			}
+
+			return { id, data };
+		},
+		onSuccess: async ({ id }) => {
+			dispatch(removeOrder(id));
+
+			await queryClient.invalidateQueries({ queryKey: ['orders'] });
+
+			toast.success('Order deleted successfully');
+		},
+		onError: (error) => {
+			toast.error(
+				error.response?.data?.message ||
+					error.message ||
+					'Failed to delete order'
+			);
+		},
+	});
+}

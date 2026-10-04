@@ -5,27 +5,19 @@ import { connectDB } from '@/lib/dbConnect';
 import Order from '@/models/Order';
 import { withErrorHandler } from '@/lib/withErrorHandler';
 import { ApiError } from '@/lib/ApiError';
-import crypto from 'crypto';
 import { validateVoucher } from '@/lib/validateVoucher';
 // import { createAdminNotification } from '@/utils/createNotification';
 import { shippingCost } from '@/utils/shippingCost';
 
+import { generateInvoiceID } from '@/utils/generateInvoiceId';
+
 export const runtime = 'nodejs';
 
-
+// get by orderId
 export async function GET(req) {
 	try {
 		const url = new URL(req.url);
 		const orderId = url.searchParams.get('orderId');
-
-		console.log('=================================');
-		console.log('REQUEST URL:', req.url);
-		console.log('ORDER ID:', orderId);
-		console.log('ORDER ID TYPE:', typeof orderId);
-		console.log(
-			'VALID OBJECT ID:',
-			mongoose.Types.ObjectId.isValid(orderId)
-		);
 
 		if (!orderId) {
 			return NextResponse.json(
@@ -53,19 +45,15 @@ export async function GET(req) {
 		console.log('HOST:', mongoose.connection.host);
 
 		// প্রথমে findById
-		const order = await Order.findById(orderId).lean();
+		const orders = await Order.findById(orderId).lean();
 
-		console.log('FOUND ORDER:', order);
-
-		if (!order) {
+		if (!orders) {
 			// Debug করার জন্য database-এর latest IDs দেখাবে
 			const latestOrders = await Order.find({})
 				.select('_id invoiceNo')
 				.sort({ createdAt: -1 })
 				.limit(5)
 				.lean();
-
-			console.log('LATEST ORDERS:', latestOrders);
 
 			return NextResponse.json(
 				{
@@ -83,14 +71,9 @@ export async function GET(req) {
 
 		return NextResponse.json({
 			success: true,
-			order,
+			orders,
 		});
 	} catch (error) {
-		console.error('=================================');
-		console.error('GET ORDER ERROR:', error);
-		console.error('ERROR MESSAGE:', error.message);
-		console.error('ERROR STACK:', error.stack);
-
 		return NextResponse.json(
 			{
 				success: false,
@@ -102,17 +85,11 @@ export async function GET(req) {
 	}
 }
 
-// ✅ Secure unique invoice
-function generateInvoiceID() {
-	return 'Shalban-' + crypto.randomBytes(3).toString('hex').toUpperCase();
-}
-
 /*
 |--------------------------------------------------------------------------
 | POST /api/orders
 |--------------------------------------------------------------------------
 | Supports:
-|
 | 1. Guest checkout
 | 2. Logged-in checkout
 | 3. Cash on Delivery only
@@ -121,12 +98,6 @@ function generateInvoiceID() {
 */
 
 export const POST = withErrorHandler(async (req) => {
-	/*
-	|--------------------------------------------------------------------------
-	| Body
-	|--------------------------------------------------------------------------
-	*/
-
 	let body;
 
 	try {
@@ -135,26 +106,7 @@ export const POST = withErrorHandler(async (req) => {
 		throw new ApiError('Invalid JSON body', 400);
 	}
 
-	/*
-	|--------------------------------------------------------------------------
-	| Get Data
-	|--------------------------------------------------------------------------
-	*/
-
-	const {
-		userId,
-		customer,
-		shippingAddress,
-		orderItems,
-		voucherCode,
-		payment,
-	} = body;
-
-	/*
-	|--------------------------------------------------------------------------
-	| Basic Validation
-	|--------------------------------------------------------------------------
-	*/
+	const { userId, customer, shippingAddress, orderItems, voucherCode } = body;
 
 	if (!customer) {
 		throw new ApiError('Customer information is required', 400);
@@ -180,28 +132,7 @@ export const POST = withErrorHandler(async (req) => {
 		throw new ApiError('Order items are required', 400);
 	}
 
-	/*
-	|--------------------------------------------------------------------------
-	| Connect Database
-	|--------------------------------------------------------------------------
-	*/
-
 	await connectDB();
-
-	/*
-	|--------------------------------------------------------------------------
-	| Calculate Subtotal
-	|--------------------------------------------------------------------------
-	|
-	| IMPORTANT:
-	| Price is taken from frontend orderItems.
-	|
-	| If your Product model should be used as the
-	| source of truth for price, we can change this
-	| later to fetch products from MongoDB.
-	|
-	|--------------------------------------------------------------------------
-	*/
 
 	const subtotal = orderItems.reduce((sum, item) => {
 		const price = Number(item.price) || 0;
@@ -210,12 +141,6 @@ export const POST = withErrorHandler(async (req) => {
 
 		return sum + price * quantity;
 	}, 0);
-
-	/*
-	|--------------------------------------------------------------------------
-	| Voucher
-	|--------------------------------------------------------------------------
-	*/
 
 	let discountAmount = 0;
 
@@ -243,27 +168,9 @@ export const POST = withErrorHandler(async (req) => {
 		}
 	}
 
-	/*
-	|--------------------------------------------------------------------------
-	| Shipping
-	|--------------------------------------------------------------------------
-	*/
-
 	const deliveryFee = Number(shippingCost) || 0;
 
-	/*
-	|--------------------------------------------------------------------------
-	| Total
-	|--------------------------------------------------------------------------
-	*/
-
 	const total = Math.max(0, subtotal - discountAmount + deliveryFee);
-
-	/*
-	|--------------------------------------------------------------------------
-	| Invoice Number
-	|--------------------------------------------------------------------------
-	*/
 
 	let invoiceNo = null;
 
@@ -284,30 +191,11 @@ export const POST = withErrorHandler(async (req) => {
 		throw new ApiError('Invoice generation failed', 500);
 	}
 
-	/*
-	|--------------------------------------------------------------------------
-	| Payment
-	|--------------------------------------------------------------------------
-	|
-	| COD ONLY
-	|
-	| Ignore whatever payment method
-	| frontend sends.
-	|
-	|--------------------------------------------------------------------------
-	*/
-
 	const codPayment = {
 		method: 'COD',
 		status: 'unpaid',
 		transactionId: null,
 	};
-
-	/*
-	|--------------------------------------------------------------------------
-	| Order Items
-	|--------------------------------------------------------------------------
-	*/
 
 	const formattedOrderItems = orderItems.map((item) => ({
 		productId: String(item.productId || item._id || ''),
@@ -320,22 +208,6 @@ export const POST = withErrorHandler(async (req) => {
 
 		image: item.image || '',
 	}));
-
-	/*
-	|--------------------------------------------------------------------------
-	| Create Order
-	|--------------------------------------------------------------------------
-	|
-	| userId is OPTIONAL.
-	|
-	| Guest:
-	|   userId = undefined
-	|
-	| Logged in:
-	|   userId = actual user ID
-	|
-	|--------------------------------------------------------------------------
-	*/
 
 	const orderPayload = {
 		invoiceNo,
@@ -371,29 +243,11 @@ export const POST = withErrorHandler(async (req) => {
 		orderItems: formattedOrderItems,
 	};
 
-	/*
-	|--------------------------------------------------------------------------
-	| Add userId ONLY if available
-	|--------------------------------------------------------------------------
-	*/
-
 	if (userId) {
 		orderPayload.userId = userId;
 	}
 
-	/*
-	|--------------------------------------------------------------------------
-	| Save Order
-	|--------------------------------------------------------------------------
-	*/
-
 	const order = await Order.create(orderPayload);
-
-	/*
-	|--------------------------------------------------------------------------
-	| Response
-	|--------------------------------------------------------------------------
-	*/
 
 	return NextResponse.json(
 		{

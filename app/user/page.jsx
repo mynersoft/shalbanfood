@@ -20,17 +20,16 @@ import OrderDetailsModal from '@/components/Order/OrderDetailsModal';
 import useLoginUser from '@/hooks/useAuth';
 import { useUserOrders } from '@/hooks/useOrder';
 
-
 const OrderHistory = () => {
 	const { user } = useLoginUser();
 
 	const userId = user?._id || user?.id;
-	
 
 	const { data, isLoading, isError } = useUserOrders(userId);
 
 	const orders = Array.isArray(data?.orders) ? data.orders : [];
 
+	console.log(orders);
 
 	const [selectedFilter, setSelectedFilter] = useState('all');
 	const [searchQuery, setSearchQuery] = useState('');
@@ -217,20 +216,8 @@ const OrderHistory = () => {
 	// View order
 	// --------------------------------------------------
 	const handleViewOrder = (order) => {
-		console.log(order);
-		
 		setSelectedOrder(order);
 		setIsModalOpen(true);
-	};
-
-	// --------------------------------------------------
-	// Invoice
-	// --------------------------------------------------
-	const handleDownloadInvoice = (order) => {
-		const orderId = getOrderId(order);
-
-		alert('Feature under construction');
-		// Invoice system পরে এখানে add করা যাবে
 	};
 
 	// --------------------------------------------------
@@ -296,18 +283,6 @@ const OrderHistory = () => {
 	return (
 		<div className="min-h-screen bg-gray-50 py-8">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				{/* Header */}
-				<div className="mb-8">
-					<h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-						<ShoppingBag className="w-8 h-8" />
-						Order History
-					</h1>
-
-					<p className="text-gray-600 mt-2">
-						View and manage all your past orders
-					</p>
-				</div>
-
 				{/* Stats */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 					{/* Total Orders */}
@@ -466,9 +441,10 @@ const OrderHistory = () => {
 									transition={{
 										delay: index * 0.05,
 									}}>
-									<div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
+									<div className="bg-white rounded-xl shadow-md hover:shadow-md transition-shadow border border-gray-400  overflow-hidden">
 										<div className="p-6">
 											{/* Header */}
+
 											<div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
 												<div>
 													<div className="flex items-center gap-3 mb-2 flex-wrap">
@@ -533,17 +509,6 @@ const OrderHistory = () => {
 
 												{/* Actions */}
 												<div className="flex items-center gap-3">
-													<button
-														onClick={() =>
-															handleDownloadInvoice(
-																order
-															)
-														}
-														className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
-														<Download className="w-4 h-4" />
-														Invoice
-													</button>
-
 													<button
 														onClick={() =>
 															handleViewOrder(

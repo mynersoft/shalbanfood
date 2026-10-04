@@ -1,83 +1,120 @@
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import mongoose from 'mongoose';
+
+import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/dbConnect';
 import Order from '@/models/Order';
-import { getServerSession } from 'next-auth';
-import { NextResponse } from 'next/server';
-import { authOptions } from '@/lib/auth';
-import { getIdFromReq } from '@/lib/getIdFromReq';
 
-export async function PATCH(req) {
-  const id = await getIdFromReq(req);
-     const session = await getServerSession(authOptions);
+export const runtime = 'nodejs';
 
-     if (!session) {
-       return NextResponse.json(
-         { success: false, message: 'Unauthorized' },
-         { status: 401 }
-       );
-     }
+const ORDER_STATUSES = [
+	'pending',
+	'processing',
+	'shipped',
+	'delivered',
+	'cancelled',
+];
 
+const PAYMENT_STATUSES = ['unpaid', 'paid', 'refunded', 'failed'];
 
-  await connectDB();
-  const { status } = await req.json();
+export async function PATCH(req, { params }) {
+	try {
+		const session = await getServerSession(authOptions);
 
-  const order = await Order.findByIdAndUpdate(id, { status }, { new: true });
+		if (!session?.user) {
+			return NextResponse.json(
+				{ success: false, message: 'Unauthorized' },
+				{ status: 401 }
+			);
+		}
 
-  return Response.json(order);
-}
+		if (session.user.role !== 'admin') {
+			return NextResponse.json(
+				{ success: false, message: 'Admin access required' },
+				{ status: 403 }
+			);
+		}
 
-export async function DELETE(req, { params }) {
-  try {
-    const session = await getServerSession(authOptions);
+		const { id } = await params;
 
-    if (!session) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+		if (!mongoose.isValidObjectId(id)) {
+			return NextResponse.json(
+				{ success: false, message: 'Invalid order ID' },
+				{ status: 400 }
+			);
+		}
 
-   const id = await getIdFromReq(req);
+		const body = await req.json();
+		const update = {};
 
-    if (!id) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid order ID' },
-        { status: 400 }
-      );
-    }
+		if (body.status !== undefined) {
+			const status = String(body.status).toLowerCase();
 
-    await connectDB();
+			if (!ORDER_STATUSES.includes(status)) {
+				return NextResponse.json(
+					{ success: false, message: 'Invalid order status' },
+					{ status: 400 }
+				);
+			}
 
-    const order = await Order.findById(id);
+			update.status = status;
+		}
 
-    if (!order) {
-      return NextResponse.json(
-        { success: false, message: 'Order not found' },
-        { status: 404 }
-      );
-    } // ✅ FIXED: missing brace added
+		if (body.paymentStatus !== undefined) {
+			const paymentStatus = String(body.paymentStatus).toLowerCase();
 
-    if (session.user.role !== 'admin') {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Forbidden: Admin access required',
-        },
-        { status: 403 }
-      );
-    }
+			if (!PAYMENT_STATUSES.includes(paymentStatus)) {
+				return NextResponse.json(
+					{ success: false, message: 'Invalid payment status' },
+					{ status: 400 }
+				);
+			}
 
-    await Order.findByIdAndDelete(id);
+			update.paymentStatus = paymentStatus;
+		}
 
-    return NextResponse.json({
-      success: true,
-      message: 'Order deleted successfully',
-    });
-  } catch (error) {
-    console.error('DELETE ERROR:', error);
+		if (body.trackingNumber !== undefined) {
+			update.trackingNumber = String(body.trackingNumber).trim();
+		}
 
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
-  }
+		if (body.adminNote !== undefined) {
+			update.adminNote = String(body.adminNote).trim();
+		}
+
+		if (Object.keys(update).length === 0) {
+			return NextResponse.json(
+				{ success: false, message: 'No fields to update' },
+				{ status: 400 }
+			);
+		}
+
+		await connectDB();
+
+		const order = await Order.findByIdAndUpdate(
+			id,
+			{ $set: update },
+			{ new: true, runValidators: true }
+		).lean();
+
+		if (!order) {
+			return NextResponse.json(
+				{ success: false, message: 'Order not found' },
+				{ status: 404 }
+			);
+		}
+
+		return NextResponse.json({
+			success: true,
+			message: 'Order updated successfully',
+			order,
+		});
+	} catch (error) {
+		console.error('ORDER PATCH ERROR:', error);
+
+		return NextResponse.json(
+			{ success: false, message: 'Failed to update order' },
+			{ status: 500 }
+		);
+	}
 }
