@@ -17,7 +17,7 @@ import questionsReducer from './slices/questionsSlice';
 import comboReducer from './slices/comboSlice';
 
 
-import settingsReducer from '@/redux/store/slices/settings/settingsSlice';
+import settingsReducer from '@/redux/store/slices/settingsSlice';
 
 
 import uiReducer from './slices/uiSlice';
