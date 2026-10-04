@@ -1,403 +1,525 @@
 'use client';
 
-import { useSelector, useDispatch } from 'react-redux';
-import {
-  removeFromCart,
-  updateQuantity,
-} from '@/redux/store/slices/cartSlice';
-import { toast } from 'react-hot-toast';
+import { useDispatch, useSelector } from 'react-redux';
 import Link from 'next/link';
-import { Trash2, Plus, Minus } from 'lucide-react';
 import Image from 'next/image';
-import CheckEmptyCart from './CheckEmptyCart';
+import { toast } from 'react-hot-toast';
+import {
+    Minus,
+    Plus,
+    Trash2,
+    Package,
+    ChevronRight,
+} from 'lucide-react';
+
+import {
+    removeFromCart,
+    updateQuantity,
+} from '@/redux/store/slices/cartSlice';
 
 const CartItems = () => {
-  const dispatch = useDispatch();
-  const { items = [] } = useSelector((state) => state.cart);
+    const dispatch = useDispatch();
 
-  const handleRemove = (productId) => {
-    dispatch(removeFromCart(productId));
-    toast.success('Product removed from cart');
-  };
-
-  const handleQuantityChange = (productId, newQty) => {
-    if (newQty < 1) return;
-
-    dispatch(
-      updateQuantity({
-        productId,
-        quantity: newQty,
-      })
+    const { items = [] } = useSelector(
+        (state) => state.cart
     );
-  };
 
-  // Product image
-  const getProductImage = (item) => {
-    if (item.image) return item.image;
+    /*
+    |--------------------------------------------------------------------------
+    | Product image
+    |--------------------------------------------------------------------------
+    */
+    const getProductImage = (item) => {
+        if (item.image) return item.image;
 
-    if (item.featureImg) return item.featureImg;
+        if (item.featureImg) {
+            return item.featureImg;
+        }
 
-    if (
-      Array.isArray(item.galleryImages) &&
-      item.galleryImages.length > 0
-    ) {
-      return item.galleryImages[0];
+        if (
+            Array.isArray(item.galleryImages) &&
+            item.galleryImages.length > 0
+        ) {
+            return item.galleryImages[0];
+        }
+
+        return '/placeholder.png';
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Original price
+    |--------------------------------------------------------------------------
+    */
+    const getOriginalPrice = (item) => {
+        const regularPrice = Number(
+            item.regularPrice
+        );
+
+        return Number.isFinite(regularPrice) &&
+            regularPrice >= 0
+            ? regularPrice
+            : 0;
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Base selling price
+    |--------------------------------------------------------------------------
+    */
+    const getBasePrice = (item) => {
+        const sellPrice = Number(
+            item.sellPrice
+        );
+
+        if (
+            Number.isFinite(sellPrice) &&
+            sellPrice >= 0
+        ) {
+            return sellPrice;
+        }
+
+        const regularPrice = Number(
+            item.regularPrice
+        );
+
+        return Number.isFinite(regularPrice) &&
+            regularPrice >= 0
+            ? regularPrice
+            : 0;
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Final price
+    |--------------------------------------------------------------------------
+    */
+    const calculateFinalPrice = (item) => {
+        const basePrice =
+            getBasePrice(item);
+
+        if (
+            !item.discount ||
+            !item.discount.value
+        ) {
+            return basePrice;
+        }
+
+        const discountValue = Number(
+            item.discount.value
+        );
+
+        if (
+            !Number.isFinite(discountValue) ||
+            discountValue < 0
+        ) {
+            return basePrice;
+        }
+
+        if (
+            item.discount.type === 'percentage'
+        ) {
+            return Math.max(
+                basePrice -
+                    (basePrice *
+                        discountValue) /
+                        100,
+                0
+            );
+        }
+
+        if (
+            item.discount.type === 'fixed'
+        ) {
+            return Math.max(
+                basePrice - discountValue,
+                0
+            );
+        }
+
+        return basePrice;
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Discount label
+    |--------------------------------------------------------------------------
+    */
+    const getDiscountText = (item) => {
+        if (
+            !item.discount ||
+            !item.discount.value
+        ) {
+            return null;
+        }
+
+        const value = Number(
+            item.discount.value
+        );
+
+        if (!Number.isFinite(value)) {
+            return null;
+        }
+
+        if (
+            item.discount.type ===
+            'percentage'
+        ) {
+            return `${value}% OFF`;
+        }
+
+        if (
+            item.discount.type === 'fixed'
+        ) {
+            return `৳${value.toLocaleString(
+                'en-BD'
+            )} OFF`;
+        }
+
+        return null;
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Remove
+    |--------------------------------------------------------------------------
+    */
+    const handleRemove = (productId) => {
+        dispatch(
+            removeFromCart(productId)
+        );
+
+        toast.success(
+            'Product removed from cart'
+        );
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Quantity
+    |--------------------------------------------------------------------------
+    */
+    const handleQuantityChange = (
+        productId,
+        newQty
+    ) => {
+        if (newQty < 1) return;
+
+        dispatch(
+            updateQuantity({
+                productId,
+                quantity: newQty,
+            })
+        );
+    };
+
+    if (items.length === 0) {
+        return null;
     }
 
-    return '/placeholder.png';
-  };
-
-  // Get original product price
-  const getOriginalPrice = (item) => {
-    const price = Number(item.regularPrice);
-
-    return Number.isFinite(price) && price >= 0 ? price : 0;
-  };
-
-  // Get selling price
-  const getBasePrice = (item) => {
-    const sellPrice = Number(item.sellPrice);
-
-    if (Number.isFinite(sellPrice) && sellPrice >= 0) {
-      return sellPrice;
-    }
-
-    const regularPrice = Number(item.regularPrice);
-
-    return Number.isFinite(regularPrice) && regularPrice >= 0
-      ? regularPrice
-      : 0;
-  };
-
-  // Final price
-  const calculateFinalPrice = (item) => {
-    const price = getBasePrice(item);
-
-    // If there is no discount, simply return sellPrice
-    if (!item.discount || !item.discount.value) {
-      return price;
-    }
-
-    const discountValue = Number(item.discount.value);
-
-    if (!Number.isFinite(discountValue) || discountValue < 0) {
-      return price;
-    }
-
-    if (item.discount.type === 'percentage') {
-      return Math.max(
-        price - (price * discountValue) / 100,
-        0
-      );
-    }
-
-    if (item.discount.type === 'fixed') {
-      return Math.max(price - discountValue, 0);
-    }
-
-    return price;
-  };
-
-  // Discount text
-  const getDiscountText = (item) => {
-    if (!item.discount || !item.discount.value) {
-      return null;
-    }
-
-    const discountValue = Number(item.discount.value);
-
-    if (!Number.isFinite(discountValue)) {
-      return null;
-    }
-
-    if (item.discount.type === 'percentage') {
-      return `${discountValue}% OFF`;
-    }
-
-    if (item.discount.type === 'fixed') {
-      return `৳${discountValue} OFF`;
-    }
-
-    return null;
-  };
-
-  // Item total
-  const calculateItemTotal = (item) => {
-    const finalPrice = calculateFinalPrice(item);
-    const quantity = Number(item.quantity) || 0;
-
-    return finalPrice * quantity;
-  };
-
-  return (
-    <div className="lg:flex-1">
-      {items.length === 0 ? (
-        <CheckEmptyCart />
-      ) : (
+    return (
         <div className="space-y-4">
+            {/* =====================================================
+                CART HEADER
+            ====================================================== */}
+            <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-5 py-4">
+                <div>
+                    <h2 className="text-base font-bold text-gray-900">
+                        Cart Items
+                    </h2>
 
-          {/* Desktop Header */}
-          <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 rounded-xl text-sm font-medium text-gray-600">
-            <div className="col-span-5">
-              Product
-            </div>
-
-            <div className="col-span-2 text-center">
-              Price
-            </div>
-
-            <div className="col-span-3 text-center">
-              Quantity
-            </div>
-
-            <div className="col-span-2 text-right">
-              Total
-            </div>
-          </div>
-
-          {/* Cart Items */}
-          {items.map((item, index) => {
-            const originalPrice = getOriginalPrice(item);
-            const finalPrice = calculateFinalPrice(item);
-            const discountText = getDiscountText(item);
-
-            const quantity = Number(item.quantity) || 0;
-
-            const itemTotal = calculateItemTotal(item);
-
-            const originalItemTotal =
-              originalPrice * quantity;
-
-            const savedAmount = Math.max(
-              originalItemTotal - itemTotal,
-              0
-            );
-
-            const productImage =
-              getProductImage(item);
-
-            const hasDiscount =
-              finalPrice < originalPrice;
-
-            return (
-              <div
-                key={`${item._id}-${index}`}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-all duration-300"
-              >
-                <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-
-                  {/* Product Info */}
-                  <div className="flex items-start gap-4 md:w-5/12">
-
-                    {/* Image */}
-                    <div className="relative w-24 h-24 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100 p-2 shrink-0">
-
-                      <Image
-                        src={productImage}
-                        alt={item.name || 'Product'}
-                        width={96}
-                        height={96}
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          e.currentTarget.src =
-                            '/placeholder.png';
-                        }}
-                      />
-
-                      {discountText && (
-                        <div className="absolute -top-2 -left-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-                          {discountText}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Name */}
-                    <div className="flex-1 min-w-0">
-
-                      <Link
-                        href={`/product/${item.slug || item._id}`}
-                      >
-                        <h3 className="font-semibold text-gray-900 text-lg mb-1 line-clamp-2 hover:text-blue-600 transition-colors">
-                          {item.name}
-                        </h3>
-                      </Link>
-
-                      {/* Size */}
-                      {item.size?.value && (
-                        <p className="text-sm text-gray-500">
-                          {item.size.value}{' '}
-                          {item.size.unit}
-                        </p>
-                      )}
-
-                      {/* Mobile Price */}
-                      <div className="md:hidden mt-2">
-                        <span className="text-xl font-bold text-gray-900">
-                          ৳{finalPrice.toLocaleString()}
-                        </span>
-
-                        {hasDiscount && (
-                          <span className="ml-2 text-sm text-gray-400 line-through">
-                            ৳{originalPrice.toLocaleString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Desktop Price */}
-                  <div className="hidden md:block md:w-2/12">
-                    <div className="text-center">
-
-                      <div className="text-xl font-bold text-gray-900 mb-1">
-                        ৳{finalPrice.toLocaleString()}
-                      </div>
-
-                      {hasDiscount && (
-                        <div className="text-gray-400 line-through text-sm">
-                          ৳{originalPrice.toLocaleString()}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Quantity */}
-                  <div className="md:w-3/12">
-
-                    <div className="flex items-center justify-between md:justify-center">
-
-                      <div className="flex items-center gap-2">
-
-                        {/* Minus */}
-                        <button
-                          onClick={() =>
-                            handleQuantityChange(
-                              item._id,
-                              quantity - 1
-                            )
-                          }
-                          disabled={quantity <= 1}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        >
-                          <Minus size={18} />
-                        </button>
-
-                        {/* Quantity */}
-                        <span className="w-14 h-10 flex items-center justify-center bg-gray-50 rounded-xl font-bold text-gray-900 text-lg">
-                          {quantity}
-                        </span>
-
-                        {/* Plus */}
-                        <button
-                          onClick={() =>
-                            handleQuantityChange(
-                              item._id,
-                              quantity + 1
-                            )
-                          }
-                          disabled={
-                            item.stock > 0 &&
-                            quantity >= item.stock
-                          }
-                          className="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        >
-                          <Plus size={18} />
-                        </button>
-
-                      </div>
-
-                      {/* Mobile Remove */}
-                      <button
-                        onClick={() =>
-                          handleRemove(item._id)
-                        }
-                        className="md:hidden p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-
-                    </div>
-
-                    {/* Stock */}
-                    {item.stock > 0 &&
-                      quantity >= item.stock && (
-                        <p className="text-xs text-amber-600 text-center mt-2">
-                          Max stock reached
-                        </p>
-                      )}
-                  </div>
-
-                  {/* Total */}
-                  <div className="md:w-2/12">
-
-                    <div className="flex items-center justify-between md:justify-end md:flex-col md:items-end gap-4">
-
-                      <div className="text-right">
-
-                        <div className="text-2xl font-bold text-gray-900">
-                          ৳{itemTotal.toLocaleString()}
-                        </div>
-
-                        {savedAmount > 0 && (
-                          <div className="text-sm text-green-600 font-semibold">
-                            Saved ৳
-                            {savedAmount.toLocaleString()}
-                          </div>
-                        )}
-
-                        <div className="text-xs text-gray-500 mt-1">
-                          ৳{finalPrice.toLocaleString()} ×{' '}
-                          {quantity}
-                        </div>
-
-                      </div>
-
-                      {/* Desktop Remove */}
-                      <button
-                        onClick={() =>
-                          handleRemove(item._id)
-                        }
-                        className="hidden md:inline-flex items-center gap-2 px-3 py-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                      >
-                        <Trash2 size={18} />
-                        <span className="text-sm font-medium">
-                          Remove
-                        </span>
-                      </button>
-
-                    </div>
-                  </div>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                        Review your selected products
+                    </p>
                 </div>
 
-                {/* Mobile Summary */}
-                <div className="mt-4 pt-4 border-t border-gray-100 md:hidden">
+                <Package
+                    size={21}
+                    className="text-[#16834b]"
+                />
+            </div>
 
-                  <div className="flex justify-between items-center">
+            {/* =====================================================
+                ITEMS
+            ====================================================== */}
+            {items.map((item, index) => {
+                const originalPrice =
+                    getOriginalPrice(item);
 
-                    <div className="text-sm text-gray-600">
-                      Item Total:{' '}
-                      <span className="font-bold text-gray-900">
-                        ৳{itemTotal.toLocaleString()}
-                      </span>
-                    </div>
+                const finalPrice =
+                    calculateFinalPrice(item);
 
-                    {savedAmount > 0 && (
-                      <div className="text-sm font-semibold text-green-600">
-                        You save ৳
-                        {savedAmount.toLocaleString()}
-                      </div>
-                    )}
+                const quantity =
+                    Number(item.quantity) || 0;
 
-                  </div>
+                const itemTotal =
+                    finalPrice * quantity;
 
-                </div>
-              </div>
-            );
-          })}
+                const originalItemTotal =
+                    originalPrice * quantity;
+
+                const savedAmount = Math.max(
+                    originalItemTotal -
+                        itemTotal,
+                    0
+                );
+
+                const discountText =
+                    getDiscountText(item);
+
+                const productImage =
+                    getProductImage(item);
+
+                const hasDiscount =
+                    finalPrice <
+                    originalPrice;
+
+                const productHref =
+                    `/product/${
+                        item.slug ||
+                        item._id
+                    }`;
+
+                return (
+                    <article
+                        key={`${item._id}-${index}`}
+                        className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:border-gray-300 hover:shadow-md"
+                    >
+                        <div className="p-4 sm:p-5">
+                            <div className="flex gap-4">
+                                {/* =================================
+                                    IMAGE
+                                ================================== */}
+                                <Link
+                                    href={productHref}
+                                    className="relative h-[96px] w-[96px] shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-[#fafafa] sm:h-[120px] sm:w-[120px]"
+                                >
+                                    <Image
+                                        src={
+                                            productImage
+                                        }
+                                        alt={
+                                            item.name ||
+                                            'Product'
+                                        }
+                                        fill
+                                        sizes="120px"
+                                        className="object-contain p-2 transition duration-300 group-hover:scale-105"
+                                    />
+
+                                    {discountText && (
+                                        <span className="absolute left-1.5 top-1.5 rounded-md bg-[#e5484d] px-2 py-1 text-[9px] font-bold text-white shadow-sm">
+                                            {
+                                                discountText
+                                            }
+                                        </span>
+                                    )}
+                                </Link>
+
+                                {/* =================================
+                                    CONTENT
+                                ================================== */}
+                                <div className="min-w-0 flex-1">
+                                    {/* Name */}
+                                    <div className="flex items-start justify-between gap-3">
+                                        <Link
+                                            href={
+                                                productHref
+                                            }
+                                            className="min-w-0"
+                                        >
+                                            <h3 className="line-clamp-2 text-sm font-bold leading-5 text-gray-900 transition hover:text-[#16834b] sm:text-base">
+                                                {
+                                                    item.name
+                                                }
+                                            </h3>
+                                        </Link>
+
+                                        {/* Desktop remove */}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleRemove(
+                                                    item._id
+                                                )
+                                            }
+                                            className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 sm:flex"
+                                            aria-label={`Remove ${
+                                                item.name ||
+                                                'product'
+                                            }`}
+                                        >
+                                            <Trash2
+                                                size={
+                                                    17
+                                                }
+                                            />
+                                        </button>
+                                    </div>
+
+                                    {/* Size */}
+                                    {item
+                                        .size
+                                        ?.value && (
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            {
+                                                item
+                                                    .size
+                                                    .value
+                                            }{' '}
+                                            {
+                                                item
+                                                    .size
+                                                    .unit
+                                            }
+                                        </p>
+                                    )}
+
+                                    {/* Price */}
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                        <span className="text-lg font-bold text-[#16834b]">
+                                            ৳
+                                            {finalPrice.toLocaleString(
+                                                'en-BD'
+                                            )}
+                                        </span>
+
+                                        {hasDiscount && (
+                                            <span className="text-xs text-gray-400 line-through">
+                                                ৳
+                                                {originalPrice.toLocaleString(
+                                                    'en-BD'
+                                                )}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Saved */}
+                                    {savedAmount >
+                                        0 && (
+                                        <p className="mt-1 text-[11px] font-semibold text-[#16834b]">
+                                            You save ৳
+                                            {savedAmount.toLocaleString(
+                                                'en-BD'
+                                            )}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* =====================================
+                                BOTTOM ROW
+                            ====================================== */}
+                            <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
+                                {/* Quantity */}
+                                <div className="flex items-center gap-2">
+                                    <span className="hidden text-xs font-medium text-gray-500 sm:block">
+                                        Quantity
+                                    </span>
+
+                                    <div className="flex items-center overflow-hidden rounded-lg border border-gray-200 bg-white">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleQuantityChange(
+                                                    item._id,
+                                                    quantity -
+                                                        1
+                                                )
+                                            }
+                                            disabled={
+                                                quantity <=
+                                                1
+                                            }
+                                            className="flex h-9 w-9 items-center justify-center text-gray-500 transition hover:bg-gray-50 hover:text-[#16834b] disabled:cursor-not-allowed disabled:opacity-30"
+                                            aria-label="Decrease quantity"
+                                        >
+                                            <Minus
+                                                size={
+                                                    15
+                                                }
+                                            />
+                                        </button>
+
+                                        <span className="flex h-9 min-w-9 items-center justify-center border-x border-gray-200 px-2 text-sm font-bold text-gray-900">
+                                            {
+                                                quantity
+                                            }
+                                        </span>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleQuantityChange(
+                                                    item._id,
+                                                    quantity +
+                                                        1
+                                                )
+                                            }
+                                            disabled={
+                                                item.stock >
+                                                    0 &&
+                                                quantity >=
+                                                    item.stock
+                                            }
+                                            className="flex h-9 w-9 items-center justify-center text-gray-500 transition hover:bg-gray-50 hover:text-[#16834b] disabled:cursor-not-allowed disabled:opacity-30"
+                                            aria-label="Increase quantity"
+                                        >
+                                            <Plus
+                                                size={
+                                                    15
+                                                }
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Item total */}
+                                <div className="text-right">
+                                    <p className="text-[10px] uppercase tracking-wide text-gray-400">
+                                        Item Total
+                                    </p>
+
+                                    <p className="mt-0.5 text-base font-bold text-gray-900 sm:text-lg">
+                                        ৳
+                                        {itemTotal.toLocaleString(
+                                            'en-BD'
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Stock warning */}
+                            {item.stock >
+                                0 &&
+                                quantity >=
+                                    item.stock && (
+                                    <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-center text-[11px] font-medium text-amber-700">
+                                        Maximum available stock reached
+                                    </div>
+                                )}
+
+                            {/* Mobile remove */}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleRemove(
+                                        item._id
+                                    )
+                                }
+                                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-red-500 transition hover:bg-red-50 sm:hidden"
+                            >
+                                <Trash2
+                                    size={14}
+                                />
+                                Remove Item
+                            </button>
+                        </div>
+                    </article>
+                );
+            })}
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default CartItems;
