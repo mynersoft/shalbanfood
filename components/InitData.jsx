@@ -17,8 +17,6 @@ export default function InitData() {
 
 	const isLoggedIn = !!session?.user;
 
-	
-
 	useProducts();
 	useBrands();
 	useCategories();

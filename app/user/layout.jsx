@@ -22,7 +22,7 @@ const Layout = ({ children }) => {
 
 	useEffect(() => {
 		if (status === 'unauthenticated') {
-			toast.error('তুমি প্রথমে Login করো', {
+			toast.error('লগইন করুন', {
 				id: 'user-login-required',
 				duration: 2500,
 			});
@@ -54,8 +54,6 @@ const Layout = ({ children }) => {
 			window.removeEventListener('resize', handleResize);
 		};
 	}, [dispatch]);
-
-	/* ================= Loading ================= */
 
 	if (status === 'loading') {
 		return (
@@ -98,8 +96,6 @@ const Layout = ({ children }) => {
 			</div>
 		);
 	}
-
-	/* ================= Authenticated User ================= */
 
 	return (
 		<div className="flex min-h-screen bg-slate-50">

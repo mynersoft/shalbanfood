@@ -1,7 +1,41 @@
   Fetching data ---------  
   const { isLoading, isFetching } = useProducts();
+  
   const { products } = useSelector((state) => state.product.products);
 	
+
+
+post data  ===================
+1. slice
+2. hook
+
+
+slice
+export const createCategory = createAsyncThunk(
+    'categories/createCategory',
+    async (categoryData, { rejectWithValue }) => {
+        try {
+            const res = await axios.post(
+                '/api/categories',
+                categoryData
+            );
+
+            return res.data.category;
+        } catch (error) {
+            return rejectWithValue(
+                error.response?.data?.message ||
+                'Failed to create category'
+            );
+        }
+    }
+);
+
+     .addCase(createCategory.fulfilled, (state, action) => {
+                state.creating = false;
+                state.success = true;
+
+                state.categories.unshift(action.payload);
+            })
 
 
 

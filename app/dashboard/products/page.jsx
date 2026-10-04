@@ -5,19 +5,21 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, deleteProduct } from '@/redux/productSlice';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import ProductFormModal from '@/components/dashboard/ProductFormModal';
-import CategoryForm from '@/components/dashboard/CategoryForm';
+import ProductFormModal from '@/app/dashboard/components/product/ProductFormModal';
+import CategoryForm from '@/app/dashboard/components/CategoryForm';
 import Modal from '@/components/Modal';
-import { addCategory } from '@/redux/categorySlice';
+import { addCategory } from '@/redux/store/slices/categorySlice';
 import { useProducts } from '@/hooks/useProducts';
 import Image from 'next/image';
+import { useAddCategory, useCategories } from '@/hooks/useCategory';
 
 export default function ProductsPage() {
-	  const { isLoading, isFetching } = useProducts();
-	
+	const { isLoading, isFetching } = useProducts();
+
+	const { useAddCategory } = useCategories();
+
 	const { products } = useSelector((state) => state.product.products);
-	
-	
+
 	const dispatch = useDispatch();
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -85,10 +87,17 @@ export default function ProductsPage() {
 
 	const handleCancel = () => setShowCatModal(false);
 
-	const handleCatSubmit = (payload) => {
+	const handleCatSubmit = async (payload) => {
 		dispatch(addCategory(payload));
+
+		try {
+			await useAddCategory({ payload });
+		} catch (error) {
+			console.log(error);
+			alert('cat added failed');
+		}
+
 		setShowCatModal(false);
-		alert('Category added successfully!');
 	};
 
 	return (
@@ -123,7 +132,7 @@ export default function ProductsPage() {
 					</button>
 
 					<button
-						onClick={() => router.push('/products/list')}
+						onClick={() => router.push('/dashboard/products/list')}
 						className="px-4 py-2 bg-blue-600 text-white rounded">
 						List
 					</button>
@@ -155,11 +164,11 @@ export default function ProductsPage() {
 									<td className="p-3">
 										{p.image && (
 											<Image
-												height={50}
-												width={50}
-												src={p.featureImg}
-												alt={p.name || ''}
-												className="w-14 h-14 object-cover rounded"
+												height={200}
+												width={200}
+												src={p.image}
+												alt={p.name + 'shalbanfood'}
+												className="w-18 h-18 object-cover rounded"
 											/>
 										)}
 									</td>

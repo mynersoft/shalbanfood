@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-    addProduct,
-    updateProduct,
-    fetchProducts,
-} from "@/redux/productSlice";
-import { fetchCategories } from "@/redux/store/slices/categorySlice";
+	addProduct,
+	updateProduct,
+	setProducts,
+} from '@/redux/store/slices/productSlice';
 import toast from "react-hot-toast";
 
 // =====================================================
@@ -113,27 +112,21 @@ const defaultForm = {
 // COMPONENT
 // =====================================================
 export default function ProductFormModal({
+
+
     editingProduct,
     onClose,
     currentPage = 1,
 }) {
     const dispatch = useDispatch();
 
-    const { categories = [] } = useSelector(
-        (state) => state.category
-    );
-
+    const {categories}  = useSelector((state) => state.category);
+   
+    
     const [form, setForm] = useState(defaultForm);
     const [file, setFile] = useState(null);
     const [saving, setSaving] = useState(false);
     const [previewUrl, setPreviewUrl] = useState("");
-
-    // =====================================================
-    // LOAD CATEGORIES
-    // =====================================================
-    useEffect(() => {
-        dispatch(fetchCategories());
-    }, [dispatch]);
 
     // =====================================================
     // LOAD EDITING PRODUCT
@@ -214,7 +207,7 @@ export default function ProductFormModal({
     // SELECTED CATEGORY
     // =====================================================
     const selectedCategory =
-        categories.find(
+     categories.length >= 0 &&  categories.find(
             (cat) => cat.name === form.category
         ) || {};
 
@@ -526,7 +519,7 @@ export default function ProductFormModal({
                                     Select category
                                 </option>
 
-                                {categories.map((cat) => (
+                                {categories.length >= 0 && categories.map((cat) => (
                                     <option
                                         key={
                                             cat._id ||

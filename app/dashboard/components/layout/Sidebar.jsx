@@ -24,7 +24,6 @@ const menuItems = [
 		icon: LayoutDashboard,
 	},
 
-
 	{
 		name: 'Products',
 		href: '/dashboard/products',
@@ -36,12 +35,11 @@ const menuItems = [
 		icon: Package,
 	},
 
-{
+	{
 		name: 'Brands',
 		href: '/dashboard/brands',
 		icon: Package,
 	},
-
 
 	{
 		name: 'Categories',
@@ -54,8 +52,18 @@ const menuItems = [
 		icon: ShoppingCart,
 	},
 	{
-		name: 'Customers',
-		href: '/dashboard/customers',
+		name: 'Due',
+		href: '/dashboard/due',
+		icon: ShoppingCart,
+	},
+	{
+		name: 'Shipping cost',
+		href: '/dashboard/shipping-cost',
+		icon: ShoppingCart,
+	},
+	{
+		name: 'users',
+		href: '/dashboard/users',
 		icon: Users,
 	},
 	{
@@ -63,6 +71,7 @@ const menuItems = [
 		href: '/dashboard/analytics',
 		icon: BarChart3,
 	},
+
 	{
 		name: 'Settings',
 		href: '/dashboard/settings',

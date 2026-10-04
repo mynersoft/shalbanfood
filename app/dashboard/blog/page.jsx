@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X, Loader2, FileText } from 'lucide-react';
 
-import BlogForm from '@/components/dashboard/BlogForm';
+import BlogForm from '@/app/dashboard/components/blog/BlogForm';
 
 export default function AdminBlogsPage() {
 	const [blogs, setBlogs] = useState([]);

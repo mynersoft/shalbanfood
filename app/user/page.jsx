@@ -20,14 +20,17 @@ import OrderDetailsModal from '@/components/Order/OrderDetailsModal';
 import useLoginUser from '@/hooks/useAuth';
 import { useUserOrders } from '@/hooks/useOrder';
 
+
 const OrderHistory = () => {
 	const { user } = useLoginUser();
 
 	const userId = user?._id || user?.id;
+	
 
 	const { data, isLoading, isError } = useUserOrders(userId);
 
 	const orders = Array.isArray(data?.orders) ? data.orders : [];
+
 
 	const [selectedFilter, setSelectedFilter] = useState('all');
 	const [searchQuery, setSearchQuery] = useState('');
@@ -214,6 +217,8 @@ const OrderHistory = () => {
 	// View order
 	// --------------------------------------------------
 	const handleViewOrder = (order) => {
+		console.log(order);
+		
 		setSelectedOrder(order);
 		setIsModalOpen(true);
 	};
@@ -224,8 +229,7 @@ const OrderHistory = () => {
 	const handleDownloadInvoice = (order) => {
 		const orderId = getOrderId(order);
 
-		console.log('Downloading invoice:', orderId);
-
+		alert('Feature under construction');
 		// Invoice system পরে এখানে add করা যাবে
 	};
 
