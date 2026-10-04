@@ -589,7 +589,7 @@ const AdminOrders = () => {
                                       { order.status}
                                     </option>
                                     
-                                                    <option value={order.status}>
+                                                    <option value='processing'>
                                      processing
                                                     </option>
                                                     <option >
