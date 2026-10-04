@@ -456,38 +456,3 @@ export default function HomePage() {
     );
 }
 
-সবচেয়ে গুরুত্বপূর্ণ fix
-
-তোমার আগের code-এ ছিল:
-
-const { products } = useSelector(
-    (state) => state.product.products
-);
-
-এটা ধরে নিচ্ছে "state.product.products" একটি object:
-
-{
-    products: [...]
-}
-
-কিন্তু তোমার Redux slice যদি এমন হয়:
-
-initialState: {
-    products: [],
-    ...
-}
-
-তাহলে আগের code ভুল।
-
-আমি করেছি:
-
-const products =
-    useSelector((state) => state.product?.products) || [];
-
-এতে "products" সরাসরি array হিসেবে পাওয়া যাবে।
-
-তবে তোমার Redux "productSlice" যদি "products"-এর ভিতরে আবার "{ products: [] }" রাখে, তাহলে selector অনুযায়ী সেটা পরিবর্তন করতে হবে।
-
-আর "ShopByCategory" এখন Latest Products-এর মাঝখানে নয়, আলাদা সুন্দর section হিসেবে থাকবে।
-
-একটা বিষয় খেয়াল রাখবে: আমি "a href" ব্যবহার করেছি কারণ simple navigation-এর জন্য ঠিক আছে; চাইলে পুরো HomePage-এ "next/link" ব্যবহার করে আরও optimized version করা যায়।
