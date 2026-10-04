@@ -1,5 +1,5 @@
 import CommissionReport from "../components/CommissionReport";
-import VendorPayout from "../components/VendorPayout";
+
 import Settings from "../components/Settings";
 
 export default function PaymentsPage() {
@@ -12,10 +12,7 @@ export default function PaymentsPage() {
         <CommissionReport />
       </div>
 
-      {/* Vendor Payout */}
-      <div className="mb-8">
-        <VendorPayout />
-      </div>
+      
 
       {/* Settings */}
       <div className="mb-8">
