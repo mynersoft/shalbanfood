@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { connectDB } from '@/lib/dbConnect';
-import Setting from '@/models/Setting';
+import Setting from '@/models/Settings';
 
 const DEFAULT_KEY = 'main';
 
