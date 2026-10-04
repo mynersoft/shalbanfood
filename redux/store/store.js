@@ -16,6 +16,10 @@ import notificationReducer from './slices/notificationSlice';
 import questionsReducer from './slices/questionsSlice';
 import comboReducer from './slices/comboSlice';
 
+
+import settingsReducer from '@/redux/store/slices/settings/settingsSlice';
+
+
 import uiReducer from './slices/uiSlice';
 import categoryReducer from './slices/categorySlice';
 import brandReducer from './slices/brandsSlice';
@@ -50,6 +54,7 @@ export const store = configureStore({
 		combo: comboReducer,
 		shipping: shippingReducer,
 		dashboard: dashboardReducer,
+settings: settingsReducer,
 	},
 
 	middleware: (getDefaultMiddleware) =>
