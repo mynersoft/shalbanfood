@@ -4,6 +4,8 @@ import { useSelector } from 'react-redux';
 import { useProducts } from '@/hooks/useProducts';
 import ProductCard from '@/components/products/ProductCard';
 
+import ShopByCategory from '@/components/home/ShopByCategory';
+
 export default function HomePage() {
 	const { isLoading, isFetching } = useProducts();
 
@@ -13,6 +15,14 @@ export default function HomePage() {
 		<main className="min-h-screen">
 			<section className="mx-auto max-w-7xl px-4 py-8">
 				<div className="mb-6 flex items-center justify-between">
+
+
+	<h2 className="text-2xl font-bold">Latest Products</h2>
+
+
+<ShopByCategory />
+
+
 					<h1 className="text-2xl font-bold">Latest Products</h1>
             
 					{isFetching && !isLoading && (
