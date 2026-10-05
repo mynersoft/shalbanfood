@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+
 import {
 	Search,
 	Package,
@@ -18,18 +18,12 @@ import {
 	ChevronRight,
 	Download,
 	LoaderCircle,
+	MessageCircle,
+	Filter,
+	ArrowUpDown,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { MessageCircle } from 'lucide-react';
-import { getOrderWhatsAppUrl } from '@/lib/whatsapp';
 
-import AdminOrderDetailsModal, {
-	ORDER_STATUSES,
-	getOrderId,
-} from '@/app/dashboard/components/order/AdminOrderDetailsModal';
-
-import { formatCurrency } from '@/utils/formatCurrency';
-import { formatDate } from '@/utils/formatDate';
+import { toast } from 'react-hot-toast';
 
 import {
 	useAdminOrders,
@@ -37,676 +31,1112 @@ import {
 	useDeleteOrder,
 } from '@/hooks/useOrder';
 
+
+
+
+
+import { getOrderWhatsAppUrl } from '@/lib/whatsapp';
+import AdminOrderDetailsModal, { getOrderId, ORDER_STATUSES } from '../components/order/AdminOrderDetailsModal';
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+
 const PAGE_SIZE = 10;
 
+// ============================================================
+// STATUS CONFIG
+// ============================================================
+
 const BADGE = {
-	pending: 'bg-yellow-100 text-yellow-800',
-	processing: 'bg-blue-100 text-blue-800',
-	shipped: 'bg-purple-100 text-purple-800',
-	delivered: 'bg-green-100 text-green-800',
-	cancelled: 'bg-red-100 text-red-800',
+	pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+
+	processing: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+
+	shipped: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+
+	delivered: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+
+	cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
 };
 
 const STATUS_ICON = {
 	pending: Clock,
-	processing: RefreshCw,
+	processing: Package,
 	shipped: Truck,
 	delivered: CheckCircle,
 	cancelled: XCircle,
 };
 
-const StatusBadge = ({ status }) => {
-	const Icon = STATUS_ICON[status] || Package;
+// ============================================================
+// STATUS BADGE
+// ============================================================
+
+function StatusBadge({ status }) {
+	const normalized = String(status || 'pending').toLowerCase();
+
+	const Icon = STATUS_ICON[normalized] || Clock;
+
+	const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+
 	return (
 		<span
-			className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium capitalize ${
-				BADGE[status] || 'bg-gray-100 text-gray-800'
+			className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+				BADGE[normalized] ||
+				'border-gray-500/20 bg-gray-500/10 text-gray-400'
 			}`}>
-			<Icon className="h-3.5 w-3.5" />
-			{status}
+			<Icon size={13} />
+
+			{label}
 		</span>
 	);
-};
+}
 
-const AdminOrders = () => {
+// ============================================================
+// CURRENCY
+// ============================================================
+
+function formatCurrency(value) {
+	const number = Number(value || 0);
+
+	return new Intl.NumberFormat('en-BD', {
+		style: 'currency',
+		currency: 'BDT',
+		maximumFractionDigits: 0,
+	}).format(number);
+}
+
+// ============================================================
+// DATE
+// ============================================================
+
+function formatDate(value) {
+	if (!value) return '—';
+
+	try {
+		return new Intl.DateTimeFormat('en-BD', {
+			dateStyle: 'medium',
+			timeStyle: 'short',
+		}).format(new Date(value));
+	} catch {
+		return '—';
+	}
+}
+
+// ============================================================
+// STATS CARD
+// ============================================================
+
+function StatsCard({ title, value, icon: Icon, description }) {
+	return (
+		<div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131318]">
+			<div className="flex items-start justify-between gap-3">
+				<div>
+					<p className="text-sm text-gray-500 dark:text-gray-400">
+						{title}
+					</p>
+
+					<p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+						{value}
+					</p>
+
+					{description && (
+						<p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+							{description}
+						</p>
+					)}
+				</div>
+
+				<div className="rounded-xl bg-gray-100 p-2.5 dark:bg-white/5">
+					<Icon
+						size={20}
+						className="text-gray-700 dark:text-gray-300"
+					/>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
+
+export default function AdminOrders() {
 	const { data, isLoading, isError, error, refetch, isFetching } =
 		useAdminOrders();
 
-	const orders = Array.isArray(data) ? data : [];
-
 	const updateOrder = useUpdateOrder();
+
 	const deleteOrder = useDeleteOrder();
 
-	const [filter, setFilter] = useState('all');
+	const orders = Array.isArray(data) ? data : [];
+
+	// ========================================================
+	// LOCAL STATE
+	// ========================================================
+
 	const [search, setSearch] = useState('');
-	const [sort, setSort] = useState('newest');
+
+	const [statusFilter, setStatusFilter] = useState('all');
+
+	const [sortBy, setSortBy] = useState('newest');
+
 	const [page, setPage] = useState(1);
+
 	const [selectedId, setSelectedId] = useState(null);
+
 	const [busyId, setBusyId] = useState(null);
 
-	const selectedOrder = useMemo(
-		() => orders.find((o) => o._id === selectedId) || null,
-		[orders, selectedId]
-	);
+	// ========================================================
+	// SELECTED ORDER
+	// ========================================================
 
-	// ---------- stats ----------
+	const selectedOrder = useMemo(() => {
+		if (!selectedId) return null;
+
+		return (
+			orders.find((order) => String(order._id) === String(selectedId)) ||
+			null
+		);
+	}, [orders, selectedId]);
+
+	// ========================================================
+	// STATS
+	// ========================================================
+
 	const stats = useMemo(() => {
-		const count = (s) =>
-			orders.filter((o) => (o.status || 'pending') === s).length;
+		const total = orders.length;
+
+		const pending = orders.filter(
+			(order) => String(order.status).toLowerCase() === 'pending'
+		).length;
+
+		const processing = orders.filter(
+			(order) => String(order.status).toLowerCase() === 'processing'
+		).length;
+
+		const delivered = orders.filter(
+			(order) => String(order.status).toLowerCase() === 'delivered'
+		).length;
+
 		const revenue = orders
-			.filter((o) => o.status !== 'cancelled')
-			.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+			.filter(
+				(order) => String(order.status).toLowerCase() !== 'cancelled'
+			)
+			.reduce(
+				(sum, order) =>
+					sum +
+					Number(
+						order.totalAmount ??
+							order.total ??
+							order.grandTotal ??
+							0
+					),
+				0
+			);
+
 		return {
-			total: orders.length,
-			pending: count('pending'),
-			processing: count('processing'),
-			delivered: count('delivered'),
+			total,
+			pending,
+			processing,
+			delivered,
 			revenue,
 		};
 	}, [orders]);
 
-	const filters = [
-		{ id: 'all', label: 'All', count: orders.length },
-		...ORDER_STATUSES.map((s) => ({
-			id: s,
-			label: s.charAt(0).toUpperCase() + s.slice(1),
-			count: orders.filter((o) => (o.status || 'pending') === s).length,
-		})),
-	];
+	// ========================================================
+	// FILTER + SEARCH + SORT
+	// ========================================================
 
-	// ---------- filter / search / sort ----------
-	const filtered = useMemo(() => {
-		const q = search.trim().toLowerCase();
+	const filteredOrders = useMemo(() => {
+		let result = [...orders];
 
-		const list = orders.filter((o) => {
-			const st = (o.status || 'pending').toLowerCase();
-			if (filter !== 'all' && st !== filter) return false;
-			if (!q) return true;
+		// ----------------------------------------------------
+		// STATUS FILTER
+		// ----------------------------------------------------
 
-			const haystack = [
-				getOrderId(o),
-				o.customer?.name,
-				o.customer?.phone,
-				o.customer?.email,
-				o.trackingNumber,
-				...(o.orderItems || []).map((i) => i.name),
-			]
-				.filter(Boolean)
-				.join(' ')
-				.toLowerCase();
-			return haystack.includes(q);
+		if (statusFilter !== 'all') {
+			result = result.filter(
+				(order) =>
+					String(order.status || 'pending').toLowerCase() ===
+					statusFilter
+			);
+		}
+
+		// ----------------------------------------------------
+		// SEARCH
+		// ----------------------------------------------------
+
+		const query = search.trim().toLowerCase();
+
+		if (query) {
+			result = result.filter((order) => {
+				const customer =
+					order.customer || order.user || order.shippingAddress || {};
+
+				const name =
+					customer.name ||
+					customer.fullName ||
+					order.name ||
+					order.customerName ||
+					'';
+
+				const phone =
+					customer.phone || order.phone || order.customerPhone || '';
+
+				const email =
+					customer.email || order.email || order.customerEmail || '';
+
+				const tracking = order.trackingNumber || '';
+
+				const itemNames = Array.isArray(order.items)
+					? order.items
+							.map((item) => item.name || item.productName || '')
+							.join(' ')
+					: '';
+
+				const searchable = [
+					getOrderId(order),
+					order._id,
+					name,
+					phone,
+					email,
+					tracking,
+					itemNames,
+				]
+					.join(' ')
+					.toLowerCase();
+
+				return searchable.includes(query);
+			});
+		}
+
+		// ----------------------------------------------------
+		// SORT
+		// ----------------------------------------------------
+
+		result.sort((a, b) => {
+			switch (sortBy) {
+				case 'oldest':
+					return (
+						new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+					);
+
+				case 'highest':
+					return (
+						Number(b.totalAmount ?? b.total ?? b.grandTotal ?? 0) -
+						Number(a.totalAmount ?? a.total ?? a.grandTotal ?? 0)
+					);
+
+				case 'lowest':
+					return (
+						Number(a.totalAmount ?? a.total ?? a.grandTotal ?? 0) -
+						Number(b.totalAmount ?? b.total ?? b.grandTotal ?? 0)
+					);
+
+				case 'newest':
+				default:
+					return (
+						new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+					);
+			}
 		});
 
-		list.sort((a, b) => {
-			if (sort === 'oldest')
-				return new Date(a.createdAt) - new Date(b.createdAt);
-			if (sort === 'highest') return (b.total || 0) - (a.total || 0);
-			if (sort === 'lowest') return (a.total || 0) - (b.total || 0);
-			return new Date(b.createdAt) - new Date(a.createdAt);
-		});
-		return list;
-	}, [orders, filter, search, sort]);
+		return result;
+	}, [orders, search, statusFilter, sortBy]);
 
-	const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-	const currentPage = Math.min(page, totalPages);
-	const pageOrders = filtered.slice(
-		(currentPage - 1) * PAGE_SIZE,
-		currentPage * PAGE_SIZE
+	// ========================================================
+	// PAGINATION
+	// ========================================================
+
+	const totalPages = Math.max(
+		1,
+		Math.ceil(filteredOrders.length / PAGE_SIZE)
 	);
 
-	// ---------- actions ----------
+	const safePage = Math.min(page, totalPages);
+
+	const paginatedOrders = useMemo(() => {
+		const start = (safePage - 1) * PAGE_SIZE;
+
+		return filteredOrders.slice(start, start + PAGE_SIZE);
+	}, [filteredOrders, safePage]);
+
+	// ========================================================
+	// RESET PAGE WHEN FILTER CHANGES
+	// ========================================================
+
+	const handleSearchChange = (value) => {
+		setSearch(value);
+		setPage(1);
+	};
+
+	const handleStatusFilterChange = (value) => {
+		setStatusFilter(value);
+		setPage(1);
+	};
+
+	const handleSortChange = (value) => {
+		setSortBy(value);
+		setPage(1);
+	};
+
+	// ========================================================
+	// UPDATE ORDER
+	// ========================================================
 
 	const handleUpdate = async (id, payload) => {
-		setBusyId(id);
+		if (!id) return;
 
 		try {
-			await updateOrder.mutateAsync({ id, payload });
+			setBusyId(id);
+
+			await updateOrder.mutateAsync({
+				id,
+				payload,
+			});
+		} catch (err) {
+			console.error('Update order error:', err);
 		} finally {
 			setBusyId(null);
 		}
 	};
+
+	// ========================================================
+	// QUICK STATUS CHANGE
+	// ========================================================
 
 	const handleQuickStatus = async (order, newStatus) => {
-		const current = (order.status || 'pending').toLowerCase();
+		if (!order?._id) return;
 
-		if (newStatus === current || busyId === order._id) return;
+		const current = String(order.status || 'pending').toLowerCase();
 
-		if (
-			newStatus === 'cancelled' &&
-			!window.confirm(`Cancel order #${getOrderId(order)}?`)
-		) {
+		if (newStatus === current || busyId === order._id) {
 			return;
 		}
 
-		try {
-			await handleUpdate(order._id, { status: newStatus });
-		} catch {
-			// Error toast is handled by the mutation hook.
+		if (newStatus === 'cancelled') {
+			const confirmed = window.confirm(
+				`Cancel order #${getOrderId(order)}?`
+			);
+
+			if (!confirmed) {
+				return;
+			}
 		}
+
+		await handleUpdate(order._id, {
+			status: newStatus,
+		});
 	};
 
+	// ========================================================
+	// DELETE ORDER
+	// ========================================================
+
 	const handleDelete = async (order) => {
-		if (
-			!window.confirm(
-				`Permanently delete order #${getOrderId(order)}? This cannot be undone.`
-			)
-		) {
+		if (!order?._id) return;
+
+		const confirmed = window.confirm(
+			`Delete order #${getOrderId(order)} permanently?`
+		);
+
+		if (!confirmed) {
 			return;
 		}
 
-		setBusyId(order._id);
-
 		try {
+			setBusyId(order._id);
+
 			await deleteOrder.mutateAsync(order._id);
 
-			if (selectedId === order._id) {
+			if (String(selectedId) === String(order._id)) {
 				setSelectedId(null);
 			}
-		} catch {
-			// Error toast is handled by the mutation hook.
+		} catch (err) {
+			console.error('Delete order error:', err);
 		} finally {
 			setBusyId(null);
 		}
-  };
-  
-
-
-  const handleOrderStatusChange = () => {}
-
-
-
-
-
-	const exportCSV = () => {
-		if (!filtered.length) {
-			toast.error('No orders to export.');
-			return;
-		}
-		const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-		const rows = [
-			[
-				'Order ID',
-				'Date',
-				'Customer',
-				'Phone',
-				'Email',
-				'Items',
-				'Total',
-				'Payment',
-				'Status',
-				'Tracking',
-			],
-			...filtered.map((o) => [
-				getOrderId(o),
-				o.createdAt ? new Date(o.createdAt).toISOString() : '',
-				o.customer?.name,
-				o.customer?.phone,
-				o.customer?.email,
-				(o.orderItems || []).length,
-				o.total,
-				o.paymentStatus,
-				o.status,
-				o.trackingNumber,
-			]),
-		];
-		const csv = '\uFEFF' + rows.map((r) => r.map(esc).join(',')).join('\n');
-		const url = URL.createObjectURL(
-			new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-		);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
-		a.click();
-		URL.revokeObjectURL(url);
 	};
 
-	// ---------- states ----------
+	// ========================================================
+	// WHATSAPP
+	// ========================================================
+
+	const handleWhatsApp = (order) => {
+		try {
+			const url = getOrderWhatsAppUrl(order);
+
+			if (!url) {
+				toast.error('Customer phone number not found');
+
+				return;
+			}
+
+			window.open(url, '_blank', 'noopener,noreferrer');
+		} catch (error) {
+			console.error(error);
+
+			toast.error('Unable to open WhatsApp');
+		}
+	};
+
+	// ========================================================
+	// CSV EXPORT
+	// ========================================================
+
+	const exportCSV = () => {
+		if (!filteredOrders.length) {
+			toast.error('No orders to export');
+
+			return;
+		}
+
+		const headers = [
+			'Order ID',
+			'Customer',
+			'Phone',
+			'Email',
+			'Total',
+			'Payment Status',
+			'Order Status',
+			'Tracking Number',
+			'Created At',
+		];
+
+		const rows = filteredOrders.map((order) => {
+			const customer =
+				order.customer || order.user || order.shippingAddress || {};
+
+			const name =
+				customer.name || customer.fullName || order.customerName || '';
+
+			const phone =
+				customer.phone || order.phone || order.customerPhone || '';
+
+			const email =
+				customer.email || order.email || order.customerEmail || '';
+
+			return [
+				getOrderId(order),
+				name,
+				phone,
+				email,
+				Number(
+					order.totalAmount ?? order.total ?? order.grandTotal ?? 0
+				),
+				order.paymentStatus || 'pending',
+				order.status || 'pending',
+				order.trackingNumber || '',
+				order.createdAt || '',
+			];
+		});
+
+		const escapeCSV = (value) => {
+			const text = String(value ?? '');
+
+			return `"${text.replace(/"/g, '""')}"`;
+		};
+
+		const csv = [
+			headers.map(escapeCSV),
+			...rows.map((row) => row.map(escapeCSV)),
+		]
+			.map((row) => row.join(','))
+			.join('\n');
+
+		const blob = new Blob(['\uFEFF' + csv], {
+			type: 'text/csv;charset=utf-8;',
+		});
+
+		const url = URL.createObjectURL(blob);
+
+		const link = document.createElement('a');
+
+		link.href = url;
+
+		link.download = `shalban-food-orders-${new Date()
+			.toISOString()
+			.slice(0, 10)}.csv`;
+
+		document.body.appendChild(link);
+
+		link.click();
+
+		document.body.removeChild(link);
+
+		URL.revokeObjectURL(url);
+
+		toast.success('Orders exported successfully');
+	};
+
+	// ========================================================
+	// LOADING
+	// ========================================================
+
 	if (isLoading) {
 		return (
 			<div className="flex min-h-[400px] items-center justify-center">
-				<div className="text-center">
-					<LoaderCircle className="mx-auto mb-3 h-9 w-9 animate-spin text-blue-600" />
-					<p className="text-gray-600">Loading orders...</p>
+				<div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+					<LoaderCircle className="animate-spin" size={22} />
+
+					<span>Loading orders...</span>
 				</div>
 			</div>
 		);
 	}
 
+	// ========================================================
+	// ERROR
+	// ========================================================
+
 	if (isError) {
 		return (
-			<div className="rounded-xl border border-red-200 bg-white p-10 text-center">
-				<XCircle className="mx-auto mb-4 h-14 w-14 text-red-500" />
-				<h2 className="mb-2 text-xl font-semibold text-gray-900">
+			<div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+				<XCircle size={40} className="mx-auto text-red-400" />
+
+				<h3 className="mt-3 font-semibold text-gray-900 dark:text-white">
 					Failed to load orders
-				</h2>
+				</h3>
+
+				<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+					{error?.message || 'Something went wrong.'}
+				</p>
+
 				<button
+					type="button"
 					onClick={() => refetch()}
-					className="mt-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
-					Try again
+					className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
+					<RefreshCw size={16} />
+					Try Again
 				</button>
 			</div>
 		);
 	}
 
-	const statCards = [
-		{
-			label: 'Total Orders',
-			value: stats.total,
-			icon: ShoppingBag,
-			color: 'text-blue-500 bg-blue-50',
-		},
-		{
-			label: 'Pending',
-			value: stats.pending,
-			icon: Clock,
-			color: 'text-yellow-500 bg-yellow-50',
-		},
-		{
-			label: 'Processing',
-			value: stats.processing,
-			icon: RefreshCw,
-			color: 'text-indigo-500 bg-indigo-50',
-		},
-		{
-			label: 'Delivered',
-			value: stats.delivered,
-			icon: CheckCircle,
-			color: 'text-green-500 bg-green-50',
-		},
-		{
-			label: 'Revenue',
-			value: formatCurrency(stats.revenue),
-			icon: Wallet,
-			color: 'text-purple-500 bg-purple-50',
-		},
-	];
+	// ========================================================
+	// RENDER
+	// ========================================================
 
 	return (
-		<div className="min-h-screen bg-gray-50 py-8">
-			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-				{/* Title */}
-				<div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-					<div>
-						<h1 className="text-2xl font-bold text-gray-900">
-							Orders
-						</h1>
-						<p className="text-sm text-gray-500">
-							Manage and update customer orders
-						</p>
-					</div>
-					<div className="flex gap-2">
-						<button
-							onClick={() => refetch()}
-							disabled={isFetching}
-							className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-60">
-							<RefreshCw
-								className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`}
-							/>
-							Refresh
-						</button>
-						<button
-							onClick={exportCSV}
-							className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
-							<Download className="h-4 w-4" />
-							Export CSV
-						</button>
-					</div>
+		<div className="space-y-6">
+			{/* ==================================================
+			    HEADER
+			================================================== */}
+
+			<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Orders
+					</h1>
+
+					<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+						Manage customer orders, status and deliveries.
+					</p>
 				</div>
 
-				{/* Stats */}
-				<div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-					{statCards.map((c, i) => (
-						<motion.div
-							key={c.label}
-							initial={{ opacity: 0, y: 16 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: i * 0.05 }}
-							className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-							<div className="flex items-center justify-between gap-2">
-								<div className="min-w-0">
-									<p className="text-xs text-gray-500">
-										{c.label}
-									</p>
-									<p className="truncate text-xl font-bold text-gray-900">
-										{c.value}
-									</p>
-								</div>
-								<c.icon
-									className={`h-10 w-10 shrink-0 rounded-lg p-2 ${c.color}`}
-								/>
-							</div>
-						</motion.div>
-					))}
-				</div>
+				<div className="flex flex-wrap gap-2">
+					<button
+						type="button"
+						onClick={() => refetch()}
+						disabled={isFetching}
+						className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:bg-[#131318] dark:text-gray-200 dark:hover:bg-white/5">
+						<RefreshCw
+							size={16}
+							className={isFetching ? 'animate-spin' : ''}
+						/>
+						Refresh
+					</button>
 
-				{/* Search / filter / sort */}
-				<div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-					<div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-						<div className="relative flex-1">
-							<Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-							<input
-								type="text"
-								value={search}
-								onChange={(e) => {
-									setSearch(e.target.value);
-									setPage(1);
-								}}
-								placeholder="Search by order ID, customer, phone, email, product, tracking..."
-								className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-							/>
-						</div>
+					<button
+						type="button"
+						onClick={exportCSV}
+						className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
+						<Download size={16} />
+						Export CSV
+					</button>
+				</div>
+			</div>
+
+			{/* ==================================================
+			    STATS
+			================================================== */}
+
+			<div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+				<StatsCard
+					title="Total Orders"
+					value={stats.total}
+					icon={ShoppingBag}
+				/>
+
+				<StatsCard title="Pending" value={stats.pending} icon={Clock} />
+
+				<StatsCard
+					title="Processing"
+					value={stats.processing}
+					icon={Package}
+				/>
+
+				<StatsCard
+					title="Delivered"
+					value={stats.delivered}
+					icon={CheckCircle}
+				/>
+
+				<div className="col-span-2 lg:col-span-1">
+					<StatsCard
+						title="Revenue"
+						value={formatCurrency(stats.revenue)}
+						icon={Wallet}
+					/>
+				</div>
+			</div>
+
+			{/* ==================================================
+			    FILTERS
+			================================================== */}
+
+			<div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-[#131318]">
+				<div className="flex flex-col gap-3 xl:flex-row">
+					{/* Search */}
+
+					<div className="relative flex-1">
+						<Search
+							size={18}
+							className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+						/>
+
+						<input
+							type="text"
+							value={search}
+							onChange={(e) => handleSearchChange(e.target.value)}
+							placeholder="Search order, customer, phone, email, tracking..."
+							className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-gray-900 outline-none transition focus:border-gray-400 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
+						/>
+					</div>
+
+					{/* Status */}
+
+					<div className="relative">
+						<Filter
+							size={16}
+							className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+						/>
+
 						<select
-							value={sort}
-							onChange={(e) => setSort(e.target.value)}
-							className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-							<option value="newest">Newest first</option>
-							<option value="oldest">Oldest first</option>
-							<option value="highest">Highest total</option>
-							<option value="lowest">Lowest total</option>
+							value={statusFilter}
+							onChange={(e) =>
+								handleStatusFilterChange(e.target.value)
+							}
+							className="h-11 min-w-[170px] appearance-none rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-8 text-sm text-gray-900 outline-none dark:border-white/10 dark:bg-white/5 dark:text-white">
+							<option value="all">All Status</option>
+
+							{ORDER_STATUSES.map((status) => (
+								<option
+									key={status}
+									value={status}
+									className="bg-white dark:bg-[#131318]">
+									{status.charAt(0).toUpperCase() +
+										status.slice(1)}
+								</option>
+							))}
 						</select>
 					</div>
 
-					<div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-						{filters.map((f) => (
-							<button
-								key={f.id}
-								onClick={() => {
-									setFilter(f.id);
-									setPage(1);
-								}}
-								className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition ${
-									filter === f.id
-										? 'bg-blue-600 text-white'
-										: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-								}`}>
-								{f.label}
-								<span className="ml-2 rounded-full bg-black/10 px-2 py-0.5 text-xs">
-									{f.count}
-								</span>
-							</button>
-						))}
+					{/* Sort */}
+
+					<div className="relative">
+						<ArrowUpDown
+							size={16}
+							className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+						/>
+
+						<select
+							value={sortBy}
+							onChange={(e) => handleSortChange(e.target.value)}
+							className="h-11 min-w-[170px] appearance-none rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-8 text-sm text-gray-900 outline-none dark:border-white/10 dark:bg-white/5 dark:text-white">
+							<option value="newest">Newest First</option>
+
+							<option value="oldest">Oldest First</option>
+
+							<option value="highest">Highest Amount</option>
+
+							<option value="lowest">Lowest Amount</option>
+						</select>
 					</div>
 				</div>
 
-				{/* Table */}
-				<div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-					{pageOrders.length === 0 ? (
-						<div className="p-12 text-center">
-							<Package className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-							<h3 className="mb-1 text-xl font-semibold text-gray-900">
-								No orders found
-							</h3>
-							<p className="text-gray-600">
-								{search || filter !== 'all'
-									? 'Try changing your search or filter.'
-									: 'No orders have been placed yet.'}
-							</p>
-						</div>
-					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full min-w-[900px] text-left text-sm">
-								<thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-									<tr>
-										<th className="px-4 py-3">Order</th>
-										<th className="px-4 py-3">Customer</th>
-										<th className="px-4 py-3">Items</th>
-										<th className="px-4 py-3">Total</th>
-										<th className="px-4 py-3">Payment</th>
-										<th className="px-4 py-3">Status</th>
-										<th className="px-4 py-3 text-right">
-											Actions
-										</th>
-									</tr>
-								</thead>
-								<tbody className="divide-y divide-gray-100">
-									{pageOrders.map((order) => {
-										const st = (
-											order.status || 'pending'
-										).toLowerCase();
-										const busy = busyId === order._id;
-										const itemCount = (
-											order.orderItems || []
-										).length;
+				<div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-500">
+					<span>
+						Showing{' '}
+						<strong className="text-gray-700 dark:text-gray-300">
+							{filteredOrders.length}
+						</strong>{' '}
+						orders
+					</span>
 
-										return (
-											<tr
-												key={order._id}
-												className="hover:bg-gray-50">
-												<td className="px-4 py-3">
-													<p className="font-semibold text-gray-900">
-														#{getOrderId(order)}
-													</p>
-													<p className="text-xs text-gray-500">
-														{order.createdAt
-															? formatDate(
-																	order.createdAt
-																)
-															: 'N/A'}
-													</p>
-												</td>
-												<td className="px-4 py-3">
-													<p className="font-medium text-gray-900">
-														{order.customer?.name ||
-															'Customer'}
-													</p>
-													<p className="text-xs text-gray-500">
-														{order.customer
-															?.phone ||
-															order.customer
-																?.email ||
-															'—'}
-													</p>
-												</td>
-												<td className="px-4 py-3 text-gray-700">
-													{itemCount} item
-													{itemCount !== 1 ? 's' : ''}
-												</td>
-												<td className="px-4 py-3 font-semibold text-gray-900">
-													{formatCurrency(
-														Number(order.total) || 0
-													)}
-												</td>
-												<td className="px-4 py-3">
-													<span
-														className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${
-															order.paymentStatus ===
-															'paid'
-																? 'bg-green-100 text-green-800'
-																: order.paymentStatus ===
-																	  'refunded'
-																	? 'bg-gray-200 text-gray-700'
-																	: 'bg-orange-100 text-orange-800'
-														}`}>
-														{order.paymentStatus ||
-															'unpaid'}
-													</span>
-												</td>
-												<td className="px-4 py-3">
-													<div className="flex flex-col items-start gap-1.5">
-														<StatusBadge
-															status={st}
-														/>
-														<select
-															value={st}
-															disabled={busy}
-															onChange={(e) =>
-																handleQuickStatus(
-																	order,
-																	e.target
-																		.value
-																)
-															}
-															className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
-															{ORDER_STATUSES.map(
-																(s) => (
-																	<option
-																		key={s}
-																		value={
-																			s
-																		}>
-																		{s
-																			.charAt(
-																				0
-																			)
-																			.toUpperCase() +
-																			s.slice(
-																				1
-																			)}
-																	</option>
-																)
-															)}
-														</select>
-													</div>
-												</td>
-
-												<td className="px-4 py-3">
-													<div className="flex items-center justify-end gap-2">
-														{busy && (
-															<LoaderCircle className="h-4 w-4 animate-spin text-gray-400" />
-														)}
-														<button
-															onClick={() =>
-																setSelectedId(
-																	order._id
-																)
-															}
-															className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
-															<Eye className="h-3.5 w-3.5" />
-															Manage
-														</button>
-														<td>
-															<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                              <label className="block">
-                                               
-                                                <select className='text-black'
-                                                  
-                                                  onChange={(e) =>
-                                                    handleOrderStatusChange(e.target.value)
-                                                  }
-                                                 >
-                                                 
-                                                    <option value={order.status}>
-                                      { order.status}
-                                    </option>
-                                    
-                                                    <option value='processing'>
-                                     processing
-                                                    </option>
-                                                    <option >
-                                    confirm
-                                                    </option>
-                                                    <option >
-                                     cancel
-                                                    </option>
-                                                  
-                                                </select>
-                                              </label>
-                              
-                              
-                                            
-                                            </div>
-														</td>
-
-														<button
-															type="button"
-															onClick={(e) => {
-																e.stopPropagation();
-
-																const url =
-																	getOrderWhatsAppUrl(
-																		order
-																	);
-
-																{
-																	console.log(
-																		order
-																	);
-																}
-
-																if (!url) {
-																	toast.error(
-																		'Customer phone number not found'
-																	);
-																	return;
-																}
-
-																window.open(
-																	url,
-																	'_blank',
-																	'noopener,noreferrer'
-																);
-															}}
-															title="Message customer on WhatsApp"
-															className="inline-flex items-center justify-center gap-2
-        rounded-lg 
-        px-3 py-2
-        text-sm font-medium text-green-900
-        transition hover:bg-green-500/20">
-															<MessageCircle
-																size={16}
-															/>
-														</button>
-														<button
-															onClick={() =>
-																handleDelete(
-																	order
-																)
-															}
-															disabled={busy}
-															aria-label="Delete order"
-															className="rounded-lg border border-red-200 p-1.5 text-red-500 hover:bg-red-50 disabled:opacity-50">
-															<Trash2 className="h-4 w-4" />
-														</button>
-													</div>
-												</td>
-											</tr>
-										);
-									})}
-								</tbody>
-							</table>
-						</div>
-					)}
-
-					{/* Pagination */}
-					{filtered.length > PAGE_SIZE && (
-						<div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-							<p className="text-sm text-gray-600">
-								Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-								{Math.min(
-									currentPage * PAGE_SIZE,
-									filtered.length
-								)}{' '}
-								of {filtered.length}
-							</p>
-							<div className="flex items-center gap-2">
-								<button
-									onClick={() =>
-										setPage((p) => Math.max(1, p - 1))
-									}
-									disabled={currentPage === 1}
-									className="rounded-lg border border-gray-300 p-2 hover:bg-gray-100 disabled:opacity-40">
-									<ChevronLeft className="h-4 w-4" />
-								</button>
-								<span className="text-sm text-gray-700">
-									{currentPage} / {totalPages}
-								</span>
-								<button
-									onClick={() =>
-										setPage((p) =>
-											Math.min(totalPages, p + 1)
-										)
-									}
-									disabled={currentPage === totalPages}
-									className="rounded-lg border border-gray-300 p-2 hover:bg-gray-100 disabled:opacity-40">
-									<ChevronRight className="h-4 w-4" />
-								</button>
-							</div>
-						</div>
+					{isFetching && (
+						<span className="flex items-center gap-1.5">
+							<LoaderCircle size={13} className="animate-spin" />
+							Updating...
+						</span>
 					)}
 				</div>
 			</div>
 
-			{/* Modal */}
+			{/* ==================================================
+			    EMPTY
+			================================================== */}
+
+			{filteredOrders.length === 0 && (
+				<div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-white/10 dark:bg-[#131318]">
+					<ShoppingBag size={42} className="mx-auto text-gray-400" />
+
+					<h3 className="mt-4 font-semibold text-gray-900 dark:text-white">
+						No orders found
+					</h3>
+
+					<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+						Try changing your search or filters.
+					</p>
+				</div>
+			)}
+
+			{/* ==================================================
+			    TABLE
+			================================================== */}
+
+			{filteredOrders.length > 0 && (
+				<div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-[#131318]">
+					<div className="overflow-x-auto">
+						<table className="w-full min-w-[1100px] text-left">
+							<thead className="border-b border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/[0.025]">
+								<tr>
+									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+										Order
+									</th>
+
+									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+										Customer
+									</th>
+
+									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+										Items
+									</th>
+
+									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+										Total
+									</th>
+
+									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+										Payment
+									</th>
+
+									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+										Status
+									</th>
+
+									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+										Actions
+									</th>
+								</tr>
+							</thead>
+
+							<tbody className="divide-y divide-gray-200 dark:divide-white/10">
+								{paginatedOrders.map((order) => {
+									const customer =
+										order.customer ||
+										order.user ||
+										order.shippingAddress ||
+										{};
+
+									const customerName =
+										customer.name ||
+										customer.fullName ||
+										order.customerName ||
+										'Guest Customer';
+
+									const phone =
+										customer.phone ||
+										order.phone ||
+										order.customerPhone ||
+										'';
+
+									const total = Number(
+										order.totalAmount ??
+											order.total ??
+											order.grandTotal ??
+											0
+									);
+
+									const status = String(
+										order.status || 'pending'
+									).toLowerCase();
+
+									const busy = busyId === order._id;
+
+									return (
+										<tr
+											key={order._id}
+											className="transition hover:bg-gray-50 dark:hover:bg-white/[0.025]">
+											{/* ORDER */}
+
+											<td className="px-4 py-4">
+												<div>
+													<button
+														type="button"
+														onClick={() =>
+															setSelectedId(
+																order._id
+															)
+														}
+														className="font-semibold text-gray-900 hover:underline dark:text-white">
+														#{getOrderId(order)}
+													</button>
+
+													<p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+														{formatDate(
+															order.createdAt
+														)}
+													</p>
+												</div>
+											</td>
+
+											{/* CUSTOMER */}
+
+											<td className="px-4 py-4">
+												<div className="max-w-[190px]">
+													<p className="truncate font-medium text-gray-900 dark:text-white">
+														{customerName}
+													</p>
+
+													{phone && (
+														<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+															{phone}
+														</p>
+													)}
+
+													{customer.email && (
+														<p className="truncate text-xs text-gray-500 dark:text-gray-500">
+															{customer.email}
+														</p>
+													)}
+												</div>
+											</td>
+
+											{/* ITEMS */}
+
+											<td className="px-4 py-4">
+												<div className="flex items-center gap-2">
+													<div className="rounded-lg bg-gray-100 p-2 dark:bg-white/5">
+														<ShoppingBag
+															size={15}
+															className="text-gray-500"
+														/>
+													</div>
+
+													<span className="text-sm text-gray-700 dark:text-gray-300">
+														{Array.isArray(
+															order.items
+														)
+															? order.items.reduce(
+																	(
+																		sum,
+																		item
+																	) =>
+																		sum +
+																		Number(
+																			item.quantity ||
+																				1
+																		),
+																	0
+																)
+															: 0}{' '}
+														item(s)
+													</span>
+												</div>
+											</td>
+
+											{/* TOTAL */}
+
+											<td className="px-4 py-4">
+												<span className="font-semibold text-gray-900 dark:text-white">
+													{formatCurrency(total)}
+												</span>
+											</td>
+
+											{/* PAYMENT */}
+
+											<td className="px-4 py-4">
+												<div className="space-y-1">
+													<span className="text-sm text-gray-700 dark:text-gray-300">
+														{order.paymentMethod ||
+															'COD'}
+													</span>
+
+													<p className="text-xs capitalize text-gray-500 dark:text-gray-500">
+														{order.paymentStatus ||
+															'pending'}
+													</p>
+												</div>
+											</td>
+
+											{/* STATUS */}
+
+											<td className="px-4 py-4">
+												<div className="flex min-w-[150px] flex-col items-start gap-2">
+													<StatusBadge
+														status={status}
+													/>
+
+													<select
+														value={status}
+														disabled={busy}
+														onChange={(e) =>
+															handleQuickStatus(
+																order,
+																e.target.value
+															)
+														}
+														className="h-8 w-full rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 outline-none focus:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300">
+														{ORDER_STATUSES.map(
+															(option) => (
+																<option
+																	key={option}
+																	value={
+																		option
+																	}
+																	className="bg-white dark:bg-[#131318]">
+																	{option
+																		.charAt(
+																			0
+																		)
+																		.toUpperCase() +
+																		option.slice(
+																			1
+																		)}
+																</option>
+															)
+														)}
+													</select>
+												</div>
+											</td>
+
+											{/* ACTIONS */}
+
+											<td className="px-4 py-4">
+												<div className="flex items-center gap-1.5">
+													{/* VIEW */}
+
+													<button
+														type="button"
+														title="View order"
+														onClick={() =>
+															setSelectedId(
+																order._id
+															)
+														}
+														className="rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white">
+														<Eye size={16} />
+													</button>
+
+													{/* WHATSAPP */}
+
+													<button
+														type="button"
+														title="WhatsApp customer"
+														onClick={() =>
+															handleWhatsApp(
+																order
+															)
+														}
+														disabled={!phone}
+														className="rounded-lg border border-green-500/20 bg-green-500/5 p-2 text-green-500 transition hover:bg-green-500/10 disabled:cursor-not-allowed disabled:opacity-40">
+														<MessageCircle
+															size={16}
+														/>
+													</button>
+
+													{/* DELETE */}
+
+													<button
+														type="button"
+														title="Delete order"
+														onClick={() =>
+															handleDelete(order)
+														}
+														disabled={busy}
+														className="rounded-lg border border-red-500/20 bg-red-500/5 p-2 text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40">
+														{busy ? (
+															<LoaderCircle
+																size={16}
+																className="animate-spin"
+															/>
+														) : (
+															<Trash2 size={16} />
+														)}
+													</button>
+												</div>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
+
+					{/* ==================================================
+					    PAGINATION
+					================================================== */}
+
+					<div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-white/10">
+						<p className="text-sm text-gray-500 dark:text-gray-400">
+							Page{' '}
+							<span className="font-medium text-gray-900 dark:text-white">
+								{safePage}
+							</span>{' '}
+							of{' '}
+							<span className="font-medium text-gray-900 dark:text-white">
+								{totalPages}
+							</span>
+						</p>
+
+						<div className="flex items-center gap-2">
+							<button
+								type="button"
+								disabled={safePage <= 1}
+								onClick={() =>
+									setPage((current) =>
+										Math.max(1, current - 1)
+									)
+								}
+								className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5">
+								<ChevronLeft size={16} />
+								Previous
+							</button>
+
+							<button
+								type="button"
+								disabled={safePage >= totalPages}
+								onClick={() =>
+									setPage((current) =>
+										Math.min(totalPages, current + 1)
+									)
+								}
+								className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5">
+								Next
+								<ChevronRight size={16} />
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* ==================================================
+			    ORDER DETAILS MODAL
+			================================================== */}
 
 			<AdminOrderDetailsModal
 				isOpen={Boolean(selectedOrder)}
@@ -714,11 +1144,9 @@ const AdminOrders = () => {
 				onClose={() => setSelectedId(null)}
 				onUpdate={handleUpdate}
 				isUpdating={
-					Boolean(selectedOrder) && busyId === selectedOrder._id
+					selectedOrder ? busyId === selectedOrder._id : false
 				}
 			/>
 		</div>
 	);
-};
-
-export default AdminOrders;
+}

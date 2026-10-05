@@ -1,13 +1,8 @@
-  Fetching data ---------  
-  const { isLoading, isFetching } = useProducts();
-  
-  const { products } = useSelector((state) => state.product.products);
-	
+
+use all time / page
+ const {data, isLoading, isFetching } = useProducts();
 
 
-post data  ===================
-1. slice
-2. hook
 
 
 slice
@@ -36,6 +31,15 @@ export const createCategory = createAsyncThunk(
 
                 state.categories.unshift(action.payload);
             })
+
+
+
+
+
+
+
+
+	const deleteOrder = useDeleteOrder();
 
 
 
