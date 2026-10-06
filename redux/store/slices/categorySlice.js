@@ -1,274 +1,445 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import {
+    createSlice,
+    createAsyncThunk,
+} from "@reduxjs/toolkit";
 
-// ======================================================
-// Helper: Extract API Error Message
-// ======================================================
-const getErrorMessage = (error, fallback) => {
-	return (
-		error?.response?.data?.message ||
-		error?.response?.data?.error ||
-		error?.message ||
-		fallback
-	);
+import axios from "axios";
+
+// ========================================
+// ERROR HELPER
+// ========================================
+
+const getErrorMessage = (
+    error,
+    fallback
+) => {
+    return (
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        fallback
+    );
 };
 
-// ======================================================
-// FETCH CATEGORIES
-// ======================================================
-export const fetchCategories = createAsyncThunk(
-	'categories/fetchCategories',
-	async (_, { rejectWithValue }) => {
-		try {
-			const res = await axios.get('/api/categories');
-			console.log(res.data, 'cat');
-			return res.data?.categories || [];
-		} catch (error) {
-			return rejectWithValue(
-				getErrorMessage(error, 'Failed to fetch categories')
-			);
-		}
-	}
-);
+// ========================================
+// FETCH
+// ========================================
 
-// ======================================================
-// ADD CATEGORY
-// ======================================================
-export const addCategory = createAsyncThunk(
-	'categories/addCategory',
-	async (payload, { rejectWithValue }) => {
-		try {
-			const res = await axios.post('/api/categories', payload);
+export const fetchCategories =
+    createAsyncThunk(
+        "categories/fetchCategories",
+        async (_, { rejectWithValue }) => {
+            try {
+                const res =
+                    await axios.get(
+                        "/api/categories"
+                    );
 
-			console.log(res.data.category, 'slice');
+                return (
+                    res.data?.categories ||
+                    []
+                );
+            } catch (error) {
+                return rejectWithValue(
+                    getErrorMessage(
+                        error,
+                        "Failed to fetch categories"
+                    )
+                );
+            }
+        }
+    );
 
-			return res.data?.category;
-		} catch (error) {
-			return rejectWithValue(
-				getErrorMessage(error, 'Failed to create category')
-			);
-		}
-	}
-);
+// ========================================
+// ADD
+// ========================================
 
-// ======================================================
-// UPDATE CATEGORY
-// ======================================================
-export const updateCategory = createAsyncThunk(
-	'categories/updateCategory',
-	async ({ id, ...data }, { rejectWithValue }) => {
-		try {
-			if (!id) {
-				return rejectWithValue('Category ID is required');
-			}
+export const addCategory =
+    createAsyncThunk(
+        "categories/addCategory",
+        async (
+            payload,
+            { rejectWithValue }
+        ) => {
+            try {
+                const res =
+                    await axios.post(
+                        "/api/categories",
+                        payload
+                    );
 
-			const res = await axios.put(`/api/categories/${id}`, data);
+                return res.data?.category;
+            } catch (error) {
+                return rejectWithValue(
+                    getErrorMessage(
+                        error,
+                        "Failed to create category"
+                    )
+                );
+            }
+        }
+    );
 
-			return res.data?.category || res.data?.data || res.data;
-		} catch (error) {
-			return rejectWithValue(
-				getErrorMessage(error, 'Failed to update category')
-			);
-		}
-	}
-);
+// ========================================
+// UPDATE
+// ========================================
 
-// ======================================================
-// DELETE CATEGORY
-// ======================================================
-export const deleteCategory = createAsyncThunk(
-	'categories/deleteCategory',
-	async (id, { rejectWithValue }) => {
-		try {
-			if (!id) {
-				return rejectWithValue('Category ID is required');
-			}
+export const updateCategory =
+    createAsyncThunk(
+        "categories/updateCategory",
+        async (
+            { id, ...data },
+            { rejectWithValue }
+        ) => {
+            try {
+                if (!id) {
+                    return rejectWithValue(
+                        "Category ID is required"
+                    );
+                }
 
-			await axios.delete(`/api/categories/${id}`);
+                const res =
+                    await axios.put(
+                        `/api/categories/${id}`,
+                        data
+                    );
 
-			return id;
-		} catch (error) {
-			return rejectWithValue(
-				getErrorMessage(error, 'Failed to delete category')
-			);
-		}
-	}
-);
+                return (
+                    res.data?.category ||
+                    res.data?.data ||
+                    res.data
+                );
+            } catch (error) {
+                return rejectWithValue(
+                    getErrorMessage(
+                        error,
+                        "Failed to update category"
+                    )
+                );
+            }
+        }
+    );
 
-// ======================================================
+// ========================================
+// DELETE
+// ========================================
+
+export const deleteCategory =
+    createAsyncThunk(
+        "categories/deleteCategory",
+        async (
+            id,
+            { rejectWithValue }
+        ) => {
+            try {
+                if (!id) {
+                    return rejectWithValue(
+                        "Category ID is required"
+                    );
+                }
+
+                await axios.delete(
+                    `/api/categories/${id}`
+                );
+
+                return id;
+            } catch (error) {
+                return rejectWithValue(
+                    getErrorMessage(
+                        error,
+                        "Failed to delete category"
+                    )
+                );
+            }
+        }
+    );
+
+// ========================================
 // INITIAL STATE
-// ======================================================
+// ========================================
+
 const initialState = {
-	categories: [],
-	loading: false,
-	saving: false,
-	deleting: false,
-	error: null,
+    categories: [],
+    loading: false,
+    saving: false,
+    deleting: false,
+    error: null,
 };
 
-// ======================================================
+// ========================================
 // SLICE
-// ======================================================
+// ========================================
+
 const categorySlice = createSlice({
-	name: 'categories',
+    name: "categories",
 
-	initialState,
+    initialState,
 
-	reducers: {
-		clearCategoryError: (state) => {
-			state.error = null;
-		},
+    reducers: {
+        clearCategoryError: (
+            state
+        ) => {
+            state.error = null;
+        },
 
-		// Optional: Clear all categories
-		clearCategories: (state) => {
-			state.categories = [];
-		},
+        clearCategories: (
+            state
+        ) => {
+            state.categories = [];
+        },
 
-		// Optional: Reset entire slice
-		resetCategoryState: () => {
-			return initialState;
-		},
-	},
+        resetCategoryState: () =>
+            initialState,
+    },
 
-	extraReducers: (builder) => {
-		builder
+    extraReducers: (builder) => {
+        builder
 
-			// ==================================================
-			// FETCH
-			// ==================================================
-			.addCase(fetchCategories.pending, (state) => {
-				state.loading = true;
-				state.error = null;
-			})
-			.addCase(fetchCategories.fulfilled, (state, action) => {
-    state.categories = Array.isArray(action.payload)
-        ? action.payload
-        : [];
+            // ==================================
+            // FETCH
+            // ==================================
 
-    state.loading = false;
-    state.error = null;
-})
+            .addCase(
+                fetchCategories.pending,
+                (state) => {
+                    state.loading = true;
+                    state.error = null;
+                }
+            )
 
-			.addCase(fetchCategories.rejected, (state, action) => {
-				state.loading = false;
+            .addCase(
+                fetchCategories.fulfilled,
+                (
+                    state,
+                    action
+                ) => {
+                    // IMPORTANT:
+                    // thunk returns ARRAY directly
+                    state.categories =
+                        Array.isArray(
+                            action.payload
+                        )
+                            ? action.payload
+                            : [];
 
-				state.error =
-					action.payload ||
-					action.error?.message ||
-					'Failed to fetch categories';
-			})
+                    state.loading = false;
+                    state.error = null;
+                }
+            )
 
-			// ==================================================
-			// ADD
-			// ==================================================
-			.addCase(addCategory.pending, (state) => {
-				state.saving = true;
-				state.error = null;
-			})
+            .addCase(
+                fetchCategories.rejected,
+                (
+                    state,
+                    action
+                ) => {
+                    state.loading = false;
 
-			.addCase(addCategory.fulfilled, (state, action) => {
-				if (action.payload) {
-					state.categories.unshift(action.payload);
-				}
+                    state.error =
+                        action.payload ||
+                        action.error?.message ||
+                        "Failed to fetch categories";
+                }
+            )
 
-				state.saving = false;
-				state.error = null;
-			})
+            // ==================================
+            // ADD
+            // ==================================
 
-			.addCase(addCategory.rejected, (state, action) => {
-				state.saving = false;
+            .addCase(
+                addCategory.pending,
+                (state) => {
+                    state.saving = true;
+                    state.error = null;
+                }
+            )
 
-				state.error =
-					action.payload ||
-					action.error?.message ||
-					'Failed to create category';
-			})
+            .addCase(
+                addCategory.fulfilled,
+                (
+                    state,
+                    action
+                ) => {
+                    if (
+                        action.payload
+                    ) {
+                        state.categories.unshift(
+                            action.payload
+                        );
+                    }
 
-			// ==================================================
-			// UPDATE
-			// ==================================================
-			.addCase(updateCategory.pending, (state) => {
-				state.saving = true;
-				state.error = null;
-			})
+                    state.saving = false;
+                    state.error = null;
+                }
+            )
 
-			.addCase(updateCategory.fulfilled, (state, action) => {
-				const updated = action.payload;
+            .addCase(
+                addCategory.rejected,
+                (
+                    state,
+                    action
+                ) => {
+                    state.saving = false;
 
-				if (updated?._id) {
-					const index = state.categories.findIndex(
-						(category) => category._id === updated._id
-					);
+                    state.error =
+                        action.payload ||
+                        action.error?.message ||
+                        "Failed to create category";
+                }
+            )
 
-					if (index !== -1) {
-						state.categories[index] = updated;
-					}
-				}
+            // ==================================
+            // UPDATE
+            // ==================================
 
-				state.saving = false;
-				state.error = null;
-			})
+            .addCase(
+                updateCategory.pending,
+                (state) => {
+                    state.saving = true;
+                    state.error = null;
+                }
+            )
 
-			.addCase(updateCategory.rejected, (state, action) => {
-				state.saving = false;
+            .addCase(
+                updateCategory.fulfilled,
+                (
+                    state,
+                    action
+                ) => {
+                    const updated =
+                        action.payload;
 
-				state.error =
-					action.payload ||
-					action.error?.message ||
-					'Failed to update category';
-			})
+                    if (
+                        updated?._id
+                    ) {
+                        const index =
+                            state.categories.findIndex(
+                                (
+                                    category
+                                ) =>
+                                    category._id ===
+                                    updated._id
+                            );
 
-			// ==================================================
-			// DELETE
-			// ==================================================
-			.addCase(deleteCategory.pending, (state) => {
-				state.deleting = true;
-				state.error = null;
-			})
+                        if (
+                            index !== -1
+                        ) {
+                            state.categories[
+                                index
+                            ] = updated;
+                        }
+                    }
 
-			.addCase(deleteCategory.fulfilled, (state, action) => {
-				state.categories = state.categories.filter(
-					(category) => category._id !== action.payload
-				);
+                    state.saving = false;
+                    state.error = null;
+                }
+            )
 
-				state.deleting = false;
-				state.error = null;
-			})
+            .addCase(
+                updateCategory.rejected,
+                (
+                    state,
+                    action
+                ) => {
+                    state.saving = false;
 
-			.addCase(deleteCategory.rejected, (state, action) => {
-				state.deleting = false;
+                    state.error =
+                        action.payload ||
+                        action.error?.message ||
+                        "Failed to update category";
+                }
+            )
 
-				state.error =
-					action.payload ||
-					action.error?.message ||
-					'Failed to delete category';
-			});
-	},
+            // ==================================
+            // DELETE
+            // ==================================
+
+            .addCase(
+                deleteCategory.pending,
+                (state) => {
+                    state.deleting = true;
+                    state.error = null;
+                }
+            )
+
+            .addCase(
+                deleteCategory.fulfilled,
+                (
+                    state,
+                    action
+                ) => {
+                    state.categories =
+                        state.categories.filter(
+                            (
+                                category
+                            ) =>
+                                category._id !==
+                                action.payload
+                        );
+
+                    state.deleting = false;
+                    state.error = null;
+                }
+            )
+
+            .addCase(
+                deleteCategory.rejected,
+                (
+                    state,
+                    action
+                ) => {
+                    state.deleting = false;
+
+                    state.error =
+                        action.payload ||
+                        action.error?.message ||
+                        "Failed to delete category";
+                }
+            );
+    },
 });
 
-// ======================================================
+// ========================================
 // ACTIONS
-// ======================================================
-export const { clearCategoryError, clearCategories, resetCategoryState } =
-	categorySlice.actions;
+// ========================================
 
-// ======================================================
+export const {
+    clearCategoryError,
+    clearCategories,
+    resetCategoryState,
+} = categorySlice.actions;
+
+// ========================================
 // SELECTORS
-// ======================================================
-export const selectCategories = (state) => state.categories?.categories || [];
+// ========================================
 
-export const selectCategoryLoading = (state) =>
-	state.categories?.loading || false;
+export const selectCategories = (
+    state
+) =>
+    state.category?.categories || [];
 
-export const selectCategorySaving = (state) =>
-	state.categories?.saving || false;
+export const selectCategoryLoading = (
+    state
+) =>
+    state.category?.loading || false;
 
-export const selectCategoryDeleting = (state) =>
-	state.categories?.deleting || false;
+export const selectCategorySaving = (
+    state
+) =>
+    state.category?.saving || false;
 
-export const selectCategoryError = (state) => state.categories?.error || null;
+export const selectCategoryDeleting = (
+    state
+) =>
+    state.category?.deleting || false;
 
-// ======================================================
+export const selectCategoryError = (
+    state
+) =>
+    state.category?.error || null;
+
+// ========================================
 // REDUCER
-// ======================================================
+// ========================================
+
 export default categorySlice.reducer;
