@@ -21,12 +21,12 @@ import {
   addProduct,
   updateProduct,
   fetchProducts,
-} from '@/redux/features/product/productSlice';
+} from '@/redux/store/slices/productSlice';
 
 import { useCategories } from '@/hooks/useCategory';
 
 
-/* =========================================================
+/* =============================================
    DEFAULT VARIANT
    ========================================================= */
 
