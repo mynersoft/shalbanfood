@@ -15,6 +15,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { toggleSidebar, setSidebar } from '@/redux/store/slices/uiSlice';
 import { userSidebarMenu } from '@/constants/menu';
 import { usePathname } from 'next/navigation';
+import LogoutButton from '../auth/LogoutButton';
 
 
 export default function UserSidebar() {
@@ -37,55 +38,57 @@ export default function UserSidebar() {
   }, [dispatch]);
 
   return (
-    <>
-      <aside
-        className={`
+		<>
+			<aside
+				className={`
           fixed inset-y-0 z-50
           bg-emerald-900 text-white flex flex-col
           transition-all duration-300
           ${sidebarOpen ? 'w-64' : 'w-20'}
-        `}
-      >
-        {/* Logo + Toggle */}
-        <div className="p-4 flex items-center justify-between">
-          {sidebarOpen ? (
-            <span className="text-xl font-bold tracking-tight text-emerald-400">
-              TOMART<span className="text-orange-400">BD</span>
-            </span>
-          ) : (
-            <ShoppingCart className="w-8 h-8 text-emerald-400 mx-auto" />
-          )}
+        `}>
+				{/* Logo + Toggle */}
+				<div className="p-4 flex items-center justify-between">
+					{sidebarOpen ? (
+						<span className="text-xl font-bold tracking-tight text-emerald-400">
+							TOMART<span className="text-orange-400">BD</span>
+						</span>
+					) : (
+						<ShoppingCart className="w-8 h-8 text-emerald-400 mx-auto" />
+					)}
 
-          {/* Toggle button */}
-          <button
-            onClick={() => dispatch(toggleSidebar())}
-            className="p-1 rounded hover:bg-emerald-800"
-          >
-            {sidebarOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
-          </button>
-        </div>
+					{/* Toggle button */}
+					<button
+						onClick={() => dispatch(toggleSidebar())}
+						className="p-1 rounded hover:bg-emerald-800">
+						{sidebarOpen ? (
+							<X className="w-5 h-5" />
+						) : (
+							<Menu className="w-5 h-5" />
+						)}
+					</button>
+				</div>
 
-        {/* Nav */}
-        <nav className="flex-1 mt-6 px-3 space-y-2">
-          {userSidebarMenu.map((menu, index) => {
-            return (
-              <NavItem
-                key={index}
-                icon={menu.icon}
-                label={menu.label}
-                link={menu.link}
-                active={pathname === menu.link}
-                isOpen={sidebarOpen}
-              />
-            );
-          })}
-        </nav>
-      </aside>
-    </>
+				{/* Nav */}
+				<nav className="flex-1 mt-6 px-3 space-y-2">
+					{userSidebarMenu.map((menu, index) => {
+						return (
+							<NavItem
+								key={index}
+								icon={menu.icon}
+								label={menu.label}
+								link={menu.link}
+								active={pathname === menu.link}
+								isOpen={sidebarOpen}
+							/>
+						);
+					})}
+				</nav>
+				<div className="border-t border-white/10 p-3">
+          <LogoutButton
+          />
+				</div>
+			</aside>
+		</>
   );
 }
 

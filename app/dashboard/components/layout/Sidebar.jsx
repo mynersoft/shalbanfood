@@ -16,6 +16,7 @@ import {
 	Store,
 } from 'lucide-react';
 import { useState } from 'react';
+import LogoutButton from '@/components/auth/LogoutButton';
 
 const menuItems = [
 	{
@@ -161,18 +162,9 @@ export default function Sidebar() {
 				</nav>
 
 				{/* Bottom */}
-				<div className="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4">
-					<Link
-						href="/"
-						className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-gray-400 transition hover:bg-white/5 hover:text-white">
-						<Store size={19} />
-						View Store
-					</Link>
 
-					<button className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-red-400 transition hover:bg-red-500/10">
-						<LogOut size={19} />
-						Logout
-					</button>
+				<div className="border-t border-white/10 p-3">
+					<LogoutButton />
 				</div>
 			</aside>
 

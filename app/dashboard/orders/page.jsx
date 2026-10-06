@@ -31,22 +31,13 @@ import {
 	useDeleteOrder,
 } from '@/hooks/useOrder';
 
-
-
-
-
 import { getOrderWhatsAppUrl } from '@/lib/whatsapp';
-import AdminOrderDetailsModal, { getOrderId, ORDER_STATUSES } from '../components/order/AdminOrderDetailsModal';
-
-// ============================================================
-// CONSTANTS
-// ============================================================
+import AdminOrderDetailsModal, {
+	getOrderId,
+	ORDER_STATUSES,
+} from '../components/order/AdminOrderDetailsModal';
 
 const PAGE_SIZE = 10;
-
-// ============================================================
-// STATUS CONFIG
-// ============================================================
 
 const BADGE = {
 	pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -68,9 +59,7 @@ const STATUS_ICON = {
 	cancelled: XCircle,
 };
 
-// ============================================================
-// STATUS BADGE
-// ============================================================
+
 
 function StatusBadge({ status }) {
 	const normalized = String(status || 'pending').toLowerCase();
@@ -92,10 +81,6 @@ function StatusBadge({ status }) {
 	);
 }
 
-// ============================================================
-// CURRENCY
-// ============================================================
-
 function formatCurrency(value) {
 	const number = Number(value || 0);
 
@@ -106,9 +91,6 @@ function formatCurrency(value) {
 	}).format(number);
 }
 
-// ============================================================
-// DATE
-// ============================================================
 
 function formatDate(value) {
 	if (!value) return '—';
@@ -123,9 +105,6 @@ function formatDate(value) {
 	}
 }
 
-// ============================================================
-// STATS CARD
-// ============================================================
 
 function StatsCard({ title, value, icon: Icon, description }) {
 	return (
@@ -158,23 +137,14 @@ function StatsCard({ title, value, icon: Icon, description }) {
 	);
 }
 
-// ============================================================
-// MAIN COMPONENT
-// ============================================================
-
 export default function AdminOrders() {
 	const { data, isLoading, isError, error, refetch, isFetching } =
 		useAdminOrders();
-
 	const updateOrder = useUpdateOrder();
-
 	const deleteOrder = useDeleteOrder();
 
 	const orders = Array.isArray(data) ? data : [];
 
-	// ========================================================
-	// LOCAL STATE
-	// ========================================================
 
 	const [search, setSearch] = useState('');
 

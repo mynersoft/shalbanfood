@@ -1,3 +1,5 @@
+'use client';
+import { useUsers } from '@/hooks/useAuth';
 import {
 	Package,
 	ShoppingCart,
@@ -34,6 +36,10 @@ const stats = [
 ];
 
 export default function DashboardPage() {
+	const { data, users } = useUsers();
+
+	console.log(users);
+
 	return (
 		<div>
 			{/* Header */}
