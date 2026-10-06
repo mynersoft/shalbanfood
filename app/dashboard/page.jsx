@@ -1,5 +1,6 @@
 'use client';
 import { useUsers } from '@/hooks/useAuth';
+import { useProducts } from '@/hooks/useProducts';
 import {
 	Package,
 	ShoppingCart,
@@ -8,37 +9,40 @@ import {
 	TrendingUp,
 } from 'lucide-react';
 
-const stats = [
-	{
-		title: 'Total Sales',
-		value: '৳125,500',
-		icon: DollarSign,
-		change: '+12.5%',
-	},
-	{
-		title: 'Orders',
-		value: '248',
-		icon: ShoppingCart,
-		change: '+8.2%',
-	},
-	{
-		title: 'Products',
-		value: '86',
-		icon: Package,
-		change: '+4.6%',
-	},
-	{
-		title: 'Customers',
-		value: '1,240',
-		icon: Users,
-		change: '+15.4%',
-	},
-];
+
 
 export default function DashboardPage() {
-	const { data, users } = useUsers();
 
-	console.log(users);
+	const { data } = useUsers();
+
+
+	
+	const stats = [
+		{
+			title: 'Total Sales',
+			value: '৳125,500',
+			icon: DollarSign,
+			change: '+12.5%',
+		},
+		{
+			title: 'Orders',
+			value: '248',
+			icon: ShoppingCart,
+			change: '+8.2%',
+		},
+		{
+			title: 'Products',
+			value: '86',
+			icon: Package,
+			change: '+4.6%',
+		},
+		{
+			title: 'Customers',
+			value: data?.users?.length,
+			icon: Users,
+			change: '+15.4%',
+		},
+	];
 
 	return (
 		<div>

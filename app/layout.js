@@ -421,6 +421,9 @@ export default function RootLayout({ children }) {
 						__html: JSON.stringify(webpageSchema),
 					}}
 				/>
+
+				<script src="node_modules/eruda/eruda.js"></script>
+				<script>eruda.init();</script>
 			</head>
 
 			<body className="bg-white text-gray-900">
