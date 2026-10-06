@@ -1,42 +1,60 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-	products: [],
-	loading: true,
+  products: [],
+  loading: false,
 };
 
 const productSlice = createSlice({
-	name: 'product',
-	initialState,
+  name: 'product',
+  initialState,
 
-	reducers: {
-		setProducts(state, action) {
-			state.products = action.payload;
-		},
+  reducers: {
+    setProducts(state, action) {
+      state.products = Array.isArray(action.payload)
+        ? action.payload
+        : [];
+      state.loading = false;
+    },
 
-		addProduct(state, action) {
-			state.products.push(action.payload);
-		},
+    addProduct(state, action) {
+      if (action.payload) {
+        state.products.unshift(action.payload);
+      }
+    },
 
-		updateProduct(state, action) {
-			const index = state.products.findIndex(
-				(p) => p._id === action.payload._id
-			);
+    updateProduct(state, action) {
+      const updated = action.payload;
 
-			if (index !== -1) {
-				state.products[index] = action.payload;
-			}
-		},
+      if (!updated?._id) return;
 
-		removeProduct(state, action) {
-			state.products = state.products.filter(
-				(product) => product._id !== action.payload
-			);
-		},
-	},
+      const index = state.products.findIndex(
+        (product) => product._id === updated._id
+      );
+
+      if (index !== -1) {
+        state.products[index] = updated;
+      }
+    },
+
+    removeProduct(state, action) {
+      state.products = state.products.filter(
+        (product) => product._id !== action.payload
+      );
+    },
+
+    setLoading(state, action) {
+      state.loading = Boolean(action.payload);
+    },
+  },
 });
 
-export const { setProducts, addProduct, updateProduct, removeProduct } =
-	productSlice.actions;
+export const {
+  setProducts,
+  addProduct,
+  updateProduct,
+  removeProduct,
+  setLoading,
+} = productSlice.actions;
 
 export default productSlice.reducer;
