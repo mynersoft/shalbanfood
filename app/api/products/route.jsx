@@ -1,64 +1,476 @@
-import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/dbConnect";
-import Product from "@/models/Product";
+import { NextResponse } from 'next/server';
 
-import cloudinary from "@/lib/cloudinary";
+import { connectDB } from '@/lib/dbConnect';
+import Product from '@/models/Product';
+
+import cloudinary from '@/lib/cloudinary';
+
+
+// ======================================================
+// CONSTANTS
+// ======================================================
+
+const ALLOWED_UNITS = [
+    'gram',
+    'kg',
+    'milliliter',
+    'litre',
+    'piece',
+];
+
+const MAX_VARIANTS = 4;
+
+
+// ======================================================
+// HELPERS
+// ======================================================
+
+function parseJSON(value, fallback = null) {
+    if (!value) return fallback;
+
+    if (typeof value !== 'string') {
+        return value;
+    }
+
+    try {
+        return JSON.parse(value);
+    } catch {
+        return fallback;
+    }
+}
+
+
+function normalizeKeywords(value) {
+    const parsed = parseJSON(value, []);
+
+    if (Array.isArray(parsed)) {
+        return parsed
+            .map((item) =>
+                String(item)
+                    .trim()
+                    .toLowerCase()
+            )
+            .filter(Boolean);
+    }
+
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map((item) =>
+                item
+                    .trim()
+                    .toLowerCase()
+            )
+            .filter(Boolean);
+    }
+
+    return [];
+}
+
+
+function normalizeSlug(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+}
+
+
+function validateVariants(variants) {
+    if (!Array.isArray(variants)) {
+        return {
+            valid: false,
+            message:
+                'Variants must be an array.',
+        };
+    }
+
+    if (
+        variants.length < 1 ||
+        variants.length > MAX_VARIANTS
+    ) {
+        return {
+            valid: false,
+            message:
+                'Product must have 1 to 4 variants.',
+        };
+    }
+
+
+    const duplicateKeys = new Set();
+
+
+    for (
+        let index = 0;
+        index < variants.length;
+        index++
+    ) {
+        const variant =
+            variants[index];
+
+
+        const value =
+            Number(variant.value);
+
+        const regularPrice =
+            Number(
+                variant.regularPrice
+            );
+
+        const sellPrice =
+            Number(
+                variant.sellPrice
+            );
+
+        const stock =
+            Number(
+                variant.stock ?? 0
+            );
+
+        const unit =
+            String(
+                variant.unit || ''
+            )
+                .trim()
+                .toLowerCase();
+
+
+        // ----------------------------------------------
+        // SIZE
+        // ----------------------------------------------
+
+        if (
+            !Number.isFinite(value) ||
+            value <= 0
+        ) {
+            return {
+                valid: false,
+                message:
+                    `Variant ${index + 1}: valid size is required.`,
+            };
+        }
+
+
+        // ----------------------------------------------
+        // UNIT
+        // ----------------------------------------------
+
+        if (
+            !ALLOWED_UNITS.includes(
+                unit
+            )
+        ) {
+            return {
+                valid: false,
+                message:
+                    `Variant ${index + 1}: invalid unit.`,
+            };
+        }
+
+
+        // ----------------------------------------------
+        // REGULAR PRICE
+        // ----------------------------------------------
+
+        if (
+            !Number.isFinite(
+                regularPrice
+            ) ||
+            regularPrice < 0
+        ) {
+            return {
+                valid: false,
+                message:
+                    `Variant ${index + 1}: invalid regular price.`,
+            };
+        }
+
+
+        // ----------------------------------------------
+        // SELL PRICE
+        // ----------------------------------------------
+
+        if (
+            !Number.isFinite(
+                sellPrice
+            ) ||
+            sellPrice < 0
+        ) {
+            return {
+                valid: false,
+                message:
+                    `Variant ${index + 1}: invalid sell price.`,
+            };
+        }
+
+
+        if (
+            sellPrice >
+            regularPrice
+        ) {
+            return {
+                valid: false,
+                message:
+                    `Variant ${index + 1}: sell price cannot be higher than regular price.`,
+            };
+        }
+
+
+        // ----------------------------------------------
+        // STOCK
+        // ----------------------------------------------
+
+        if (
+            !Number.isFinite(stock) ||
+            stock < 0
+        ) {
+            return {
+                valid: false,
+                message:
+                    `Variant ${index + 1}: invalid stock.`,
+            };
+        }
+
+
+        // ----------------------------------------------
+        // DUPLICATE SIZE
+        // ----------------------------------------------
+
+        const key =
+            `${value}-${unit}`;
+
+        if (
+            duplicateKeys.has(key)
+        ) {
+            return {
+                valid: false,
+                message:
+                    `Duplicate variant found: ${value} ${unit}.`,
+            };
+        }
+
+        duplicateKeys.add(key);
+    }
+
+
+    return {
+        valid: true,
+    };
+}
+
+
+// ======================================================
+// CLOUDINARY FILE UPLOAD
+// ======================================================
+
+async function uploadFileToCloudinary(
+    file
+) {
+    const bytes =
+        await file.arrayBuffer();
+
+    const buffer =
+        Buffer.from(bytes);
+
+
+    return new Promise(
+        (resolve, reject) => {
+            const stream =
+                cloudinary.uploader.upload_stream(
+                    {
+                        folder:
+                            'products',
+                    },
+
+                    (
+                        error,
+                        result
+                    ) => {
+                        if (error) {
+                            reject(
+                                error
+                            );
+                        } else {
+                            resolve(
+                                result
+                            );
+                        }
+                    }
+                );
+
+
+            stream.end(buffer);
+        }
+    );
+}
+
+
+// ======================================================
+// CLOUDINARY URL UPLOAD
+// ======================================================
+
+async function uploadUrlToCloudinary(
+    imageUrl
+) {
+    return cloudinary.uploader.upload(
+        imageUrl,
+        {
+            folder:
+                'products',
+        }
+    );
+}
+
 
 // ======================================================
 // ================== GET PRODUCTS ======================
 // ======================================================
+
 export async function GET(req) {
     try {
         await connectDB();
 
-        const { searchParams } = new URL(req.url);
 
-        const page =
-            Number(searchParams.get("page")) || 1;
+        const {
+            searchParams,
+        } = new URL(req.url);
 
-        const limit =
-            Number(searchParams.get("limit")) || 10;
 
-        const skip = (page - 1) * limit;
-
-        // ------------------------------------------------
-        // Fetch paginated products
-        // ------------------------------------------------
-        const products = await Product.find()
-            .skip(skip)
-            .limit(limit)
-            .sort({ createdAt: -1 });
-
-        // ------------------------------------------------
-        // Calculate total inventory amount
-        // ALL products, not only current page
-        // ------------------------------------------------
-        const allProducts = await Product.find(
-            {},
-            {
-                stock: 1,
-                regularPrice: 1,
-            }
+        const page = Math.max(
+            Number(
+                searchParams.get(
+                    'page'
+                )
+            ) || 1,
+            1
         );
 
-        const totalAmount = allProducts.reduce(
-            (sum, product) => {
-                const stock =
-                    Number(product.stock) || 0;
 
-                const price =
-                    Number(product.regularPrice) || 0;
-
-                return sum + stock * price;
-            },
-            0
+        const limit = Math.min(
+            Math.max(
+                Number(
+                    searchParams.get(
+                        'limit'
+                    )
+                ) || 10,
+                1
+            ),
+            100
         );
+
+
+        const skip =
+            (page - 1) * limit;
+
+
+        // ------------------------------------------------
+        // PAGINATED PRODUCTS
+        // ------------------------------------------------
+
+        const products =
+            await Product.find()
+                .sort({
+                    createdAt: -1,
+                })
+                .skip(skip)
+                .limit(limit)
+                .lean();
+
+
+        // ------------------------------------------------
+        // TOTAL PRODUCT COUNT
+        // ------------------------------------------------
+
+        const totalProducts =
+            await Product.countDocuments();
+
+
+        // ------------------------------------------------
+        // TOTAL INVENTORY VALUE
+        //
+        // regularPrice × stock
+        // for every variant
+        // ------------------------------------------------
+
+        const inventoryProducts =
+            await Product.find(
+                {},
+                {
+                    variants: 1,
+                }
+            ).lean();
+
+
+        const totalAmount =
+            inventoryProducts.reduce(
+                (
+                    total,
+                    product
+                ) => {
+                    if (
+                        !Array.isArray(
+                            product.variants
+                        )
+                    ) {
+                        return total;
+                    }
+
+
+                    const productTotal =
+                        product.variants.reduce(
+                            (
+                                sum,
+                                variant
+                            ) => {
+                                const stock =
+                                    Number(
+                                        variant.stock
+                                    ) || 0;
+
+                                const price =
+                                    Number(
+                                        variant.regularPrice
+                                    ) || 0;
+
+                                return (
+                                    sum +
+                                    stock *
+                                        price
+                                );
+                            },
+                            0
+                        );
+
+
+                    return (
+                        total +
+                        productTotal
+                    );
+                },
+                0
+            );
+
 
         return NextResponse.json(
             {
                 success: true,
+
                 products,
+
+                totalProducts,
+
                 totalAmount,
+
+                page,
+
+                limit,
+
+                totalPages:
+                    Math.ceil(
+                        totalProducts /
+                            limit
+                    ),
             },
             {
                 status: 200,
@@ -66,15 +478,18 @@ export async function GET(req) {
         );
     } catch (error) {
         console.error(
-            "GET products error:",
+            'GET PRODUCTS ERROR:',
             error
         );
+
 
         return NextResponse.json(
             {
                 success: false,
-                message: "Server Error",
-                error: error.message,
+
+                message:
+                    error.message ||
+                    'Server Error',
             },
             {
                 status: 500,
@@ -83,104 +498,150 @@ export async function GET(req) {
     }
 }
 
+
 // ======================================================
-// ================== POST - ADD PRODUCT =================
+// ================== POST PRODUCT =======================
 // ======================================================
+
 export async function POST(req) {
     try {
         await connectDB();
 
-        const formData = await req.formData();
 
-        // ------------------------------------------------
-        // BASIC PRODUCT DATA
-        // ------------------------------------------------
-        const name = formData.get("name");
+        const formData =
+            await req.formData();
+
+
+        // =================================================
+        // BASIC DATA
+        // =================================================
+
+        const name =
+            formData.get('name');
+
+        const slug =
+            normalizeSlug(
+                formData.get(
+                    'slug'
+                )
+            );
+
         const category =
-            formData.get("category");
+            formData.get(
+                'category'
+            );
 
         const subCategory =
-            formData.get("subCategory") || "";
+            formData.get(
+                'subCategory'
+            ) || '';
 
         const brand =
-            formData.get("brand") || "";
-
-        const stock = Number(
-            formData.get("stock") || 0
-        );
-
-        const regularPrice = Number(
-            formData.get("regularPrice") || 0
-        );
-
-        const sellPrice = Number(
-            formData.get("sellPrice") || 0
-        );
+            formData.get(
+                'brand'
+            ) || '';
 
         const warranty =
-            formData.get("warranty") || "";
+            formData.get(
+                'warranty'
+            ) || '';
 
-        // ------------------------------------------------
-        // VALIDATION
-        // ------------------------------------------------
-        if (!name || !category) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Product name and category are required",
-                },
-                {
-                    status: 400,
-                }
+
+        // =================================================
+        // CONTENT
+        // =================================================
+
+        const shortDescription =
+            formData.get(
+                'shortDescription'
+            ) || '';
+
+        const description =
+            formData.get(
+                'description'
+            ) || '';
+
+
+        // =================================================
+        // SKU
+        // =================================================
+
+        const sku =
+            String(
+                formData.get(
+                    'sku'
+                ) || ''
+            )
+                .trim()
+                .toUpperCase();
+
+
+        // =================================================
+        // SEO
+        // =================================================
+
+        const seoTitle =
+            String(
+                formData.get(
+                    'seoTitle'
+                ) || ''
+            ).trim();
+
+
+        const seoDescription =
+            String(
+                formData.get(
+                    'seoDescription'
+                ) || ''
+            ).trim();
+
+
+        const keywords =
+            normalizeKeywords(
+                formData.get(
+                    'keywords'
+                )
             );
-        }
+
+
+        const canonicalUrl =
+            String(
+                formData.get(
+                    'canonicalUrl'
+                ) || ''
+            ).trim();
+
 
         // =================================================
-        // PRODUCT SIZE
+        // STATUS
         // =================================================
 
-        const sizeData = formData.get("size");
+        const isActive =
+            formData.get(
+                'isActive'
+            ) !== 'false';
 
-        let size = null;
 
-        if (sizeData) {
-            try {
-                size =
-                    typeof sizeData === "string"
-                        ? JSON.parse(sizeData)
-                        : sizeData;
-            } catch (error) {
-                console.error(
-                    "SIZE PARSE ERROR:",
-                    error
-                );
+        const isFeatured =
+            formData.get(
+                'isFeatured'
+            ) === 'true';
 
-                return NextResponse.json(
-                    {
-                        error:
-                            "Invalid product size",
-                    },
-                    {
-                        status: 400,
-                    }
-                );
-            }
-        }
 
-        // ------------------------------------------------
-        // Validate size
-        // ------------------------------------------------
+        // =================================================
+        // VALIDATE BASIC DATA
+        // =================================================
+
         if (
-            !size ||
-            size.value === undefined ||
-            size.value === null ||
-            Number(size.value) <= 0 ||
-            !size.unit
+            !name ||
+            !String(name).trim()
         ) {
             return NextResponse.json(
                 {
-                    error:
-                        "Valid product size is required",
+                    success: false,
+
+                    message:
+                        'Product name is required.',
                 },
                 {
                     status: 400,
@@ -188,113 +649,221 @@ export async function POST(req) {
             );
         }
 
-        // ------------------------------------------------
-        // Allowed units
-        // ------------------------------------------------
-        const allowedUnits = [
-            "gram",
-            "kg",
-            "milliliter",
-            "litre",
-        ];
-
-        if (!allowedUnits.includes(size.unit)) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Invalid product size unit",
-                },
-                {
-                    status: 400,
-                }
-            );
-        }
-
-        // =================================================
-        // IMAGE UPLOAD
-        // =================================================
-
-        let finalImage = "";
-
-        // ------------------------------------------------
-        // CASE 1
-        // Google Image URL
-        // ------------------------------------------------
-        const googleImageUrl =
-            formData.get("imageUrl");
 
         if (
-            googleImageUrl &&
-            typeof googleImageUrl === "string"
+            !category ||
+            !String(
+                category
+            ).trim()
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        'Product category is required.',
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+
+        if (!slug) {
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        'Product slug is required.',
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+
+        // =================================================
+        // CHECK DUPLICATE SLUG
+        // =================================================
+
+        const existingSlug =
+            await Product.findOne({
+                slug,
+            }).lean();
+
+
+        if (existingSlug) {
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        'A product with this slug already exists.',
+                },
+                {
+                    status: 409,
+                }
+            );
+        }
+
+
+        // =================================================
+        // VARIANTS
+        // =================================================
+
+        const variants =
+            parseJSON(
+                formData.get(
+                    'variants'
+                ),
+                []
+            );
+
+
+        const variantValidation =
+            validateVariants(
+                variants
+            );
+
+
+        if (
+            !variantValidation.valid
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        variantValidation.message,
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+
+        // =================================================
+        // NORMALIZE VARIANTS
+        // =================================================
+
+        const normalizedVariants =
+            variants.map(
+                (variant) => ({
+                    value:
+                        Number(
+                            variant.value
+                        ),
+
+                    unit:
+                        String(
+                            variant.unit
+                        )
+                            .trim()
+                            .toLowerCase(),
+
+                    regularPrice:
+                        Number(
+                            variant.regularPrice
+                        ),
+
+                    sellPrice:
+                        Number(
+                            variant.sellPrice
+                        ),
+
+                    stock:
+                        Number(
+                            variant.stock ||
+                                0
+                        ),
+
+                    soldCount:
+                        Number(
+                            variant.soldCount ||
+                                0
+                        ),
+
+                    sku:
+                        String(
+                            variant.sku ||
+                                ''
+                        )
+                            .trim()
+                            .toUpperCase(),
+                })
+            );
+
+
+        // =================================================
+        // IMAGE
+        // =================================================
+
+        let finalImage = '';
+
+
+        // -------------------------------------------------
+        // IMAGE URL
+        // -------------------------------------------------
+
+        const imageUrl =
+            formData.get(
+                'imageUrl'
+            );
+
+
+        if (
+            imageUrl &&
+            typeof imageUrl ===
+                'string'
         ) {
             try {
                 const uploadResponse =
-                    await cloudinary.uploader.upload(
-                        googleImageUrl,
-                        {
-                            folder: "products",
-                        }
+                    await uploadUrlToCloudinary(
+                        imageUrl
                     );
+
 
                 finalImage =
                     uploadResponse.secure_url;
             } catch (error) {
                 console.error(
-                    "GOOGLE IMAGE UPLOAD ERROR:",
+                    'IMAGE URL UPLOAD ERROR:',
                     error
                 );
             }
         }
 
-        // ------------------------------------------------
-        // CASE 2
-        // Local uploaded image
-        // ------------------------------------------------
-        const file =
-            formData.get("image");
+
+        // -------------------------------------------------
+        // LOCAL FILE
+        // -------------------------------------------------
+
+        const imageFile =
+            formData.get(
+                'image'
+            );
+
 
         if (
-            file &&
-            typeof file !== "string" &&
-            file.size > 0
+            imageFile &&
+            typeof imageFile !==
+                'string' &&
+            imageFile.size > 0
         ) {
-            const bytes =
-                await file.arrayBuffer();
-
-            const buffer =
-                Buffer.from(bytes);
-
             const uploadResponse =
-                await new Promise(
-                    (resolve, reject) => {
-                        cloudinary.uploader
-                            .upload_stream(
-                                {
-                                    folder:
-                                        "products",
-                                },
-                                (
-                                    err,
-                                    result
-                                ) => {
-                                    if (err) {
-                                        reject(
-                                            err
-                                        );
-                                    } else {
-                                        resolve(
-                                            result
-                                        );
-                                    }
-                                }
-                            )
-                            .end(buffer);
-                    }
+                await uploadFileToCloudinary(
+                    imageFile
                 );
+
 
             finalImage =
                 uploadResponse.secure_url;
         }
+
 
         // =================================================
         // CREATE PRODUCT
@@ -302,50 +871,71 @@ export async function POST(req) {
 
         const newProduct =
             await Product.create({
-                name: name.trim(),
-
-                category: category.trim(),
-
-                subCategory:
-                    subCategory.toString().trim(),
-
-                brand:
-                    brand.toString().trim(),
-
-                // ⭐ SIZE
-                size: {
-                    value: Number(
-                        size.value
-                    ),
-                    unit: size.unit,
-                },
-
-                stock,
-
-                regularPrice,
-
-                sellPrice,
-
-                warranty:
-                    warranty
-                        .toString()
+                name:
+                    String(name)
                         .trim(),
 
-                image: finalImage,
+                slug,
 
-                soldCount: 0,
+                category:
+                    String(category)
+                        .trim()
+                        .toLowerCase(),
+
+                subCategory:
+                    String(
+                        subCategory
+                    )
+                        .trim()
+                        .toLowerCase(),
+
+                brand:
+                    String(brand)
+                        .trim(),
+
+                warranty:
+                    String(warranty)
+                        .trim(),
+
+                shortDescription:
+                    String(
+                        shortDescription
+                    ).trim(),
+
+                description:
+                    String(
+                        description
+                    ).trim(),
+
+                image:
+                    finalImage,
+
+                sku,
+
+                seoTitle,
+
+                seoDescription,
+
+                keywords,
+
+                canonicalUrl,
+
+                variants:
+                    normalizedVariants,
+
+                isActive,
+
+                isFeatured,
             });
 
-        console.log(
-            "PRODUCT CREATED:",
-            newProduct
-        );
 
         return NextResponse.json(
             {
                 success: true,
+
                 message:
-                    "Product added successfully",
+                    'Product added successfully.',
+
                 product:
                     JSON.parse(
                         JSON.stringify(
@@ -359,16 +949,43 @@ export async function POST(req) {
         );
     } catch (error) {
         console.error(
-            "PRODUCT ADD ERROR:",
+            'POST PRODUCT ERROR:',
             error
         );
+
+
+        // Mongo duplicate key
+        if (
+            error.code === 11000
+        ) {
+            const duplicateField =
+                Object.keys(
+                    error.keyPattern ||
+                        {}
+                )[0];
+
+
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        `${duplicateField || 'Field'} already exists.`,
+                },
+                {
+                    status: 409,
+                }
+            );
+        }
+
 
         return NextResponse.json(
             {
                 success: false,
-                error:
+
+                message:
                     error.message ||
-                    "Failed to add product",
+                    'Failed to add product.',
             },
             {
                 status: 500,
@@ -377,26 +994,35 @@ export async function POST(req) {
     }
 }
 
+
 // ======================================================
-// ================== PUT - UPDATE PRODUCT ==============
+// ================== PUT PRODUCT ========================
 // ======================================================
-export async function PUT(request) {
+
+export async function PUT(req) {
     try {
         await connectDB();
 
-        const formData =
-            await request.formData();
 
-        // ------------------------------------------------
+        const formData =
+            await req.formData();
+
+
+        // =================================================
         // PRODUCT ID
-        // ------------------------------------------------
-        const _id = formData.get("_id");
+        // =================================================
+
+        const _id =
+            formData.get('_id');
+
 
         if (!_id) {
             return NextResponse.json(
                 {
-                    error:
-                        "Product ID missing",
+                    success: false,
+
+                    message:
+                        'Product ID is missing.',
                 },
                 {
                     status: 400,
@@ -404,17 +1030,24 @@ export async function PUT(request) {
             );
         }
 
-        // ------------------------------------------------
-        // CHECK PRODUCT
-        // ------------------------------------------------
+
+        // =================================================
+        // FIND PRODUCT
+        // =================================================
+
         const existingProduct =
-            await Product.findById(_id);
+            await Product.findById(
+                _id
+            );
+
 
         if (!existingProduct) {
             return NextResponse.json(
                 {
-                    error:
-                        "Product not found",
+                    success: false,
+
+                    message:
+                        'Product not found.',
                 },
                 {
                     status: 404,
@@ -422,258 +1055,545 @@ export async function PUT(request) {
             );
         }
 
+
         // =================================================
-        // BASIC FIELDS
+        // BASIC DATA
         // =================================================
 
         const name =
-            formData.get("name");
+            formData.get(
+                'name'
+            );
+
+
+        const slug =
+            normalizeSlug(
+                formData.get(
+                    'slug'
+                )
+            );
+
 
         const category =
-            formData.get("category");
+            formData.get(
+                'category'
+            );
+
 
         const subCategory =
-            formData.get("subCategory") || "";
+            formData.get(
+                'subCategory'
+            ) || '';
+
 
         const brand =
-            formData.get("brand") || "";
-
-        const stock = Number(
-            formData.get("stock") || 0
-        );
-
-        const regularPrice = Number(
             formData.get(
-                "regularPrice"
-            ) || 0
-        );
+                'brand'
+            ) || '';
 
-        const sellPrice = Number(
-            formData.get("sellPrice") || 0
-        );
 
         const warranty =
-            formData.get("warranty") || "";
+            formData.get(
+                'warranty'
+            ) || '';
+
 
         // =================================================
-        // PRODUCT SIZE
+        // CONTENT
         // =================================================
 
-        const sizeData =
-            formData.get("size");
+        const shortDescription =
+            formData.get(
+                'shortDescription'
+            ) || '';
 
-        let size = null;
 
-        if (sizeData) {
-            try {
-                size =
-                    typeof sizeData ===
-                    "string"
-                        ? JSON.parse(
-                              sizeData
-                          )
-                        : sizeData;
-            } catch (error) {
-                console.error(
-                    "SIZE PARSE ERROR:",
-                    error
-                );
+        const description =
+            formData.get(
+                'description'
+            ) || '';
 
-                return NextResponse.json(
-                    {
-                        error:
-                            "Invalid product size",
-                    },
-                    {
-                        status: 400,
-                    }
-                );
-            }
-        }
 
-        // ------------------------------------------------
-        // For old products
-        // If size doesn't exist, don't break update
-        // ------------------------------------------------
-        if (size) {
-            const allowedUnits = [
-                "gram",
-                "kg",
-                "milliliter",
-                "litre",
-            ];
+        // =================================================
+        // SKU
+        // =================================================
 
-            if (
-                !size.value ||
-                Number(size.value) <= 0 ||
-                !size.unit
-            ) {
-                return NextResponse.json(
-                    {
-                        error:
-                            "Valid product size is required",
-                    },
-                    {
-                        status: 400,
-                    }
-                );
-            }
+        const sku =
+            String(
+                formData.get(
+                    'sku'
+                ) ||
+                    existingProduct.sku ||
+                    ''
+            )
+                .trim()
+                .toUpperCase();
 
-            if (
-                !allowedUnits.includes(
-                    size.unit
+
+        // =================================================
+        // SEO
+        // =================================================
+
+        const seoTitle =
+            String(
+                formData.get(
+                    'seoTitle'
+                ) ||
+                    ''
+            ).trim();
+
+
+        const seoDescription =
+            String(
+                formData.get(
+                    'seoDescription'
+                ) ||
+                    ''
+            ).trim();
+
+
+        const keywords =
+            normalizeKeywords(
+                formData.get(
+                    'keywords'
                 )
-            ) {
-                return NextResponse.json(
-                    {
-                        error:
-                            "Invalid product size unit",
-                    },
-                    {
-                        status: 400,
-                    }
-                );
-            }
+            );
+
+
+        const canonicalUrl =
+            String(
+                formData.get(
+                    'canonicalUrl'
+                ) || ''
+            ).trim();
+
+
+        // =================================================
+        // STATUS
+        // =================================================
+
+        const isActive =
+            formData.get(
+                'isActive'
+            ) !== 'false';
+
+
+        const isFeatured =
+            formData.get(
+                'isFeatured'
+            ) === 'true';
+
+
+        // =================================================
+        // BASIC VALIDATION
+        // =================================================
+
+        if (
+            !name ||
+            !String(name).trim()
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        'Product name is required.',
+                },
+                {
+                    status: 400,
+                }
+            );
         }
+
+
+        if (
+            !category ||
+            !String(
+                category
+            ).trim()
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        'Product category is required.',
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+
+        if (!slug) {
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        'Product slug is required.',
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+
+        // =================================================
+        // DUPLICATE SLUG CHECK
+        // =================================================
+
+        const duplicateSlug =
+            await Product.findOne({
+                slug,
+
+                _id: {
+                    $ne: _id,
+                },
+            }).lean();
+
+
+        if (duplicateSlug) {
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        'Another product already uses this slug.',
+                },
+                {
+                    status: 409,
+                }
+            );
+        }
+
+
+        // =================================================
+        // VARIANTS
+        // =================================================
+
+        const variantsData =
+            formData.get(
+                'variants'
+            );
+
+
+        let variants;
+
+
+        if (
+            variantsData !==
+            null
+        ) {
+            variants =
+                parseJSON(
+                    variantsData,
+                    null
+                );
+        } else {
+            // If no variants were sent,
+            // preserve existing variants.
+            variants =
+                existingProduct.variants;
+        }
+
+
+        const variantValidation =
+            validateVariants(
+                variants
+            );
+
+
+        if (
+            !variantValidation.valid
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        variantValidation.message,
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+
+        // =================================================
+        // PRESERVE VARIANT DATA
+        // =================================================
+
+        const normalizedVariants =
+            variants.map(
+                (variant) => {
+                    const oldVariant =
+                        existingProduct.variants?.find(
+                            (item) =>
+                                String(
+                                    item._id
+                                ) ===
+                                String(
+                                    variant._id
+                                )
+                        );
+
+
+                    return {
+                        _id:
+                            variant._id ||
+                            undefined,
+
+                        value:
+                            Number(
+                                variant.value
+                            ),
+
+                        unit:
+                            String(
+                                variant.unit
+                            )
+                                .trim()
+                                .toLowerCase(),
+
+                        regularPrice:
+                            Number(
+                                variant.regularPrice
+                            ),
+
+                        sellPrice:
+                            Number(
+                                variant.sellPrice
+                            ),
+
+                        stock:
+                            Number(
+                                variant.stock ||
+                                    0
+                            ),
+
+                        // --------------------------------
+                        // IMPORTANT:
+                        // Preserve old soldCount
+                        // --------------------------------
+
+                        soldCount:
+                            variant.soldCount !==
+                            undefined
+                                ? Number(
+                                      variant.soldCount
+                                  )
+                                : Number(
+                                      oldVariant
+                                          ?.soldCount ||
+                                          0
+                                  ),
+
+                        sku:
+                            String(
+                                variant.sku ||
+                                    ''
+                            )
+                                .trim()
+                                .toUpperCase(),
+                    };
+                }
+            );
+
 
         // =================================================
         // IMAGE
         // =================================================
 
         let finalImage =
-            existingProduct.image || "";
+            existingProduct.image ||
+            '';
+
+
+        // -------------------------------------------------
+        // EXISTING IMAGE
+        // -------------------------------------------------
+
+        const existingImage =
+            formData.get(
+                'existingImage'
+            );
+
+
+        if (
+            existingImage &&
+            typeof existingImage ===
+                'string'
+        ) {
+            finalImage =
+                existingImage;
+        }
+
+
+        // -------------------------------------------------
+        // IMAGE URL
+        // -------------------------------------------------
+
+        const imageUrl =
+            formData.get(
+                'imageUrl'
+            );
+
+
+        if (
+            imageUrl &&
+            typeof imageUrl ===
+                'string'
+        ) {
+            try {
+                const uploadResponse =
+                    await uploadUrlToCloudinary(
+                        imageUrl
+                    );
+
+
+                finalImage =
+                    uploadResponse.secure_url;
+            } catch (error) {
+                console.error(
+                    'IMAGE URL UPDATE ERROR:',
+                    error
+                );
+            }
+        }
+
+
+        // -------------------------------------------------
+        // NEW IMAGE FILE
+        // -------------------------------------------------
 
         const imageFile =
-            formData.get("image");
+            formData.get(
+                'image'
+            );
 
-        // ------------------------------------------------
-        // New image selected
-        // ------------------------------------------------
+
         if (
             imageFile &&
             typeof imageFile !==
-                "string" &&
+                'string' &&
             imageFile.size > 0
         ) {
-            const arrayBuffer =
-                await imageFile.arrayBuffer();
-
-            const buffer =
-                Buffer.from(
-                    arrayBuffer
+            const uploadResponse =
+                await uploadFileToCloudinary(
+                    imageFile
                 );
 
-            const uploadToCloudinary =
-                () =>
-                    new Promise(
-                        (
-                            resolve,
-                            reject
-                        ) => {
-                            const stream =
-                                cloudinary
-                                    .uploader
-                                    .upload_stream(
-                                        {
-                                            folder:
-                                                "products",
-                                        },
-                                        (
-                                            err,
-                                            result
-                                        ) => {
-                                            if (
-                                                err
-                                            ) {
-                                                reject(
-                                                    err
-                                                );
-                                            } else {
-                                                resolve(
-                                                    result
-                                                );
-                                            }
-                                        }
-                                    );
-
-                            stream.end(
-                                buffer
-                            );
-                        }
-                    );
-
-            const result =
-                await uploadToCloudinary();
 
             finalImage =
-                result.secure_url;
+                uploadResponse.secure_url;
         }
 
-        // =================================================
-        // UPDATE DATA
-        // =================================================
-
-        const updateFields = {
-            name:
-                name?.toString().trim(),
-
-            category:
-                category?.toString().trim(),
-
-            subCategory:
-                subCategory
-                    .toString()
-                    .trim(),
-
-            brand:
-                brand.toString().trim(),
-
-            stock,
-
-            regularPrice,
-
-            sellPrice,
-
-            warranty:
-                warranty
-                    .toString()
-                    .trim(),
-
-            image: finalImage,
-        };
-
-        // ------------------------------------------------
-        // Add size only when received
-        // ------------------------------------------------
-        if (size) {
-            updateFields.size = {
-                value: Number(
-                    size.value
-                ),
-                unit: size.unit,
-            };
-        }
 
         // =================================================
-        // UPDATE DATABASE
+        // UPDATE
         // =================================================
 
-        const updated =
-            await Product.findByIdAndUpdate(
-                _id,
-                updateFields,
-                {
-                    new: true,
-                    runValidators: true,
-                }
-            );
+        existingProduct.name =
+            String(name).trim();
+
+
+        existingProduct.slug =
+            slug;
+
+
+        existingProduct.category =
+            String(category)
+                .trim()
+                .toLowerCase();
+
+
+        existingProduct.subCategory =
+            String(subCategory)
+                .trim()
+                .toLowerCase();
+
+
+        existingProduct.brand =
+            String(brand).trim();
+
+
+        existingProduct.warranty =
+            String(warranty).trim();
+
+
+        existingProduct.shortDescription =
+            String(
+                shortDescription
+            ).trim();
+
+
+        existingProduct.description =
+            String(
+                description
+            ).trim();
+
+
+        existingProduct.sku =
+            sku;
+
+
+        existingProduct.seoTitle =
+            seoTitle;
+
+
+        existingProduct.seoDescription =
+            seoDescription;
+
+
+        existingProduct.keywords =
+            keywords;
+
+
+        existingProduct.canonicalUrl =
+            canonicalUrl;
+
+
+        existingProduct.image =
+            finalImage;
+
+
+        existingProduct.variants =
+            normalizedVariants;
+
+
+        existingProduct.isActive =
+            isActive;
+
+
+        existingProduct.isFeatured =
+            isFeatured;
+
+
+        // =================================================
+        // SAVE
+        // =================================================
+
+        const updatedProduct =
+            await existingProduct.save();
+
 
         return NextResponse.json(
             {
                 success: true,
+
                 message:
-                    "Product updated successfully",
-                product: updated,
+                    'Product updated successfully.',
+
+                product:
+                    JSON.parse(
+                        JSON.stringify(
+                            updatedProduct
+                        )
+                    ),
             },
             {
                 status: 200,
@@ -681,16 +1601,42 @@ export async function PUT(request) {
         );
     } catch (error) {
         console.error(
-            "PUT PRODUCT ERROR:",
+            'PUT PRODUCT ERROR:',
             error
         );
+
+
+        if (
+            error.code === 11000
+        ) {
+            const duplicateField =
+                Object.keys(
+                    error.keyPattern ||
+                        {}
+                )[0];
+
+
+            return NextResponse.json(
+                {
+                    success: false,
+
+                    message:
+                        `${duplicateField || 'Field'} already exists.`,
+                },
+                {
+                    status: 409,
+                }
+            );
+        }
+
 
         return NextResponse.json(
             {
                 success: false,
-                error:
+
+                message:
                     error.message ||
-                    "Failed to update product",
+                    'Failed to update product.',
             },
             {
                 status: 500,
@@ -699,24 +1645,34 @@ export async function PUT(request) {
     }
 }
 
+
 // ======================================================
 // ================== DELETE PRODUCT ====================
 // ======================================================
-export async function DELETE(request) {
+
+export async function DELETE(req) {
     try {
         await connectDB();
 
-        const { searchParams } =
-            new URL(request.url);
+
+        const {
+            searchParams,
+        } = new URL(req.url);
+
 
         const id =
-            searchParams.get("id");
+            searchParams.get(
+                'id'
+            );
+
 
         if (!id) {
             return NextResponse.json(
                 {
-                    error:
-                        "Product ID missing",
+                    success: false,
+
+                    message:
+                        'Product ID is missing.',
                 },
                 {
                     status: 400,
@@ -724,16 +1680,20 @@ export async function DELETE(request) {
             );
         }
 
-        const deletedProduct =
-            await Product.findByIdAndDelete(
+
+        const product =
+            await Product.findById(
                 id
             );
 
-        if (!deletedProduct) {
+
+        if (!product) {
             return NextResponse.json(
                 {
-                    error:
-                        "Product not found",
+                    success: false,
+
+                    message:
+                        'Product not found.',
                 },
                 {
                     status: 404,
@@ -741,11 +1701,18 @@ export async function DELETE(request) {
             );
         }
 
+
+        await Product.findByIdAndDelete(
+            id
+        );
+
+
         return NextResponse.json(
             {
                 success: true,
+
                 message:
-                    "Product deleted successfully",
+                    'Product deleted successfully.',
             },
             {
                 status: 200,
@@ -753,16 +1720,18 @@ export async function DELETE(request) {
         );
     } catch (error) {
         console.error(
-            "DELETE PRODUCT ERROR:",
+            'DELETE PRODUCT ERROR:',
             error
         );
+
 
         return NextResponse.json(
             {
                 success: false,
-                error:
+
+                message:
                     error.message ||
-                    "Failed to delete product",
+                    'Failed to delete product.',
             },
             {
                 status: 500,
