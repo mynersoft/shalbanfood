@@ -1,306 +1,1294 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchProducts, deleteProduct } from '@/redux/productSlice';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
+
+import Image from 'next/image';
+
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  Package,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  X,
+} from 'lucide-react';
+
+import toast from 'react-hot-toast';
 
 import ProductFormModal from '@/app/dashboard/components/product/ProductFormModal';
 import CategoryForm from '@/app/dashboard/components/CategoryForm';
 import Modal from '@/components/Modal';
-import { addCategory } from '@/redux/store/slices/categorySlice';
-import { useProducts } from '@/hooks/useProducts';
-import Image from 'next/image';
-import { useAddCategory, useCategories } from '@/hooks/useCategory';
+
+import {
+  useProducts,
+  useDeleteProduct,
+} from '@/hooks/useProducts';
+
+import {
+  useAddCategory,
+} from '@/hooks/useCategory';
+
 
 export default function ProductsPage() {
-	const { isLoading, isFetching } = useProducts();
 
-	const { useAddCategory } = useCategories();
+  /* ========================================
+     PAGINATION
+  ======================================== */
 
-	const { products } = useSelector((state) => state.product.products);
+  const [page, setPage] = useState(1);
 
-	const dispatch = useDispatch();
-	const router = useRouter();
-	const searchParams = useSearchParams();
+  const limit = 10;
 
-	const {
-		items,
-		total,
-		page: reduxPage,
-		limit,
-	} = useSelector((s) => s.product);
 
-	const [pageLocal, setPageLocal] = useState(reduxPage || 1);
-	const [showModal, setShowModal] = useState(false);
-	const [showCatModal, setShowCatModal] = useState(false);
-	const [editingProduct, setEditingProduct] = useState(null);
+  /* ========================================
+     MODALS
+  ======================================== */
 
-	// Initialize search from URL query param `search` (or empty if none)
-	const initialSearch = searchParams?.get('search') || '';
-	const [search, setSearch] = useState(initialSearch);
-	const [filteredItems, setFilteredItems] = useState([]);
+  const [showProductModal, setShowProductModal] =
+    useState(false);
 
-	// Fetch products when page changes
-	useEffect(() => {
-		dispatch(fetchProducts({ page: pageLocal, limit }));
-	}, [dispatch, pageLocal, limit]);
+  const [showCategoryModal, setShowCategoryModal] =
+    useState(false);
 
-	// Delete product
-	const handleDelete = async (id) => {
-		if (!confirm('Delete product?')) return;
-		await dispatch(deleteProduct(id)).unwrap();
-		dispatch(fetchProducts({ page: pageLocal, limit }));
-	};
+  const [editingProduct, setEditingProduct] =
+    useState(null);
 
-	// Update filtered items when `items` or `search` changes
-	useEffect(() => {
-		if (!Array.isArray(products)) {
-			setFilteredItems([]);
-			return;
-		}
 
-		const result = products.filter((p) => {
-			if (!p.name) return false;
-			if (!search) return true;
-			return p.name.toLowerCase().includes(search.toLowerCase());
-		});
+  /* ========================================
+     SEARCH
+  ======================================== */
 
-		setFilteredItems(result);
-	}, [products, search]);
+  const [search, setSearch] =
+    useState('');
 
-	// Update URL query dynamically when search changes
-	useEffect(() => {
-		const params = new URLSearchParams(window.location.search);
-		if (search) {
-			params.set('search', search);
-		} else {
-			params.delete('search');
-		}
-		const queryString = params.toString();
-		router.replace(
-			`/dashboard/products${queryString ? `?${queryString}` : ''}`
-		);
-	}, [search, router]);
 
-	const totalPages = Math.max(1, Math.ceil((total || 0) / (limit || 1)));
+  /* ========================================
+     PRODUCTS
+  ======================================== */
 
-	const handleCancel = () => setShowCatModal(false);
+  const {
+    data,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useProducts({
+    page,
+    limit,
+  });
 
-	const handleCatSubmit = async (payload) => {
-		dispatch(addCategory(payload));
 
-		try {
-			await useAddCategory({ payload });
-		} catch (error) {
-			console.log(error);
-			alert('cat added failed');
-		}
+  const products =
+    data?.products || [];
 
-		setShowCatModal(false);
-	};
+  const totalProducts =
+    data?.totalProducts || 0;
 
-	return (
-		<div className="p-4 min-h-screen bg-gray-950 text-gray-300">
-			{/* HEADER */}
-			<div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-6">
-				<h1 className="text-2xl font-semibold">Products</h1>
+  const totalPages =
+    data?.totalPages ||
+    Math.max(
+      1,
+      Math.ceil(
+        totalProducts / limit
+      )
+    );
 
-				{/* SEARCH */}
-				<input
-					type="text"
-					value={search}
-					onChange={(e) => setSearch(e.target.value)}
-					placeholder="Search by name..."
-					className="px-4 py-2 rounded bg-gray-800 w-full md:w-64 border border-gray-700 text-gray-300"
-				/>
 
-				<div className="flex gap-2">
-					<button
-						onClick={() => {
-							setEditingProduct(null);
-							setShowModal(true);
-						}}
-						className="bg-green-600 px-4 py-2 rounded">
-						+ Add Product
-					</button>
+  /* ========================================
+     DELETE
+  ======================================== */
 
-					<button
-						onClick={() => setShowCatModal(true)}
-						className="bg-green-600 px-4 py-2 rounded">
-						+ Add Category
-					</button>
+  const deleteProductMutation =
+    useDeleteProduct();
 
-					<button
-						onClick={() => router.push('/dashboard/products/list')}
-						className="px-4 py-2 bg-blue-600 text-white rounded">
-						List
-					</button>
-				</div>
-			</div>
 
-			{/* TABLE (DESKTOP) */}
-			<div className="hidden md:block overflow-x-auto bg-gray-900 rounded-lg">
-				<table className="w-full text-sm">
-					<thead className="bg-gray-800">
-						<tr>
-							<th className="p-3 text-left">Image</th>
-							<th className="p-3 text-left">Name</th>
-							<th className="p-3 text-left">Category</th>
-							<th className="p-3 text-left">Brand</th>
-							<th className="p-3 text-left">Stock</th>
-							<th className="p-3 text-left">Regular Price</th>
-							<th className="p-3 text-left">Sell Price</th>
-							<th className="p-3 text-center">Actions</th>
-						</tr>
-					</thead>
+  /* ========================================
+     CATEGORY
+  ======================================== */
 
-					<tbody>
-						{filteredItems.length > 0 ? (
-							filteredItems.map((p) => (
-								<tr
-									key={p._id}
-									className="border-b border-gray-800 hover:bg-gray-800/40">
-									<td className="p-3">
-										{p.image && (
-											<Image
-												height={200}
-												width={200}
-												src={p.image}
-												alt={p.name + 'shalbanfood'}
-												className="w-18 h-18 object-cover rounded"
-											/>
-										)}
-									</td>
-									<td className="p-3">{p.name}</td>
-									<td className="p-3">{p.category}</td>
-									<td className="p-3">{p.brand}</td>
-									<td className="p-3">{p.stock}</td>
-									<td className="p-3">{p.regularPrice}</td>
-									<td className="p-3">{p.sellPrice}</td>
+  const addCategoryMutation =
+    useAddCategory();
 
-									<td className="p-3 text-center flex gap-2 justify-center">
-										<button
-											onClick={() => {
-												setEditingProduct(p);
-												setShowModal(true);
-											}}
-											className="bg-blue-600 px-3 py-1 rounded">
-											Edit
-										</button>
-										<button
-											onClick={() => handleDelete(p._id)}
-											className="bg-red-600 px-3 py-1 rounded">
-											Delete
-										</button>
-									</td>
-								</tr>
-							))
-						) : (
-							<tr>
-								<td
-									colSpan={8}
-									className="p-6 text-center text-gray-500">
-									No products found
-								</td>
-							</tr>
-						)}
-					</tbody>
-				</table>
-			</div>
 
-			{/* MOBILE VIEW */}
-			<div className="md:hidden space-y-4">
-				{filteredItems.length ? (
-					filteredItems.map((p) => (
-						<div
-							key={p._id}
-							className="bg-gray-900 p-4 rounded-lg border border-gray-800">
-							<div className="flex items-center gap-3">
-								{p.image && (
-									<img
-										src={p.image}
-										alt={p.name || ''}
-										className="w-10 h-20 object-cover rounded"
-									/>
-								)}
-								<div>
-									<h2 className="font-semibold">{p.name}</h2>
-									<p className="text-gray-400 text-sm">
-										{p.category} • {p.brand}
-									</p>
-								</div>
-							</div>
+  /* ========================================
+     FILTER
+  ======================================== */
 
-							<div className="mt-3 grid grid-cols-2 text-sm">
-								<p>Regular: {p.regularPrice}</p>
-								<p>Stock: {p.stock}</p>
-								<p>Sell: {p.sellPrice}</p>
-							</div>
+  const filteredProducts =
+    useMemo(() => {
+      const keyword =
+        search.trim().toLowerCase();
 
-							<div className="flex gap-2 mt-3">
-								<button
-									onClick={() => {
-										setEditingProduct(p);
-										setShowModal(true);
-									}}
-									className="bg-blue-600 px-3 py-1 rounded w-full">
-									Edit
-								</button>
-								<button
-									onClick={() => handleDelete(p._id)}
-									className="bg-red-600 px-3 py-1 rounded w-full">
-									Delete
-								</button>
-							</div>
-						</div>
-					))
-				) : (
-					<p className="text-center text-gray-500">
-						No products found
-					</p>
-				)}
-			</div>
+      if (!keyword) {
+        return products;
+      }
 
-			{/* PAGINATION */}
-			<div className="flex justify-center gap-2 mt-4">
-				{Array.from({ length: totalPages }).map((_, i) => (
-					<button
-						key={i + 1}
-						onClick={() => setPageLocal(i + 1)}
-						className={`px-3 py-1 rounded ${
-							pageLocal === i + 1
-								? 'bg-green-600 text-white'
-								: 'bg-gray-800 text-gray-400'
-						}`}>
-						{i + 1}
-					</button>
-				))}
-			</div>
+      return products.filter(
+        (product) =>
+          product.name
+            ?.toLowerCase()
+            .includes(keyword) ||
+          product.slug
+            ?.toLowerCase()
+            .includes(keyword) ||
+          product.category
+            ?.toLowerCase()
+            .includes(keyword)
+      );
+    }, [products, search]);
 
-			{/* PRODUCT MODAL */}
-			{showModal && (
-				<ProductFormModal
-					open={showModal}
-					editingProduct={editingProduct}
-					onClose={() => {
-						setShowModal(false);
-						setEditingProduct(null);
-						dispatch(fetchProducts({ page: pageLocal, limit }));
-					}}
-				/>
-			)}
 
-			{/* CATEGORY MODAL */}
-			<Modal show={showCatModal} onClose={handleCancel}>
-				<h3 className="text-lg mb-4 font-semibold text-gray-100">
-					Add Category
-				</h3>
-				<CategoryForm
-					onCancel={handleCancel}
-					onSubmit={handleCatSubmit}
-				/>
-			</Modal>
-		</div>
-	);
+  /* ========================================
+     OPEN ADD
+  ======================================== */
+
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setShowProductModal(true);
+  };
+
+
+  /* ========================================
+     OPEN EDIT
+  ======================================== */
+
+  const handleEditProduct = (
+    product
+  ) => {
+    setEditingProduct(product);
+    setShowProductModal(true);
+  };
+
+
+  /* ========================================
+     CLOSE PRODUCT
+  ======================================== */
+
+  const handleCloseProductModal =
+    () => {
+      setShowProductModal(false);
+      setEditingProduct(null);
+    };
+
+
+  /* ========================================
+     DELETE
+  ======================================== */
+
+  const handleDelete = async (
+    product
+  ) => {
+    if (!product?._id) return;
+
+    const confirmed =
+      window.confirm(
+        `Delete "${product.name}"?`
+      );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteProductMutation.mutateAsync(
+        product._id
+      );
+
+      /*
+       * If deleting the last item
+       * of a page, go back one page.
+       */
+
+      if (
+        products.length === 1 &&
+        page > 1
+      ) {
+        setPage(
+          (previous) =>
+            previous - 1
+        );
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+
+  /* ========================================
+     CATEGORY CREATE
+  ======================================== */
+
+  const handleCategorySubmit =
+    async (payload) => {
+      try {
+        await addCategoryMutation.mutateAsync(
+          payload
+        );
+
+        setShowCategoryModal(false);
+
+        toast.success(
+          'Category added successfully'
+        );
+      } catch (error) {
+        console.error(error);
+
+        toast.error(
+          error?.message ||
+            'Category creation failed'
+        );
+      }
+    };
+
+
+  /* ========================================
+     VARIANT HELPERS
+  ======================================== */
+
+  const getTotalStock = (
+    product
+  ) => {
+    if (
+      !Array.isArray(
+        product?.variants
+      )
+    ) {
+      return 0;
+    }
+
+    return product.variants.reduce(
+      (total, variant) =>
+        total +
+        Number(
+          variant.stock || 0
+        ),
+      0
+    );
+  };
+
+
+  const getPriceText = (
+    product
+  ) => {
+    if (
+      !Array.isArray(
+        product?.variants
+      ) ||
+      !product.variants.length
+    ) {
+      return '৳0';
+    }
+
+    const prices =
+      product.variants
+        .map((variant) =>
+          Number(
+            variant.sellPrice || 0
+          )
+        )
+        .filter(
+          (price) =>
+            !Number.isNaN(price)
+        );
+
+    if (!prices.length) {
+      return '৳0';
+    }
+
+    const min =
+      Math.min(...prices);
+
+    const max =
+      Math.max(...prices);
+
+    if (min === max) {
+      return `৳${min}`;
+    }
+
+    return `৳${min} - ৳${max}`;
+  };
+
+
+  const getVariantText = (
+    product
+  ) => {
+    if (
+      !Array.isArray(
+        product?.variants
+      )
+    ) {
+      return '-';
+    }
+
+    return product.variants
+      .map((variant) => {
+        let size =
+          Number(
+            variant.value || 0
+          );
+
+        let unit = '';
+
+        switch (
+          variant.unit
+        ) {
+          case 'gram':
+            unit = 'g';
+            break;
+
+          case 'kg':
+            unit = 'kg';
+            break;
+
+          case 'milliliter':
+            unit = 'ml';
+            break;
+
+          case 'litre':
+            unit = 'L';
+            break;
+
+          case 'piece':
+            unit = 'pcs';
+            break;
+
+          default:
+            unit = '';
+        }
+
+        return `${size}${unit}`;
+      })
+      .join(', ');
+  };
+
+
+  /* ========================================
+     LOADING
+  ======================================== */
+
+  if (
+    isLoading &&
+    !data
+  ) {
+    return (
+      <main className="p-4 sm:p-6">
+
+        <div
+          className="
+            flex min-h-[400px]
+            items-center justify-center
+          "
+        >
+          <RefreshCw
+            size={28}
+            className="animate-spin"
+          />
+        </div>
+
+      </main>
+    );
+  }
+
+
+  /* ========================================
+     UI
+  ======================================== */
+
+  return (
+    <main
+      className="
+        min-h-screen
+        bg-[#0d0d11]
+        p-3 text-white
+        sm:p-5
+      "
+    >
+
+      {/* ====================================
+          HEADER
+      ==================================== */}
+
+      <div
+        className="
+          mb-5 flex flex-col
+          gap-4 lg:flex-row
+          lg:items-center
+          lg:justify-between
+        "
+      >
+
+        <div>
+          <h1 className="text-xl font-bold sm:text-2xl">
+            Products
+          </h1>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your Shalban Food products
+          </p>
+        </div>
+
+
+        <div className="flex gap-2">
+
+          <button
+            type="button"
+            onClick={() =>
+              setShowCategoryModal(true)
+            }
+            className="
+              flex items-center
+              justify-center gap-2
+              rounded-xl
+              border border-white/10
+              bg-white/5
+              px-4 py-2.5
+              text-sm font-semibold
+              hover:bg-white/10
+            "
+          >
+            <Plus size={17} />
+
+            Category
+          </button>
+
+
+          <button
+            type="button"
+            onClick={handleAddProduct}
+            className="
+              flex items-center
+              justify-center gap-2
+              rounded-xl
+              bg-white
+              px-4 py-2.5
+              text-sm font-bold
+              text-black
+              hover:bg-gray-200
+            "
+          >
+            <Plus size={17} />
+
+            Add Product
+          </button>
+
+        </div>
+
+      </div>
+
+
+      {/* ====================================
+          SEARCH
+      ==================================== */}
+
+      <div
+        className="
+          mb-5 flex flex-col
+          gap-3 sm:flex-row
+        "
+      >
+
+        <div className="relative flex-1">
+
+          <Search
+            size={18}
+            className="
+              absolute left-3
+              top-1/2 -translate-y-1/2
+              text-gray-500
+            "
+          />
+
+          <input
+            value={search}
+            onChange={(event) =>
+              setSearch(
+                event.target.value
+              )
+            }
+            placeholder="Search products..."
+            className="
+              w-full rounded-xl
+              border border-white/10
+              bg-white/[0.04]
+              py-2.5 pl-10 pr-10
+              text-sm text-white
+              outline-none
+              focus:border-white/30
+            "
+          />
+
+          {search && (
+            <button
+              type="button"
+              onClick={() =>
+                setSearch('')
+              }
+              className="
+                absolute right-3
+                top-1/2
+                -translate-y-1/2
+                text-gray-500
+                hover:text-white
+              "
+            >
+              <X size={16} />
+            </button>
+          )}
+
+        </div>
+
+
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="
+            flex items-center
+            justify-center gap-2
+            rounded-xl
+            border border-white/10
+            bg-white/[0.04]
+            px-4 py-2.5
+            text-sm
+            hover:bg-white/10
+            disabled:opacity-50
+          "
+        >
+          <RefreshCw
+            size={16}
+            className={
+              isFetching
+                ? 'animate-spin'
+                : ''
+            }
+          />
+
+          Refresh
+        </button>
+
+      </div>
+
+
+      {/* ====================================
+          STATS
+      ==================================== */}
+
+      <div
+        className="
+          mb-5 grid
+          grid-cols-2 gap-3
+          lg:grid-cols-4
+        "
+      >
+
+        <div className="card">
+          <p className="card-label">
+            Total Products
+          </p>
+
+          <p className="card-value">
+            {totalProducts}
+          </p>
+        </div>
+
+
+        <div className="card">
+          <p className="card-label">
+            Current Page
+          </p>
+
+          <p className="card-value">
+            {products.length}
+          </p>
+        </div>
+
+
+        <div className="card">
+          <p className="card-label">
+            Page
+          </p>
+
+          <p className="card-value">
+            {page}/{totalPages}
+          </p>
+        </div>
+
+
+        <div className="card">
+          <p className="card-label">
+            Showing
+          </p>
+
+          <p className="card-value">
+            {filteredProducts.length}
+          </p>
+        </div>
+
+      </div>
+
+
+      {/* ====================================
+          DESKTOP TABLE
+      ==================================== */}
+
+      <div
+        className="
+          hidden overflow-hidden
+          rounded-2xl
+          border border-white/10
+          bg-[#131318]
+          md:block
+        "
+      >
+
+        <div className="overflow-x-auto">
+
+          <table className="w-full">
+
+            <thead>
+              <tr
+                className="
+                  border-b border-white/10
+                  text-left text-xs
+                  uppercase tracking-wide
+                  text-gray-500
+                "
+              >
+                <th className="px-4 py-4">
+                  Product
+                </th>
+
+                <th className="px-4 py-4">
+                  Category
+                </th>
+
+                <th className="px-4 py-4">
+                  Variants
+                </th>
+
+                <th className="px-4 py-4">
+                  Price
+                </th>
+
+                <th className="px-4 py-4">
+                  Stock
+                </th>
+
+                <th className="px-4 py-4 text-right">
+                  Action
+                </th>
+              </tr>
+            </thead>
+
+
+            <tbody>
+
+              {filteredProducts.map(
+                (product) => (
+                  <tr
+                    key={product._id}
+                    className="
+                      border-b border-white/5
+                      last:border-0
+                      hover:bg-white/[0.025]
+                    "
+                  >
+
+                    {/* Product */}
+
+                    <td className="px-4 py-4">
+
+                      <div className="flex items-center gap-3">
+
+                        <div
+                          className="
+                            relative
+                            h-12 w-12
+                            shrink-0
+                            overflow-hidden
+                            rounded-xl
+                            bg-white/5
+                          "
+                        >
+                          {product.image ? (
+                            <Image
+                              src={
+                                product.image
+                              }
+                              alt={
+                                product.name ||
+                                'Product'
+                              }
+                              fill
+                              sizes="48px"
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div
+                              className="
+                                flex h-full
+                                items-center
+                                justify-center
+                              "
+                            >
+                              <Package
+                                size={20}
+                                className="text-gray-600"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+
+                        <div className="min-w-0">
+
+                          <p className="truncate text-sm font-semibold">
+                            {product.name}
+                          </p>
+
+                          <p className="mt-1 truncate text-xs text-gray-500">
+                            /{product.slug}
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    </td>
+
+
+                    {/* Category */}
+
+                    <td className="px-4 py-4">
+
+                      <span
+                        className="
+                          rounded-full
+                          bg-white/5
+                          px-2.5 py-1
+                          text-xs
+                        "
+                      >
+                        {product.category ||
+                          '-'}
+                      </span>
+
+                    </td>
+
+
+                    {/* Variants */}
+
+                    <td className="px-4 py-4 text-sm text-gray-300">
+                      {getVariantText(
+                        product
+                      )}
+                    </td>
+
+
+                    {/* Price */}
+
+                    <td className="px-4 py-4 text-sm font-semibold">
+                      {getPriceText(
+                        product
+                      )}
+                    </td>
+
+
+                    {/* Stock */}
+
+                    <td className="px-4 py-4">
+
+                      <span
+                        className={
+                          getTotalStock(
+                            product
+                          ) > 0
+                            ? 'text-sm text-green-400'
+                            : 'text-sm text-red-400'
+                        }
+                      >
+                        {getTotalStock(
+                          product
+                        )}
+                      </span>
+
+                    </td>
+
+
+                    {/* Actions */}
+
+                    <td className="px-4 py-4">
+
+                      <div className="flex justify-end gap-2">
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleEditProduct(
+                              product
+                            )
+                          }
+                          className="
+                            rounded-lg
+                            border
+                            border-white/10
+                            p-2
+                            text-gray-400
+                            hover:bg-white/10
+                            hover:text-white
+                          "
+                        >
+                          <Pencil
+                            size={16}
+                          />
+                        </button>
+
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDelete(
+                              product
+                            )
+                          }
+                          disabled={
+                            deleteProductMutation.isPending
+                          }
+                          className="
+                            rounded-lg
+                            border
+                            border-red-500/10
+                            p-2
+                            text-red-400
+                            hover:bg-red-500/10
+                            disabled:opacity-40
+                          "
+                        >
+                          <Trash2
+                            size={16}
+                          />
+                        </button>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+                )
+              )}
+
+            </tbody>
+
+          </table>
+
+
+          {!filteredProducts.length && (
+            <div
+              className="
+                flex min-h-[250px]
+                flex-col items-center
+                justify-center
+                text-center
+              "
+            >
+              <Package
+                size={38}
+                className="mb-3 text-gray-700"
+              />
+
+              <p className="font-semibold">
+                No products found
+              </p>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Try another search or add a product.
+              </p>
+            </div>
+          )}
+
+        </div>
+
+      </div>
+
+
+      {/* ====================================
+          MOBILE CARDS
+      ==================================== */}
+
+      <div className="space-y-3 md:hidden">
+
+        {filteredProducts.map(
+          (product) => (
+            <div
+              key={product._id}
+              className="
+                rounded-2xl
+                border border-white/10
+                bg-[#131318]
+                p-3
+              "
+            >
+
+              <div className="flex gap-3">
+
+                <div
+                  className="
+                    relative
+                    h-16 w-16
+                    shrink-0
+                    overflow-hidden
+                    rounded-xl
+                    bg-white/5
+                  "
+                >
+                  {product.image ? (
+                    <Image
+                      src={
+                        product.image
+                      }
+                      alt={
+                        product.name ||
+                        'Product'
+                      }
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <Package
+                        size={22}
+                        className="text-gray-600"
+                      />
+                    </div>
+                  )}
+                </div>
+
+
+                <div className="min-w-0 flex-1">
+
+                  <h3 className="truncate text-sm font-semibold">
+                    {product.name}
+                  </h3>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    {product.category}
+                  </p>
+
+                  <p className="mt-2 text-sm font-bold">
+                    {getPriceText(
+                      product
+                    )}
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <div
+                className="
+                  mt-3 grid
+                  grid-cols-3 gap-2
+                "
+              >
+
+                <div className="mobile-info">
+                  <span>Variants</span>
+                  <strong>
+                    {product.variants?.length ||
+                      0}
+                  </strong>
+                </div>
+
+
+                <div className="mobile-info">
+                  <span>Stock</span>
+                  <strong>
+                    {getTotalStock(
+                      product
+                    )}
+                  </strong>
+                </div>
+
+
+                <div className="mobile-info">
+                  <span>Status</span>
+                  <strong>
+                    {product.isActive
+                      ? 'Active'
+                      : 'Off'}
+                  </strong>
+                </div>
+
+              </div>
+
+
+              <div
+                className="
+                  mt-3 flex gap-2
+                "
+              >
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleEditProduct(
+                      product
+                    )
+                  }
+                  className="
+                    flex flex-1
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    border border-white/10
+                    bg-white/5
+                    py-2.5
+                    text-sm
+                    font-medium
+                  "
+                >
+                  <Pencil size={15} />
+
+                  Edit
+                </button>
+
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDelete(
+                      product
+                    )
+                  }
+                  className="
+                    flex flex-1
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    border border-red-500/10
+                    bg-red-500/5
+                    py-2.5
+                    text-sm
+                    font-medium
+                    text-red-400
+                  "
+                >
+                  <Trash2 size={15} />
+
+                  Delete
+                </button>
+
+              </div>
+
+            </div>
+          )
+        )}
+
+
+        {!filteredProducts.length && (
+          <div
+            className="
+              rounded-2xl
+              border border-white/10
+              bg-[#131318]
+              p-10
+              text-center
+            "
+          >
+            <Package
+              size={35}
+              className="
+                mx-auto mb-3
+                text-gray-700
+              "
+            />
+
+            <p className="font-semibold">
+              No products found
+            </p>
+          </div>
+        )}
+
+      </div>
+
+
+      {/* ====================================
+          PAGINATION
+      ==================================== */}
+
+      <div
+        className="
+          mt-5 flex
+          items-center
+          justify-between
+          rounded-2xl
+          border border-white/10
+          bg-[#131318]
+          px-3 py-3
+          sm:px-4
+        "
+      >
+
+        <p className="text-xs text-gray-500 sm:text-sm">
+          Page {page} of {totalPages}
+        </p>
+
+
+        <div className="flex gap-2">
+
+          <button
+            type="button"
+            disabled={
+              page <= 1 ||
+              isFetching
+            }
+            onClick={() =>
+              setPage(
+                (previous) =>
+                  Math.max(
+                    1,
+                    previous - 1
+                  )
+              )
+            }
+            className="
+              rounded-lg
+              border border-white/10
+              p-2
+              hover:bg-white/10
+              disabled:cursor-not-allowed
+              disabled:opacity-30
+            "
+          >
+            <ChevronLeft
+              size={17}
+            />
+          </button>
+
+
+          <button
+            type="button"
+            disabled={
+              page >= totalPages ||
+              isFetching
+            }
+            onClick={() =>
+              setPage(
+                (previous) =>
+                  Math.min(
+                    totalPages,
+                    previous + 1
+                  )
+              )
+            }
+            className="
+              rounded-lg
+              border border-white/10
+              p-2
+              hover:bg-white/10
+              disabled:cursor-not-allowed
+              disabled:opacity-30
+            "
+          >
+            <ChevronRight
+              size={17}
+            />
+          </button>
+
+        </div>
+
+      </div>
+
+
+      {/* ====================================
+          PRODUCT MODAL
+      ==================================== */}
+
+      <ProductFormModal
+        isOpen={showProductModal}
+        editingProduct={
+          editingProduct
+        }
+        onClose={
+          handleCloseProductModal
+        }
+      />
+
+
+      {/* ====================================
+          CATEGORY MODAL
+      ==================================== */}
+
+      <Modal
+        open={showCategoryModal}
+        onClose={() =>
+          setShowCategoryModal(false)
+        }
+      >
+        <CategoryForm
+          onSubmit={
+            handleCategorySubmit
+          }
+          onCancel={() =>
+            setShowCategoryModal(
+              false
+            )
+          }
+        />
+      </Modal>
+
+
+      {/* ====================================
+          STYLES
+      ==================================== */}
+
+      <style jsx>{`
+
+        .card {
+          border: 1px solid
+            rgba(255, 255, 255, 0.08);
+          background:
+            rgba(255, 255, 255, 0.03);
+          border-radius: 1rem;
+          padding: 1rem;
+        }
+
+        .card-label {
+          color: rgb(107, 114, 128);
+          font-size: 0.75rem;
+        }
+
+        .card-value {
+          margin-top: 0.35rem;
+          font-size: 1.25rem;
+          font-weight: 700;
+        }
+
+        .mobile-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.2rem;
+          border-radius: 0.75rem;
+          background:
+            rgba(255, 255, 255, 0.04);
+          padding: 0.6rem;
+        }
+
+        .mobile-info span {
+          color: rgb(107, 114, 128);
+          font-size: 0.65rem;
+        }
+
+        .mobile-info strong {
+          font-size: 0.75rem;
+        }
+
+      `}</style>
+
+    </main>
+  );
 }
