@@ -1,105 +1,214 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-import mongoose from 'mongoose';
+import { connectDB } from "@/lib/dbConnect";
+import Category from "@/models/Category";
 
-import { connectDB } from '@/lib/dbConnect';
-
-import Category from '@/models/Category';
+import { slugify } from "@/lib/slugify";
 
 // ========================================
 // UPDATE CATEGORY
 // ========================================
-export async function PUT(
-    req,
-    { params }
-) {
+
+export async function PUT(req, context) {
     try {
         await connectDB();
 
-        const { id } = await params;
+        const { id } = await context.params;
 
-        if (
-            !mongoose.Types.ObjectId.isValid(
-                id
-            )
-        ) {
+        const body = await req.json();
+
+        const existing =
+            await Category.findById(id);
+
+        if (!existing) {
             return NextResponse.json(
                 {
                     success: false,
-                    message:
-                        'Invalid category ID',
+                    message: "Category not found",
                 },
-                { status: 400 }
+                {
+                    status: 404,
+                }
             );
         }
-
-        const body =
-            await req.json();
 
         const name =
-            body?.name?.trim();
+            body?.name?.trim() ||
+            existing.name;
 
-        if (!name) {
+        const slug =
+            body?.slug?.trim()
+                ? slugify(body.slug)
+                : existing.slug;
+
+        if (!slug) {
             return NextResponse.json(
                 {
                     success: false,
                     message:
-                        'Category name is required',
+                        "Valid English slug is required",
                 },
-                { status: 400 }
+                {
+                    status: 400,
+                }
             );
         }
 
-        const duplicate =
+        // ----------------------------------------
+        // CHECK DUPLICATE NAME
+        // ----------------------------------------
+
+        const duplicateName =
             await Category.findOne({
-                _id: { $ne: id },
                 name: {
                     $regex: `^${name}$`,
-                    $options: 'i',
+                    $options: "i",
+                },
+
+                _id: {
+                    $ne: id,
                 },
             });
 
-        if (duplicate) {
+        if (duplicateName) {
             return NextResponse.json(
                 {
                     success: false,
                     message:
-                        'Category already exists',
+                        "Another category already uses this name",
                 },
-                { status: 409 }
-            );
-        }
-
-        const category =
-            await Category.findByIdAndUpdate(
-                id,
-                { name },
                 {
-                    new: true,
-                    runValidators: true,
+                    status: 409,
                 }
             );
+        }
 
-        if (!category) {
+        // ----------------------------------------
+        // CHECK DUPLICATE SLUG
+        // ----------------------------------------
+
+        const duplicateSlug =
+            await Category.findOne({
+                slug,
+
+                _id: {
+                    $ne: id,
+                },
+            });
+
+        if (duplicateSlug) {
             return NextResponse.json(
                 {
                     success: false,
                     message:
-                        'Category not found',
+                        "Another category already uses this slug",
                 },
-                { status: 404 }
+                {
+                    status: 409,
+                }
             );
         }
 
-        return NextResponse.json({
-            success: true,
-            message:
-                'Category updated successfully',
-            category,
-        });
+        // ----------------------------------------
+        // SUB CATEGORIES
+        // ----------------------------------------
+
+        const subCategories =
+            Array.isArray(body?.subCategories)
+                ? body.subCategories
+                      .map((sub) => {
+                          if (
+                              typeof sub ===
+                              "string"
+                          ) {
+                              const subName =
+                                  sub.trim();
+
+                              if (!subName) {
+                                  return null;
+                              }
+
+                              const subSlug =
+                                  slugify(subName);
+
+                              if (!subSlug) {
+                                  return null;
+                              }
+
+                              return {
+                                  name: subName,
+                                  slug: subSlug,
+                              };
+                          }
+
+                          const subName =
+                              sub?.name?.trim();
+
+                          if (!subName) {
+                              return null;
+                          }
+
+                          const subSlug =
+                              sub?.slug?.trim()
+                                  ? slugify(
+                                        sub.slug
+                                    )
+                                  : slugify(
+                                        subName
+                                    );
+
+                          if (!subSlug) {
+                              return null;
+                          }
+
+                          return {
+                              name: subName,
+                              slug: subSlug,
+                          };
+                      })
+                      .filter(Boolean)
+                : existing.subCategories;
+
+        // ----------------------------------------
+        // UPDATE
+        // ----------------------------------------
+
+        existing.name = name;
+        existing.slug = slug;
+        existing.subCategories =
+            subCategories;
+
+        if (
+            typeof body?.isActive ===
+            "boolean"
+        ) {
+            existing.isActive =
+                body.isActive;
+        }
+
+        if (
+            body?.sortOrder !== undefined
+        ) {
+            existing.sortOrder =
+                Number(body.sortOrder) || 0;
+        }
+
+        await existing.save();
+
+        return NextResponse.json(
+            {
+                success: true,
+                message:
+                    "Category updated successfully",
+                category: existing,
+            },
+            {
+                status: 200,
+            }
+        );
     } catch (error) {
         console.error(
-            'UPDATE CATEGORY ERROR:',
+            "UPDATE CATEGORY ERROR:",
             error
         );
 
@@ -107,9 +216,13 @@ export async function PUT(
             {
                 success: false,
                 message:
-                    'Failed to update category',
+                    error?.code === 11000
+                        ? "Category name or slug already exists"
+                        : "Failed to update category",
             },
-            { status: 500 }
+            {
+                status: 500,
+            }
         );
     }
 }
@@ -117,55 +230,46 @@ export async function PUT(
 // ========================================
 // DELETE CATEGORY
 // ========================================
+
 export async function DELETE(
     req,
-    { params }
+    context
 ) {
     try {
         await connectDB();
 
-        const { id } = await params;
-
-        if (
-            !mongoose.Types.ObjectId.isValid(
-                id
-            )
-        ) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        'Invalid category ID',
-                },
-                { status: 400 }
-            );
-        }
+        const { id } = await context.params;
 
         const category =
-            await Category.findByIdAndDelete(
-                id
-            );
+            await Category.findById(id);
 
         if (!category) {
             return NextResponse.json(
                 {
                     success: false,
-                    message:
-                        'Category not found',
+                    message: "Category not found",
                 },
-                { status: 404 }
+                {
+                    status: 404,
+                }
             );
         }
 
-        return NextResponse.json({
-            success: true,
-            message:
-                'Category deleted successfully',
-            category,
-        });
+        await Category.findByIdAndDelete(id);
+
+        return NextResponse.json(
+            {
+                success: true,
+                message:
+                    "Category deleted successfully",
+            },
+            {
+                status: 200,
+            }
+        );
     } catch (error) {
         console.error(
-            'DELETE CATEGORY ERROR:',
+            "DELETE CATEGORY ERROR:",
             error
         );
 
@@ -173,9 +277,11 @@ export async function DELETE(
             {
                 success: false,
                 message:
-                    'Failed to delete category',
+                    "Failed to delete category",
             },
-            { status: 500 }
+            {
+                status: 500,
+            }
         );
     }
 }
