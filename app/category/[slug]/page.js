@@ -17,7 +17,7 @@ const categoryNames = {
     honey: "মধু",
     ghee: "গাওয়া ঘি",
     dates: "খেজুর",
-    dry-foods: "শুকনা খাবার",
+    dry_foods: "শুকনা খাবার",
     nuts: "নাটস",
     spices: "মসলা",
 };
