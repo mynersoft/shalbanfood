@@ -26,6 +26,8 @@ import {
     useDeleteSubCategory,
 } from '@/hooks/useCategory';
 
+import CategoryForm from '@/components/dashboard/categories/CategoryForm';
+
 export default function CategoriesPage() {
     const [search, setSearch] = useState('');
 
@@ -41,9 +43,6 @@ export default function CategoriesPage() {
     const [selectedCategory, setSelectedCategory] =
         useState(null);
 
-    const [categoryName, setCategoryName] =
-        useState('');
-
     const [subCategoryName, setSubCategoryName] =
         useState('');
 
@@ -55,25 +54,25 @@ export default function CategoriesPage() {
     // ==========================================
 
     const {
-        data: categories = [],
+        data: categoryData,
         isLoading,
     } = useCategories();
+
+    const categories = Array.isArray(categoryData)
+        ? categoryData
+        : [];
 
     // ==========================================
     // MUTATIONS
     // ==========================================
 
-    const addCategoryMutation =
-        useAddCategory();
+    const addCategoryMutation = useAddCategory();
 
-    const updateCategoryMutation =
-        useUpdateCategory();
+    const updateCategoryMutation = useUpdateCategory();
 
-    const deleteCategoryMutation =
-        useDeleteCategory();
+    const deleteCategoryMutation = useDeleteCategory();
 
-    const addSubCategoryMutation =
-        useAddSubCategory();
+    const addSubCategoryMutation = useAddSubCategory();
 
     const deleteSubCategoryMutation =
         useDeleteSubCategory();
@@ -82,13 +81,17 @@ export default function CategoriesPage() {
     // SEARCH
     // ==========================================
 
+    const searchText = search.trim().toLowerCase();
+
     const filteredCategories = categories.filter(
         (category) => {
-            const searchText =
-                search.toLowerCase();
-
             const categoryMatch =
                 category.name
+                    ?.toLowerCase()
+                    .includes(searchText);
+
+            const slugMatch =
+                category.slug
                     ?.toLowerCase()
                     .includes(searchText);
 
@@ -101,7 +104,9 @@ export default function CategoriesPage() {
                 );
 
             return (
+                !searchText ||
                 categoryMatch ||
+                slugMatch ||
                 subCategoryMatch
             );
         }
@@ -124,7 +129,6 @@ export default function CategoriesPage() {
 
     const openAddCategory = () => {
         setEditingCategory(null);
-        setCategoryName('');
         setIsCategoryModalOpen(true);
     };
 
@@ -134,7 +138,6 @@ export default function CategoriesPage() {
 
     const openEditCategory = (category) => {
         setEditingCategory(category);
-        setCategoryName(category.name);
         setIsCategoryModalOpen(true);
     };
 
@@ -145,43 +148,27 @@ export default function CategoriesPage() {
     const closeCategoryModal = () => {
         setIsCategoryModalOpen(false);
         setEditingCategory(null);
-        setCategoryName('');
     };
 
     // ==========================================
-    // SAVE CATEGORY
+    // CATEGORY SUBMIT
+    // CategoryForm calls this
     // ==========================================
 
-    const handleCategorySubmit = async (e) => {
-        e.preventDefault();
-
-        const name = categoryName.trim();
-
-        if (!name) {
-            toast.error(
-                'Category name is required'
-            );
-            return;
-        }
-
+    const handleCategorySubmit = async (data) => {
         try {
-            if (editingCategory) {
-                await updateCategoryMutation.mutateAsync(
-                    {
-                        id: editingCategory._id,
-                        name,
-                    }
-                );
+            if (editingCategory?._id) {
+                await updateCategoryMutation.mutateAsync({
+                    id: editingCategory._id,
+                    ...data,
+                });
 
                 toast.success(
                     'Category updated successfully'
                 );
             } else {
                 await addCategoryMutation.mutateAsync(
-                    {
-                        name,
-                        subCategories: [],
-                    }
+                    data
                 );
 
                 toast.success(
@@ -191,7 +178,10 @@ export default function CategoriesPage() {
 
             closeCategoryModal();
         } catch (error) {
-            // Hook already handles API errors.
+            toast.error(
+                error?.message ||
+                    'Failed to save category'
+            );
         }
     };
 
@@ -217,7 +207,10 @@ export default function CategoriesPage() {
                 'Category deleted successfully'
             );
         } catch (error) {
-            // Hook handles error.
+            toast.error(
+                error?.message ||
+                    'Failed to delete category'
+            );
         }
     };
 
@@ -248,8 +241,7 @@ export default function CategoriesPage() {
     const handleSubCategorySubmit = async (e) => {
         e.preventDefault();
 
-        const name =
-            subCategoryName.trim();
+        const name = subCategoryName.trim();
 
         if (!name) {
             toast.error(
@@ -266,16 +258,12 @@ export default function CategoriesPage() {
         }
 
         try {
-            await addSubCategoryMutation.mutateAsync(
-                {
-                    parentId:
-                        selectedCategory._id,
-
-                    subCategoryData: {
-                        name,
-                    },
-                }
-            );
+            await addSubCategoryMutation.mutateAsync({
+                parentId: selectedCategory._id,
+                subCategoryData: {
+                    name,
+                },
+            });
 
             toast.success(
                 'Subcategory added successfully'
@@ -283,7 +271,10 @@ export default function CategoriesPage() {
 
             closeSubCategoryModal();
         } catch (error) {
-            // Hook handles error.
+            toast.error(
+                error?.message ||
+                    'Failed to add subcategory'
+            );
         }
     };
 
@@ -296,23 +287,25 @@ export default function CategoriesPage() {
         subCategory
     ) => {
         const confirmed = window.confirm(
-            `Delete "${subCategory}"?`
+            `Delete "${subCategory}" from "${category.name}"?`
         );
 
         if (!confirmed) return;
 
         try {
-            await deleteSubCategoryMutation.mutateAsync(
-                {
-                    slug: subCategory,
-                }
-            );
+            await deleteSubCategoryMutation.mutateAsync({
+                parentId: category._id,
+                subCategory,
+            });
 
             toast.success(
                 'Subcategory deleted successfully'
             );
         } catch (error) {
-            // Hook handles error.
+            toast.error(
+                error?.message ||
+                    'Failed to delete subcategory'
+            );
         }
     };
 
@@ -333,15 +326,15 @@ export default function CategoriesPage() {
         );
     }
 
+    // ==========================================
+    // UI
+    // ==========================================
+
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-6">
 
-            {/* ================================= */}
             {/* HEADER */}
-            {/* ================================= */}
-
             <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">
                         Categories
@@ -360,19 +353,13 @@ export default function CategoriesPage() {
                     <Plus size={18} />
                     Add Category
                 </button>
-
             </div>
 
-            {/* ================================= */}
             {/* STATS */}
-            {/* ================================= */}
-
             <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
 
                 <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-
                     <div className="flex items-center gap-4">
-
                         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
                             <FolderTree
                                 size={22}
@@ -389,15 +376,11 @@ export default function CategoriesPage() {
                                 {categories.length}
                             </p>
                         </div>
-
                     </div>
-
                 </div>
 
                 <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-
                     <div className="flex items-center gap-4">
-
                         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
                             <FolderPlus
                                 size={22}
@@ -420,15 +403,11 @@ export default function CategoriesPage() {
                                 )}
                             </p>
                         </div>
-
                     </div>
-
                 </div>
 
                 <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-
                     <div className="flex items-center gap-4">
-
                         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
                             <Search
                                 size={22}
@@ -445,21 +424,14 @@ export default function CategoriesPage() {
                                 {filteredCategories.length}
                             </p>
                         </div>
-
                     </div>
-
                 </div>
 
             </div>
 
-            {/* ================================= */}
             {/* SEARCH */}
-            {/* ================================= */}
-
             <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-
                 <div className="relative">
-
                     <Search
                         size={18}
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -469,26 +441,18 @@ export default function CategoriesPage() {
                         type="text"
                         value={search}
                         onChange={(e) =>
-                            setSearch(
-                                e.target.value
-                            )
+                            setSearch(e.target.value)
                         }
-                        placeholder="Search categories or subcategories..."
+                        placeholder="Search categories, slug or subcategories..."
                         className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                     />
-
                 </div>
-
             </div>
 
-            {/* ================================= */}
             {/* CATEGORY LIST */}
-            {/* ================================= */}
-
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
                 {filteredCategories.length === 0 ? (
-
                     <div className="flex min-h-[300px] flex-col items-center justify-center px-4 text-center">
 
                         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
@@ -507,24 +471,19 @@ export default function CategoriesPage() {
                         </p>
 
                         <button
-                            onClick={
-                                openAddCategory
-                            }
+                            type="button"
+                            onClick={openAddCategory}
                             className="mt-4 inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
                         >
                             <Plus size={17} />
                             Add Category
                         </button>
-
                     </div>
-
                 ) : (
-
                     <div className="divide-y divide-gray-100">
 
                         {filteredCategories.map(
                             (category, index) => {
-
                                 const subCategories =
                                     category.subCategories ||
                                     [];
@@ -542,10 +501,7 @@ export default function CategoriesPage() {
                                         className="group"
                                     >
 
-                                        {/* ========================= */}
                                         {/* CATEGORY ROW */}
-                                        {/* ========================= */}
-
                                         <div className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
 
                                             <div className="flex min-w-0 items-center gap-3">
@@ -583,9 +539,7 @@ export default function CategoriesPage() {
                                                 </div>
 
                                                 <div className="min-w-0">
-
                                                     <div className="flex flex-wrap items-center gap-2">
-
                                                         <h3 className="font-semibold text-gray-900">
                                                             {
                                                                 category.name
@@ -598,20 +552,17 @@ export default function CategoriesPage() {
                                                             }{' '}
                                                             subcategories
                                                         </span>
-
                                                     </div>
 
                                                     <p className="mt-0.5 text-xs text-gray-400">
-                                                        #{index +
-                                                            1}
+                                                        /category/
+                                                        {category.slug ||
+                                                            'no-slug'}
                                                     </p>
-
                                                 </div>
-
                                             </div>
 
                                             {/* ACTIONS */}
-
                                             <div className="flex items-center gap-2 md:justify-end">
 
                                                 <button
@@ -676,23 +627,16 @@ export default function CategoriesPage() {
                                                         />
                                                     )}
                                                 </button>
-
                                             </div>
-
                                         </div>
 
-                                        {/* ========================= */}
                                         {/* SUBCATEGORIES */}
-                                        {/* ========================= */}
-
                                         {isExpanded && (
                                             <div className="border-t border-gray-100 bg-gray-50 px-5 py-4">
 
                                                 {subCategories.length ===
                                                 0 ? (
-
                                                     <div className="rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center">
-
                                                         <p className="text-sm text-gray-500">
                                                             No subcategories
                                                             yet.
@@ -715,11 +659,8 @@ export default function CategoriesPage() {
                                                             Add
                                                             Subcategory
                                                         </button>
-
                                                     </div>
-
                                                 ) : (
-
                                                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 
                                                         {subCategories.map(
@@ -727,7 +668,6 @@ export default function CategoriesPage() {
                                                                 subCategory,
                                                                 subIndex
                                                             ) => (
-
                                                                 <div
                                                                     key={`${category._id}-${subCategory}-${subIndex}`}
                                                                     className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-3"
@@ -762,20 +702,26 @@ export default function CategoriesPage() {
                                                                         className="ml-2 shrink-0 rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
                                                                         title="Delete subcategory"
                                                                     >
-                                                                        <Trash2
-                                                                            size={
-                                                                                15
-                                                                            }
-                                                                        />
+                                                                        {deleteSubCategoryMutation.isPending ? (
+                                                                            <Loader2
+                                                                                size={
+                                                                                    15
+                                                                                }
+                                                                                className="animate-spin"
+                                                                            />
+                                                                        ) : (
+                                                                            <Trash2
+                                                                                size={
+                                                                                    15
+                                                                                }
+                                                                            />
+                                                                        )}
                                                                     </button>
-
                                                                 </div>
-
                                                             )
                                                         )}
 
                                                     </div>
-
                                                 )}
 
                                             </div>
@@ -787,111 +733,33 @@ export default function CategoriesPage() {
                         )}
 
                     </div>
-
                 )}
 
             </div>
 
             {/* ========================================= */}
-            {/* CATEGORY MODAL */}
+            {/* CATEGORY FORM MODAL */}
             {/* ========================================= */}
 
             {isCategoryModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
 
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-
-                        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-
-                            <div>
-                                <h2 className="text-lg font-semibold text-gray-900">
-                                    {editingCategory
-                                        ? 'Edit Category'
-                                        : 'Add Category'}
-                                </h2>
-
-                                <p className="mt-0.5 text-xs text-gray-500">
-                                    {editingCategory
-                                        ? 'Update category information'
-                                        : 'Create a new product category'}
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={
-                                    closeCategoryModal
-                                }
-                                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                            >
-                                <X size={20} />
-                            </button>
-
-                        </div>
-
-                        <form
+                    <div className="w-full max-w-lg">
+                        <CategoryForm
+                            editingCategory={
+                                editingCategory
+                            }
                             onSubmit={
                                 handleCategorySubmit
                             }
-                            className="p-5"
-                        >
-
-                            <label className="mb-2 block text-sm font-medium text-gray-700">
-                                Category Name
-                            </label>
-
-                            <input
-                                type="text"
-                                value={categoryName}
-                                onChange={(e) =>
-                                    setCategoryName(
-                                        e.target.value
-                                    )
-                                }
-                                placeholder="e.g. Honey"
-                                autoFocus
-                                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
-                            />
-
-                            <div className="mt-5 flex justify-end gap-3">
-
-                                <button
-                                    type="button"
-                                    onClick={
-                                        closeCategoryModal
-                                    }
-                                    className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    disabled={
-                                        addCategoryMutation.isPending ||
-                                        updateCategoryMutation.isPending
-                                    }
-                                    className="inline-flex min-w-[120px] items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-
-                                    {(addCategoryMutation.isPending ||
-                                        updateCategoryMutation.isPending) && (
-                                        <Loader2
-                                            size={16}
-                                            className="animate-spin"
-                                        />
-                                    )}
-
-                                    {editingCategory
-                                        ? 'Update'
-                                        : 'Add Category'}
-
-                                </button>
-
-                            </div>
-
-                        </form>
-
+                            onCancel={
+                                closeCategoryModal
+                            }
+                            loading={
+                                addCategoryMutation.isPending ||
+                                updateCategoryMutation.isPending
+                            }
+                        />
                     </div>
 
                 </div>
@@ -932,7 +800,6 @@ export default function CategoriesPage() {
                             >
                                 <X size={20} />
                             </button>
-
                         </div>
 
                         <form
@@ -989,11 +856,9 @@ export default function CategoriesPage() {
                                     )}
 
                                     Add Subcategory
-
                                 </button>
 
                             </div>
-
                         </form>
 
                     </div>
