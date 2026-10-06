@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import toast from "react-hot-toast";
 
@@ -14,13 +14,18 @@ import { useCategories } from "@/hooks/useCategory";
 
 import {
     X,
-    ImagePlus,
     Camera,
     FolderOpen,
     Loader2,
     PackagePlus,
     Save,
+    Tag,
+    Layers,
+    DollarSign,
+    ImagePlus,
 } from "lucide-react";
+
+import { slugify } from "@/lib/slugify";
 
 // =====================================================
 // IMAGE RESIZE
@@ -29,32 +34,50 @@ import {
 function resizeImage(file) {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        const objectUrl = URL.createObjectURL(file);
+
+        const objectUrl =
+            URL.createObjectURL(file);
 
         img.onload = () => {
             URL.revokeObjectURL(objectUrl);
 
-            const canvas = document.createElement("canvas");
+            const canvas =
+                document.createElement(
+                    "canvas"
+                );
 
-            const MAX_WIDTH = 800;
+            const MAX_WIDTH = 1000;
 
             let width = img.width;
             let height = img.height;
 
             if (width > MAX_WIDTH) {
-                height = height * (MAX_WIDTH / width);
+                height =
+                    height *
+                    (MAX_WIDTH / width);
+
                 width = MAX_WIDTH;
             }
 
             canvas.width = width;
             canvas.height = height;
 
-            const ctx = canvas.getContext("2d");
+            const ctx =
+                canvas.getContext("2d");
 
             if (!ctx) {
-                reject(new Error("Canvas not supported"));
+                reject(
+                    new Error(
+                        "Canvas is not supported."
+                    )
+                );
+
                 return;
             }
+
+            // Better image rendering
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
 
             ctx.drawImage(
                 img,
@@ -69,23 +92,27 @@ function resizeImage(file) {
                     if (!blob) {
                         reject(
                             new Error(
-                                "Image resize failed"
+                                "Image resize failed."
                             )
                         );
+
                         return;
                     }
 
                     resolve(blob);
                 },
                 "image/jpeg",
-                0.75
+                0.82
             );
         };
 
         img.onerror = () => {
             URL.revokeObjectURL(objectUrl);
+
             reject(
-                new Error("Image loading failed")
+                new Error(
+                    "Image loading failed."
+                )
             );
         };
 
@@ -99,8 +126,7 @@ function resizeImage(file) {
 
 function renameFile(
     blob,
-    productName,
-    fileType = "image/jpeg"
+    productName
 ) {
     const safeName =
         productName
@@ -115,7 +141,7 @@ function renameFile(
         [blob],
         `${safeName}_shalbanfood.jpg`,
         {
-            type: fileType,
+            type: "image/jpeg",
         }
     );
 }
@@ -126,9 +152,9 @@ function renameFile(
 
 const defaultForm = {
     name: "",
+    slug: "",
 
     category: "",
-
     subCategory: "",
 
     brand: "",
@@ -141,7 +167,6 @@ const defaultForm = {
     stock: "",
 
     regularPrice: "",
-
     sellPrice: "",
 
     warranty: "",
@@ -154,14 +179,14 @@ const defaultForm = {
 // =====================================================
 
 export default function ProductFormModal({
-    editingProduct,
+    editingProduct = null,
     onClose,
     currentPage = 1,
 }) {
     const dispatch = useDispatch();
 
     // =====================================================
-    // CATEGORIES
+    // CATEGORY QUERY
     // =====================================================
 
     const {
@@ -171,12 +196,14 @@ export default function ProductFormModal({
         isError: categoriesError,
     } = useCategories();
 
-    const categories = Array.isArray(categoryData)
+    const categories = Array.isArray(
+        categoryData
+    )
         ? categoryData
         : [];
 
     // =====================================================
-    // FORM STATE
+    // FORM
     // =====================================================
 
     const [form, setForm] =
@@ -192,7 +219,14 @@ export default function ProductFormModal({
         useState(false);
 
     // =====================================================
-    // LOAD EDIT PRODUCT
+    // SLUG MANUAL STATE
+    // =====================================================
+
+    const [slugEdited, setSlugEdited] =
+        useState(false);
+
+    // =====================================================
+    // LOAD PRODUCT
     // =====================================================
 
     useEffect(() => {
@@ -200,45 +234,65 @@ export default function ProductFormModal({
             setForm({
                 ...defaultForm,
 
-                ...editingProduct,
+                name:
+                    editingProduct.name ||
+                    "",
+
+                slug:
+                    editingProduct.slug ||
+                    "",
+
+                category:
+                    editingProduct.category ||
+                    "",
+
+                subCategory:
+                    editingProduct.subCategory ||
+                    "",
+
+                brand:
+                    editingProduct.brand ||
+                    "",
 
                 size: {
                     value:
-                        editingProduct.size?.value ??
+                        editingProduct
+                            .size
+                            ?.value ??
                         "",
 
                     unit:
-                        editingProduct.size?.unit ??
+                        editingProduct
+                            .size
+                            ?.unit ||
                         "gram",
                 },
 
-                category:
-                    editingProduct.category || "",
-
-                subCategory:
-                    editingProduct.subCategory || "",
-
-                brand:
-                    editingProduct.brand || "",
-
                 stock:
-                    editingProduct.stock ?? "",
+                    editingProduct.stock ??
+                    "",
 
                 regularPrice:
-                    editingProduct.regularPrice ?? "",
+                    editingProduct.regularPrice ??
+                    "",
 
                 sellPrice:
-                    editingProduct.sellPrice ?? "",
+                    editingProduct.sellPrice ??
+                    "",
 
                 warranty:
-                    editingProduct.warranty || "",
+                    editingProduct.warranty ||
+                    "",
 
                 image:
-                    editingProduct.image || "",
+                    editingProduct.image ||
+                    "",
             });
 
             setFile(null);
             setPreviewUrl("");
+
+            setSlugEdited(true);
         } else {
             setForm({
                 ...defaultForm,
@@ -251,6 +305,8 @@ export default function ProductFormModal({
 
             setFile(null);
             setPreviewUrl("");
+
+            setSlugEdited(false);
         }
     }, [editingProduct]);
 
@@ -279,14 +335,36 @@ export default function ProductFormModal({
     // =====================================================
 
     const selectedCategory =
-        categories.find(
-            (category) =>
-                category.name ===
-                form.category
-        ) || null;
+        useMemo(() => {
+            if (!form.category) {
+                return null;
+            }
+
+            return (
+                categories.find(
+                    (category) =>
+                        category.slug ===
+                        form.category
+                ) || null
+            );
+        }, [
+            categories,
+            form.category,
+        ]);
 
     // =====================================================
-    // FIELD UPDATE
+    // SUBCATEGORIES
+    // =====================================================
+
+    const subCategories =
+        Array.isArray(
+            selectedCategory?.subCategories
+        )
+            ? selectedCategory.subCategories
+            : [];
+
+    // =====================================================
+    // UPDATE FIELD
     // =====================================================
 
     const updateField = (
@@ -296,6 +374,79 @@ export default function ProductFormModal({
         setForm((previous) => ({
             ...previous,
             [field]: value,
+        }));
+    };
+
+    // =====================================================
+    // PRODUCT NAME
+    // =====================================================
+
+    const handleNameChange = (
+        event
+    ) => {
+        const value =
+            event.target.value;
+
+        setForm((previous) => ({
+            ...previous,
+
+            name: value,
+
+            slug: slugEdited
+                ? previous.slug
+                : slugify(value),
+        }));
+    };
+
+    // =====================================================
+    // PRODUCT SLUG
+    // =====================================================
+
+    const handleSlugChange = (
+        event
+    ) => {
+        const value =
+            event.target.value
+                .toLowerCase()
+                .replace(
+                    /[^a-z0-9-]/g,
+                    ""
+                )
+                .replace(
+                    /-+/g,
+                    "-"
+                )
+                .replace(
+                    /^-+|-+$/g,
+                    ""
+                );
+
+        setSlugEdited(true);
+
+        updateField(
+            "slug",
+            value
+        );
+    };
+
+    // =====================================================
+    // CATEGORY CHANGE
+    // =====================================================
+
+    const handleCategoryChange = (
+        event
+    ) => {
+        const categorySlug =
+            event.target.value;
+
+        setForm((previous) => ({
+            ...previous,
+
+            category:
+                categorySlug,
+
+            // Reset subcategory
+            subCategory: "",
         }));
     };
 
@@ -312,6 +463,7 @@ export default function ProductFormModal({
 
             size: {
                 ...previous.size,
+
                 [field]: value,
             },
         }));
@@ -321,7 +473,9 @@ export default function ProductFormModal({
     // MOBILE INPUT SCROLL
     // =====================================================
 
-    const focusScroll = (event) => {
+    const focusScroll = (
+        event
+    ) => {
         setTimeout(() => {
             event.target.scrollIntoView({
                 behavior: "smooth",
@@ -335,8 +489,12 @@ export default function ProductFormModal({
     // =====================================================
 
     const handleImageSelect =
-        async (selectedFile) => {
-            if (!selectedFile) return;
+        async (
+            selectedFile
+        ) => {
+            if (!selectedFile) {
+                return;
+            }
 
             if (
                 !selectedFile.type.startsWith(
@@ -344,7 +502,19 @@ export default function ProductFormModal({
                 )
             ) {
                 toast.error(
-                    "Please select an image file."
+                    "Please select a valid image."
+                );
+
+                return;
+            }
+
+            // Maximum original upload size
+            if (
+                selectedFile.size >
+                10 * 1024 * 1024
+            ) {
+                toast.error(
+                    "Image must be smaller than 10MB."
                 );
 
                 return;
@@ -366,8 +536,7 @@ export default function ProductFormModal({
                 const finalFile =
                     renameFile(
                         resizedBlob,
-                        form.name,
-                        "image/jpeg"
+                        form.name
                     );
 
                 setFile(finalFile);
@@ -379,7 +548,10 @@ export default function ProductFormModal({
                     }
                 );
             } catch (error) {
-                console.error(error);
+                console.error(
+                    "IMAGE ERROR:",
+                    error
+                );
 
                 toast.error(
                     "Image processing failed.",
@@ -391,10 +563,24 @@ export default function ProductFormModal({
         };
 
     // =====================================================
+    // REMOVE NEW IMAGE
+    // =====================================================
+
+    const handleRemoveNewImage =
+        () => {
+            setFile(null);
+            setPreviewUrl("");
+        };
+
+    // =====================================================
     // VALIDATION
     // =====================================================
 
     const validateForm = () => {
+        // -----------------------------------------------
+        // NAME
+        // -----------------------------------------------
+
         if (!form.name.trim()) {
             toast.error(
                 "Product name is required."
@@ -402,6 +588,22 @@ export default function ProductFormModal({
 
             return false;
         }
+
+        // -----------------------------------------------
+        // SLUG
+        // -----------------------------------------------
+
+        if (!form.slug.trim()) {
+            toast.error(
+                "Product slug is required."
+            );
+
+            return false;
+        }
+
+        // -----------------------------------------------
+        // CATEGORY
+        // -----------------------------------------------
 
         if (!form.category) {
             toast.error(
@@ -411,20 +613,29 @@ export default function ProductFormModal({
             return false;
         }
 
-        if (!form.subCategory) {
-            toast.error(
-                "Please select a subcategory."
-            );
+        // -----------------------------------------------
+        // SUBCATEGORY
+        // -----------------------------------------------
 
-            return false;
-        }
+        /*
+         * Subcategory is optional.
+         *
+         * Some categories may not have
+         * subcategories.
+         */
+
+        // -----------------------------------------------
+        // SIZE
+        // -----------------------------------------------
 
         if (
             form.size?.value === "" ||
-            Number(form.size?.value) <= 0
+            Number(
+                form.size?.value
+            ) <= 0
         ) {
             toast.error(
-                "Please enter product size."
+                "Please enter a valid product size."
             );
 
             return false;
@@ -438,9 +649,30 @@ export default function ProductFormModal({
             return false;
         }
 
+        // -----------------------------------------------
+        // STOCK
+        // -----------------------------------------------
+
+        if (
+            form.stock === "" ||
+            Number(form.stock) < 0
+        ) {
+            toast.error(
+                "Please enter valid stock."
+            );
+
+            return false;
+        }
+
+        // -----------------------------------------------
+        // REGULAR PRICE
+        // -----------------------------------------------
+
         if (
             form.regularPrice === "" ||
-            Number(form.regularPrice) < 0
+            Number(
+                form.regularPrice
+            ) < 0
         ) {
             toast.error(
                 "Please enter regular price."
@@ -449,9 +681,15 @@ export default function ProductFormModal({
             return false;
         }
 
+        // -----------------------------------------------
+        // SELL PRICE
+        // -----------------------------------------------
+
         if (
             form.sellPrice === "" ||
-            Number(form.sellPrice) < 0
+            Number(
+                form.sellPrice
+            ) < 0
         ) {
             toast.error(
                 "Please enter sell price."
@@ -460,9 +698,17 @@ export default function ProductFormModal({
             return false;
         }
 
+        // -----------------------------------------------
+        // PRICE RELATION
+        // -----------------------------------------------
+
         if (
-            Number(form.sellPrice) >
-            Number(form.regularPrice)
+            Number(
+                form.sellPrice
+            ) >
+            Number(
+                form.regularPrice
+            )
         ) {
             toast.error(
                 "Sell price cannot be higher than regular price."
@@ -483,7 +729,9 @@ export default function ProductFormModal({
     ) => {
         event.preventDefault();
 
-        if (!validateForm()) return;
+        if (!validateForm()) {
+            return;
+        }
 
         setSaving(true);
 
@@ -491,9 +739,9 @@ export default function ProductFormModal({
             const formData =
                 new FormData();
 
-            // -----------------------------------------
+            // =================================================
             // IMAGE
-            // -----------------------------------------
+            // =================================================
 
             if (file) {
                 formData.append(
@@ -502,9 +750,9 @@ export default function ProductFormModal({
                 );
             }
 
-            // -----------------------------------------
-            // NORMAL FIELDS
-            // -----------------------------------------
+            // =================================================
+            // BASIC INFORMATION
+            // =================================================
 
             formData.append(
                 "name",
@@ -512,9 +760,34 @@ export default function ProductFormModal({
             );
 
             formData.append(
+                "slug",
+                form.slug.trim()
+            );
+
+            /*
+             * IMPORTANT:
+             *
+             * Category stores SLUG.
+             *
+             * Example:
+             * honey
+             * dates
+             * ghee
+             */
+
+            formData.append(
                 "category",
                 form.category
             );
+
+            /*
+             * Subcategory also stores SLUG.
+             *
+             * Example:
+             * lichu
+             * kalojira
+             * sundarban
+             */
 
             formData.append(
                 "subCategory",
@@ -523,15 +796,25 @@ export default function ProductFormModal({
 
             formData.append(
                 "brand",
-                form.brand || ""
+                form.brand.trim()
             );
+
+            // =================================================
+            // STOCK
+            // =================================================
 
             formData.append(
                 "stock",
                 String(
-                    Number(form.stock || 0)
+                    Number(
+                        form.stock || 0
+                    )
                 )
             );
+
+            // =================================================
+            // PRICE
+            // =================================================
 
             formData.append(
                 "regularPrice",
@@ -551,14 +834,18 @@ export default function ProductFormModal({
                 )
             );
 
+            // =================================================
+            // WARRANTY
+            // =================================================
+
             formData.append(
                 "warranty",
-                form.warranty || ""
+                form.warranty.trim()
             );
 
-            // -----------------------------------------
+            // =================================================
             // SIZE
-            // -----------------------------------------
+            // =================================================
 
             formData.append(
                 "size",
@@ -572,9 +859,22 @@ export default function ProductFormModal({
                 })
             );
 
-            // -----------------------------------------
+            // =================================================
+            // EXISTING IMAGE
+            // =================================================
+
+            if (
+                editingProduct?.image
+            ) {
+                formData.append(
+                    "existingImage",
+                    editingProduct.image
+                );
+            }
+
+            // =================================================
             // UPDATE ID
-            // -----------------------------------------
+            // =================================================
 
             if (
                 editingProduct?._id
@@ -585,9 +885,9 @@ export default function ProductFormModal({
                 );
             }
 
-            // -----------------------------------------
-            // API REQUEST
-            // -----------------------------------------
+            // =================================================
+            // API
+            // =================================================
 
             const response =
                 await fetch(
@@ -622,9 +922,9 @@ export default function ProductFormModal({
                 );
             }
 
-            // -----------------------------------------
-            // REDUX
-            // -----------------------------------------
+            // =================================================
+            // REDUX UPDATE
+            // =================================================
 
             if (editingProduct) {
                 await dispatch(
@@ -648,9 +948,9 @@ export default function ProductFormModal({
                 );
             }
 
-            // -----------------------------------------
-            // REFRESH PRODUCT LIST
-            // -----------------------------------------
+            // =================================================
+            // REFRESH
+            // =================================================
 
             await dispatch(
                 fetchProducts({
@@ -658,7 +958,11 @@ export default function ProductFormModal({
                 })
             );
 
-            onClose();
+            // =================================================
+            // CLOSE
+            // =================================================
+
+            onClose?.();
         } catch (error) {
             console.error(
                 "PRODUCT SAVE ERROR:",
@@ -679,70 +983,165 @@ export default function ProductFormModal({
     // =====================================================
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-5">
+        <div className="
+            fixed
+            inset-0
+            z-[60]
+            flex
+            items-center
+            justify-center
+            bg-black/75
+            p-3
+            backdrop-blur-sm
+            sm:p-5
+        ">
 
-            <div className="flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 text-gray-100 shadow-2xl">
+            <div className="
+                flex
+                max-h-[94vh]
+                w-full
+                max-w-2xl
+                flex-col
+                overflow-hidden
+                rounded-2xl
+                border
+                border-gray-800
+                bg-gray-950
+                text-gray-100
+                shadow-2xl
+            ">
 
-                {/* =================================================
+                {/* ==========================================
                     HEADER
-                ================================================= */}
+                ========================================== */}
 
-                <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-800 bg-gray-950 px-5 py-4 sm:px-6">
+                <div className="
+                    flex
+                    shrink-0
+                    items-center
+                    justify-between
+                    border-b
+                    border-gray-800
+                    bg-gray-950
+                    px-5
+                    py-4
+                    sm:px-6
+                ">
 
-                    <div className="flex items-center gap-3">
+                    <div className="
+                        flex
+                        items-center
+                        gap-3
+                    ">
 
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10 text-green-400">
+                        <div className="
+                            flex
+                            h-10
+                            w-10
+                            items-center
+                            justify-center
+                            rounded-xl
+                            bg-green-500/10
+                            text-green-400
+                        ">
                             <PackagePlus
                                 size={21}
                             />
                         </div>
 
                         <div>
-                            <h2 className="text-base font-semibold sm:text-lg">
+                            <h2 className="
+                                text-base
+                                font-semibold
+                                sm:text-lg
+                            ">
                                 {editingProduct
                                     ? "Edit Product"
                                     : "Add Product"}
                             </h2>
 
-                            <p className="text-xs text-gray-500">
-                                Product information
+                            <p className="
+                                text-xs
+                                text-gray-500
+                            ">
+                                Manage product
+                                information
                             </p>
                         </div>
                     </div>
 
                     <button
                         type="button"
-                        onClick={onClose}
-                        disabled={saving}
-                        aria-label="Close"
-                        className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={
+                            onClose
+                        }
+                        disabled={
+                            saving
+                        }
+                        className="
+                            flex
+                            h-9
+                            w-9
+                            items-center
+                            justify-center
+                            rounded-lg
+                            text-gray-400
+                            transition
+                            hover:bg-gray-800
+                            hover:text-white
+                            disabled:opacity-50
+                        "
                     >
-                        <X size={20} />
+                        <X
+                            size={20}
+                        />
                     </button>
                 </div>
 
-                {/* =================================================
+                {/* ==========================================
                     BODY
-                ================================================= */}
+                ========================================== */}
 
-                <div className="overflow-y-auto px-5 py-5 sm:px-6">
+                <div className="
+                    overflow-y-auto
+                    px-5
+                    py-5
+                    sm:px-6
+                ">
 
                     <form
                         onSubmit={
                             handleSubmit
                         }
-                        className="space-y-5"
+                        className="
+                            space-y-6
+                        "
                     >
 
-                        {/* =================================================
+                        {/* ==================================
                             PRODUCT NAME
-                        ================================================= */}
+                        ================================== */}
 
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
 
-                            <label className="text-sm font-medium text-gray-300">
-                                Product Name
-                            </label>
+                            <div className="
+                                flex
+                                items-center
+                                gap-2
+                            ">
+                                <Tag
+                                    size={16}
+                                    className="text-green-400"
+                                />
+
+                                <label className="
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                ">
+                                    Product Name
+                                </label>
+                            </div>
 
                             <input
                                 required
@@ -752,32 +1151,105 @@ export default function ProductFormModal({
                                 onFocus={
                                     focusScroll
                                 }
-                                onChange={(
-                                    event
-                                ) =>
-                                    updateField(
-                                        "name",
-                                        event
-                                            .target
-                                            .value
-                                    )
+                                onChange={
+                                    handleNameChange
                                 }
-                                placeholder="e.g. লিচু ফুলের মধু"
-                                className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                placeholder="লিচু ফুলের মধু"
+                                className="
+                                    w-full
+                                    rounded-xl
+                                    border
+                                    border-gray-800
+                                    bg-gray-900
+                                    px-4
+                                    py-3
+                                    text-sm
+                                    text-white
+                                    outline-none
+                                    transition
+                                    placeholder:text-gray-600
+                                    focus:border-green-500
+                                    focus:ring-2
+                                    focus:ring-green-500/10
+                                "
                             />
                         </div>
 
-                        {/* =================================================
-                            CATEGORY
-                        ================================================= */}
+                        {/* ==================================
+                            SLUG
+                        ================================== */}
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+
+                            <label className="
+                                text-sm
+                                font-medium
+                                text-gray-300
+                            ">
+                                Product Slug
+                            </label>
+
+                            <input
+                                required
+                                value={
+                                    form.slug
+                                }
+                                onChange={
+                                    handleSlugChange
+                                }
+                                placeholder="lichu-fuler-modhu"
+                                className="
+                                    w-full
+                                    rounded-xl
+                                    border
+                                    border-gray-800
+                                    bg-gray-900
+                                    px-4
+                                    py-3
+                                    font-mono
+                                    text-sm
+                                    text-green-400
+                                    outline-none
+                                    transition
+                                    placeholder:text-gray-700
+                                    focus:border-green-500
+                                    focus:ring-2
+                                    focus:ring-green-500/10
+                                "
+                            />
+
+                            <p className="
+                                text-xs
+                                text-gray-600
+                            ">
+                                URL:
+                                {" "}
+                                /product/
+                                {form.slug ||
+                                    "product-slug"}
+                            </p>
+                        </div>
+
+                        {/* ==================================
+                            CATEGORY
+                        ================================== */}
+
+                        <div className="
+                            grid
+                            grid-cols-1
+                            gap-4
+                            sm:grid-cols-2
+                        ">
 
                             {/* CATEGORY */}
 
-                            <div className="space-y-1.5">
+                            <div className="space-y-2">
 
-                                <label className="text-sm font-medium text-gray-300">
+                                <label className="
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                ">
                                     Category
                                 </label>
 
@@ -790,26 +1262,26 @@ export default function ProductFormModal({
                                         categoriesLoading ||
                                         categoriesFetching
                                     }
-                                    onChange={(
-                                        event
-                                    ) => {
-                                        setForm(
-                                            (
-                                                previous
-                                            ) => ({
-                                                ...previous,
-
-                                                category:
-                                                    event
-                                                        .target
-                                                        .value,
-
-                                                subCategory:
-                                                    "",
-                                            })
-                                        );
-                                    }}
-                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                    onChange={
+                                        handleCategoryChange
+                                    }
+                                    className="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-gray-800
+                                        bg-gray-900
+                                        px-4
+                                        py-3
+                                        text-sm
+                                        text-white
+                                        outline-none
+                                        focus:border-green-500
+                                        focus:ring-2
+                                        focus:ring-green-500/10
+                                        disabled:cursor-not-allowed
+                                        disabled:opacity-50
+                                    "
                                 >
 
                                     <option value="">
@@ -827,7 +1299,7 @@ export default function ProductFormModal({
                                                     category._id
                                                 }
                                                 value={
-                                                    category.name
+                                                    category.slug
                                                 }
                                             >
                                                 {
@@ -839,8 +1311,12 @@ export default function ProductFormModal({
                                 </select>
 
                                 {categoriesError && (
-                                    <p className="text-xs text-red-400">
-                                        Failed to load
+                                    <p className="
+                                        text-xs
+                                        text-red-400
+                                    ">
+                                        Failed to
+                                        load
                                         categories.
                                     </p>
                                 )}
@@ -848,7 +1324,10 @@ export default function ProductFormModal({
                                 {!categoriesLoading &&
                                     categories.length ===
                                         0 && (
-                                        <p className="text-xs text-yellow-400">
+                                        <p className="
+                                            text-xs
+                                            text-yellow-400
+                                        ">
                                             No categories
                                             found.
                                         </p>
@@ -857,22 +1336,31 @@ export default function ProductFormModal({
 
                             {/* SUBCATEGORY */}
 
-                            <div className="space-y-1.5">
+                            <div className="space-y-2">
 
-                                <label className="text-sm font-medium text-gray-300">
+                                <label className="
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                ">
                                     Subcategory
+                                    <span className="
+                                        ml-1
+                                        text-xs
+                                        text-gray-600
+                                    ">
+                                        (Optional)
+                                    </span>
                                 </label>
 
                                 <select
-                                    required
                                     value={
                                         form.subCategory
                                     }
                                     disabled={
                                         !selectedCategory ||
-                                        !selectedCategory
-                                            .subCategories
-                                            ?.length
+                                        subCategories.length ===
+                                            0
                                     }
                                     onChange={(
                                         event
@@ -884,33 +1372,47 @@ export default function ProductFormModal({
                                                 .value
                                         )
                                     }
-                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-gray-800
+                                        bg-gray-900
+                                        px-4
+                                        py-3
+                                        text-sm
+                                        text-white
+                                        outline-none
+                                        focus:border-green-500
+                                        focus:ring-2
+                                        focus:ring-green-500/10
+                                        disabled:cursor-not-allowed
+                                        disabled:opacity-50
+                                    "
                                 >
 
                                     <option value="">
                                         {!selectedCategory
                                             ? "Select category first"
-                                            : selectedCategory
-                                                  .subCategories
-                                                  ?.length
+                                            : subCategories.length
                                             ? "Select subcategory"
                                             : "No subcategory"}
                                     </option>
 
-                                    {selectedCategory?.subCategories?.map(
+                                    {subCategories.map(
                                         (
                                             subCategory
                                         ) => (
                                             <option
                                                 key={
-                                                    subCategory
+                                                    subCategory.slug
                                                 }
                                                 value={
-                                                    subCategory
+                                                    subCategory.slug
                                                 }
                                             >
                                                 {
-                                                    subCategory
+                                                    subCategory.name
                                                 }
                                             </option>
                                         )
@@ -919,15 +1421,24 @@ export default function ProductFormModal({
                             </div>
                         </div>
 
-                        {/* =================================================
+                        {/* ==================================
                             BRAND + STOCK
-                        ================================================= */}
+                        ================================== */}
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="
+                            grid
+                            grid-cols-1
+                            gap-4
+                            sm:grid-cols-2
+                        ">
 
-                            <div className="space-y-1.5">
+                            <div className="space-y-2">
 
-                                <label className="text-sm font-medium text-gray-300">
+                                <label className="
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                ">
                                     Brand
                                 </label>
 
@@ -945,20 +1456,37 @@ export default function ProductFormModal({
                                                 .value
                                         )
                                     }
-                                    placeholder="Brand name"
-                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                    placeholder="Shalban Food"
+                                    className="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-gray-800
+                                        bg-gray-900
+                                        px-4
+                                        py-3
+                                        text-sm
+                                        text-white
+                                        outline-none
+                                        focus:border-green-500
+                                    "
                                 />
                             </div>
 
-                            <div className="space-y-1.5">
+                            <div className="space-y-2">
 
-                                <label className="text-sm font-medium text-gray-300">
+                                <label className="
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                ">
                                     Stock
                                 </label>
 
                                 <input
                                     type="number"
                                     min="0"
+                                    step="1"
                                     value={
                                         form.stock
                                     }
@@ -970,31 +1498,56 @@ export default function ProductFormModal({
                                             event
                                                 .target
                                                 .value
-                                                ? Number(
-                                                      event
-                                                          .target
-                                                          .value
-                                                  )
-                                                : ""
                                         )
                                     }
-                                    placeholder="0"
-                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                    placeholder="50"
+                                    className="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-gray-800
+                                        bg-gray-900
+                                        px-4
+                                        py-3
+                                        text-sm
+                                        text-white
+                                        outline-none
+                                        focus:border-green-500
+                                    "
                                 />
                             </div>
                         </div>
 
-                        {/* =================================================
+                        {/* ==================================
                             SIZE
-                        ================================================= */}
+                        ================================== */}
 
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
 
-                            <label className="text-sm font-medium text-gray-300">
-                                Product Size
-                            </label>
+                            <div className="
+                                flex
+                                items-center
+                                gap-2
+                            ">
+                                <Layers
+                                    size={16}
+                                    className="text-green-400"
+                                />
 
-                            <div className="grid grid-cols-2 gap-4">
+                                <label className="
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                ">
+                                    Product Size
+                                </label>
+                            </div>
+
+                            <div className="
+                                grid
+                                grid-cols-2
+                                gap-4
+                            ">
 
                                 <input
                                     type="number"
@@ -1013,16 +1566,22 @@ export default function ProductFormModal({
                                             event
                                                 .target
                                                 .value
-                                                ? Number(
-                                                      event
-                                                          .target
-                                                          .value
-                                                  )
-                                                : ""
                                         )
                                     }
-                                    placeholder="250"
-                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                    placeholder="500"
+                                    className="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-gray-800
+                                        bg-gray-900
+                                        px-4
+                                        py-3
+                                        text-sm
+                                        text-white
+                                        outline-none
+                                        focus:border-green-500
+                                    "
                                 />
 
                                 <select
@@ -1042,7 +1601,19 @@ export default function ProductFormModal({
                                                 .value
                                         )
                                     }
-                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                    className="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-gray-800
+                                        bg-gray-900
+                                        px-4
+                                        py-3
+                                        text-sm
+                                        text-white
+                                        outline-none
+                                        focus:border-green-500
+                                    "
                                 >
 
                                     <option value="gram">
@@ -1068,27 +1639,45 @@ export default function ProductFormModal({
                             </div>
                         </div>
 
-                        {/* =================================================
-                            PRICE
-                        ================================================= */}
+                        {/* ==================================
+                            PRICES
+                        ================================== */}
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="
+                            grid
+                            grid-cols-1
+                            gap-4
+                            sm:grid-cols-2
+                        ">
 
-                            <div className="space-y-1.5">
+                            {/* REGULAR */}
 
-                                <label className="text-sm font-medium text-gray-300">
+                            <div className="space-y-2">
+
+                                <label className="
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                ">
                                     Regular Price
                                 </label>
 
                                 <div className="relative">
 
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                                    <span className="
+                                        absolute
+                                        left-4
+                                        top-1/2
+                                        -translate-y-1/2
+                                        text-gray-500
+                                    ">
                                         ৳
                                     </span>
 
                                     <input
                                         type="number"
                                         min="0"
+                                        step="0.01"
                                         required
                                         value={
                                             form.regularPrice
@@ -1101,35 +1690,55 @@ export default function ProductFormModal({
                                                 event
                                                     .target
                                                     .value
-                                                    ? Number(
-                                                          event
-                                                              .target
-                                                              .value
-                                                      )
-                                                    : ""
                                             )
                                         }
                                         placeholder="1200"
-                                        className="w-full rounded-xl border border-gray-800 bg-gray-900 py-3 pl-9 pr-4 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                        className="
+                                            w-full
+                                            rounded-xl
+                                            border
+                                            border-gray-800
+                                            bg-gray-900
+                                            py-3
+                                            pl-9
+                                            pr-4
+                                            text-sm
+                                            text-white
+                                            outline-none
+                                            focus:border-green-500
+                                        "
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5">
+                            {/* SELL */}
 
-                                <label className="text-sm font-medium text-gray-300">
+                            <div className="space-y-2">
+
+                                <label className="
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                ">
                                     Sell Price
                                 </label>
 
                                 <div className="relative">
 
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500">
+                                    <span className="
+                                        absolute
+                                        left-4
+                                        top-1/2
+                                        -translate-y-1/2
+                                        text-green-500
+                                    ">
                                         ৳
                                     </span>
 
                                     <input
                                         type="number"
                                         min="0"
+                                        step="0.01"
                                         required
                                         value={
                                             form.sellPrice
@@ -1142,28 +1751,79 @@ export default function ProductFormModal({
                                                 event
                                                     .target
                                                     .value
-                                                    ? Number(
-                                                          event
-                                                              .target
-                                                              .value
-                                                      )
-                                                    : ""
                                             )
                                         }
                                         placeholder="920"
-                                        className="w-full rounded-xl border border-gray-800 bg-gray-900 py-3 pl-9 pr-4 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                        className="
+                                            w-full
+                                            rounded-xl
+                                            border
+                                            border-gray-800
+                                            bg-gray-900
+                                            py-3
+                                            pl-9
+                                            pr-4
+                                            text-sm
+                                            text-white
+                                            outline-none
+                                            focus:border-green-500
+                                        "
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* =================================================
+                        {/* DISCOUNT */}
+
+                        {Number(
+                            form.regularPrice
+                        ) >
+                            Number(
+                                form.sellPrice
+                            ) &&
+                            Number(
+                                form.sellPrice
+                            ) > 0 && (
+                                <div className="
+                                    rounded-xl
+                                    border
+                                    border-green-500/10
+                                    bg-green-500/5
+                                    px-4
+                                    py-3
+                                    text-sm
+                                    text-green-400
+                                ">
+                                    Discount:{" "}
+                                    <strong>
+                                        {Math.round(
+                                            ((Number(
+                                                form.regularPrice
+                                            ) -
+                                                Number(
+                                                    form.sellPrice
+                                                )) /
+                                                Number(
+                                                    form.regularPrice
+                                                )) *
+                                                100
+                                        )}
+                                        %
+                                    </strong>
+                                </div>
+                            )}
+
+                        {/* ==================================
                             WARRANTY
-                        ================================================= */}
+                        ================================== */}
 
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
 
-                            <label className="text-sm font-medium text-gray-300">
+                            <label className="
+                                text-sm
+                                font-medium
+                                text-gray-300
+                            ">
                                 Warranty
                             </label>
 
@@ -1182,33 +1842,79 @@ export default function ProductFormModal({
                                     )
                                 }
                                 placeholder="e.g. 7 Days"
-                                className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                className="
+                                    w-full
+                                    rounded-xl
+                                    border
+                                    border-gray-800
+                                    bg-gray-900
+                                    px-4
+                                    py-3
+                                    text-sm
+                                    text-white
+                                    outline-none
+                                    focus:border-green-500
+                                "
                             />
                         </div>
 
-                        {/* =================================================
+                        {/* ==================================
                             IMAGE
-                        ================================================= */}
+                        ================================== */}
 
                         <div className="space-y-3">
 
-                            <label className="text-sm font-medium text-gray-300">
-                                Product Image
-                            </label>
+                            <div className="
+                                flex
+                                items-center
+                                gap-2
+                            ">
+                                <ImagePlus
+                                    size={17}
+                                    className="text-green-400"
+                                />
 
-                            <div className="grid grid-cols-2 gap-3">
+                                <label className="
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                ">
+                                    Product Image
+                                </label>
+                            </div>
+
+                            <div className="
+                                grid
+                                grid-cols-2
+                                gap-3
+                            ">
 
                                 {/* CAMERA */}
 
-                                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm font-medium text-blue-400 transition hover:bg-blue-500/20">
+                                <label className="
+                                    flex
+                                    cursor-pointer
+                                    items-center
+                                    justify-center
+                                    gap-2
+                                    rounded-xl
+                                    border
+                                    border-blue-500/20
+                                    bg-blue-500/10
+                                    px-4
+                                    py-3
+                                    text-sm
+                                    font-medium
+                                    text-blue-400
+                                    transition
+                                    hover:bg-blue-500/20
+                                ">
 
                                     <Camera
                                         size={18}
                                     />
 
-                                    <span>
-                                        Camera
-                                    </span>
+                                    Camera
 
                                     <input
                                         type="file"
@@ -1229,15 +1935,30 @@ export default function ProductFormModal({
 
                                 {/* GALLERY */}
 
-                                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-purple-500/20 bg-purple-500/10 px-4 py-3 text-sm font-medium text-purple-400 transition hover:bg-purple-500/20">
+                                <label className="
+                                    flex
+                                    cursor-pointer
+                                    items-center
+                                    justify-center
+                                    gap-2
+                                    rounded-xl
+                                    border
+                                    border-purple-500/20
+                                    bg-purple-500/10
+                                    px-4
+                                    py-3
+                                    text-sm
+                                    font-medium
+                                    text-purple-400
+                                    transition
+                                    hover:bg-purple-500/20
+                                ">
 
                                     <FolderOpen
                                         size={18}
                                     />
 
-                                    <span>
-                                        Gallery
-                                    </span>
+                                    Gallery
 
                                     <input
                                         type="file"
@@ -1259,11 +1980,23 @@ export default function ProductFormModal({
                             {/* PREVIEW */}
 
                             {(previewUrl ||
-                                (form.image &&
-                                    !file)) && (
-                                <div className="rounded-xl border border-gray-800 bg-gray-900 p-3">
+                                (
+                                    form.image &&
+                                    !file
+                                )) && (
+                                <div className="
+                                    rounded-xl
+                                    border
+                                    border-gray-800
+                                    bg-gray-900
+                                    p-3
+                                ">
 
-                                    <div className="flex items-center gap-4">
+                                    <div className="
+                                        flex
+                                        items-center
+                                        gap-4
+                                    ">
 
                                         <img
                                             src={
@@ -1274,28 +2007,48 @@ export default function ProductFormModal({
                                                 form.name ||
                                                 "Product preview"
                                             }
-                                            className="h-24 w-24 rounded-xl border border-gray-700 object-cover"
+                                            className="
+                                                h-24
+                                                w-24
+                                                rounded-xl
+                                                border
+                                                border-gray-700
+                                                object-cover
+                                            "
                                         />
 
                                         <div className="min-w-0">
 
-                                            <p className="text-sm font-medium text-gray-200">
+                                            <p className="
+                                                text-sm
+                                                font-medium
+                                                text-gray-200
+                                            ">
                                                 Image
                                                 Preview
                                             </p>
 
                                             {file && (
-                                                <p className="mt-1 truncate text-xs text-gray-500">
+                                                <p className="
+                                                    mt-1
+                                                    truncate
+                                                    text-xs
+                                                    text-gray-500
+                                                ">
                                                     {
                                                         file.name
                                                     }
                                                 </p>
                                             )}
 
-                                            <p className="mt-2 text-xs text-gray-600">
-                                                Optimized
-                                                before
-                                                upload
+                                            <p className="
+                                                mt-2
+                                                text-xs
+                                                text-gray-600
+                                            ">
+                                                Image will
+                                                be optimized
+                                                before upload.
                                             </p>
                                         </div>
                                     </div>
@@ -1303,11 +2056,151 @@ export default function ProductFormModal({
                             )}
                         </div>
 
-                        {/* =================================================
-                            ACTIONS
-                        ================================================= */}
+                        {/* ==================================
+                            SUMMARY
+                        ================================== */}
 
-                        <div className="sticky bottom-0 flex gap-3 border-t border-gray-800 bg-gray-950 py-4">
+                        <div className="
+                            rounded-2xl
+                            border
+                            border-gray-800
+                            bg-gray-900/60
+                            p-4
+                        ">
+
+                            <div className="
+                                mb-3
+                                flex
+                                items-center
+                                gap-2
+                            ">
+                                <Layers
+                                    size={16}
+                                    className="text-green-400"
+                                />
+
+                                <span className="
+                                    text-xs
+                                    font-semibold
+                                    uppercase
+                                    tracking-wider
+                                    text-gray-500
+                                ">
+                                    Product Summary
+                                </span>
+                            </div>
+
+                            <div className="
+                                grid
+                                grid-cols-2
+                                gap-4
+                            ">
+
+                                <div>
+                                    <p className="
+                                        text-xs
+                                        text-gray-600
+                                    ">
+                                        Category
+                                    </p>
+
+                                    <p className="
+                                        mt-1
+                                        text-sm
+                                        text-gray-200
+                                    ">
+                                        {selectedCategory
+                                            ?.name ||
+                                            "—"}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="
+                                        text-xs
+                                        text-gray-600
+                                    ">
+                                        Subcategory
+                                    </p>
+
+                                    <p className="
+                                        mt-1
+                                        text-sm
+                                        text-gray-200
+                                    ">
+                                        {subCategories.find(
+                                            (
+                                                sub
+                                            ) =>
+                                                sub.slug ===
+                                                form.subCategory
+                                        )
+                                            ?.name ||
+                                            "—"}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="
+                                        text-xs
+                                        text-gray-600
+                                    ">
+                                        Size
+                                    </p>
+
+                                    <p className="
+                                        mt-1
+                                        text-sm
+                                        text-gray-200
+                                    ">
+                                        {form.size
+                                            ?.value ||
+                                            "—"}{" "}
+                                        {form.size
+                                            ?.value
+                                            ? form
+                                                  .size
+                                                  .unit
+                                            : ""}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="
+                                        text-xs
+                                        text-gray-600
+                                    ">
+                                        Selling Price
+                                    </p>
+
+                                    <p className="
+                                        mt-1
+                                        text-sm
+                                        font-semibold
+                                        text-green-400
+                                    ">
+                                        ৳
+                                        {form.sellPrice ||
+                                            "0"}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ==================================
+                            ACTIONS
+                        ================================== */}
+
+                        <div className="
+                            sticky
+                            bottom-0
+                            flex
+                            gap-3
+                            border-t
+                            border-gray-800
+                            bg-gray-950
+                            py-4
+                        ">
 
                             <button
                                 type="button"
@@ -1317,7 +2210,21 @@ export default function ProductFormModal({
                                 disabled={
                                     saving
                                 }
-                                className="flex-1 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm font-medium text-gray-300 transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="
+                                    flex-1
+                                    rounded-xl
+                                    border
+                                    border-gray-700
+                                    bg-gray-900
+                                    px-4
+                                    py-3
+                                    text-sm
+                                    font-medium
+                                    text-gray-300
+                                    transition
+                                    hover:bg-gray-800
+                                    disabled:opacity-50
+                                "
                             >
                                 Cancel
                             </button>
@@ -1326,9 +2233,28 @@ export default function ProductFormModal({
                                 type="submit"
                                 disabled={
                                     saving ||
-                                    categoriesLoading
+                                    categoriesLoading ||
+                                    categories.length ===
+                                        0
                                 }
-                                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="
+                                    flex
+                                    flex-1
+                                    items-center
+                                    justify-center
+                                    gap-2
+                                    rounded-xl
+                                    bg-green-600
+                                    px-4
+                                    py-3
+                                    text-sm
+                                    font-semibold
+                                    text-white
+                                    transition
+                                    hover:bg-green-700
+                                    disabled:cursor-not-allowed
+                                    disabled:opacity-50
+                                "
                             >
 
                                 {saving ? (
@@ -1340,15 +2266,21 @@ export default function ProductFormModal({
 
                                         Saving...
                                     </>
+                                ) : editingProduct ? (
+                                    <>
+                                        <Save
+                                            size={18}
+                                        />
+
+                                        Update Product
+                                    </>
                                 ) : (
                                     <>
                                         <Save
                                             size={18}
                                         />
 
-                                        {editingProduct
-                                            ? "Update Product"
-                                            : "Add Product"}
+                                        Add Product
                                     </>
                                 )}
                             </button>
