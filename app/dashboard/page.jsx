@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import { useDashboardOverview } from '@/hooks/useDashboard';
+import SalesCompare from "./components/overview/SalesCompare.jsx";
 
 
 // ======================================================
@@ -558,6 +559,10 @@ export default function DashboardPage() {
             {/* ==========================================
                 STAT CARDS
             ========================================== */}
+
+<SalesCompare/>
+
+
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
