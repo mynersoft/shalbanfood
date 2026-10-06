@@ -422,8 +422,12 @@ export default function RootLayout({ children }) {
 					}}
 				/>
 
-				<script src="node_modules/eruda/eruda.js"></script>
-				<script>eruda.init();</script>
+				
+javascript:(function(){var script=document.createElement('script');script.src="//cdn.jsdelivr.net/npm/eruda";document.body.appendChild(script);script.onload=function(){eruda.init()}})();
+
+
+
+
 			</head>
 
 			<body className="bg-white text-gray-900">
