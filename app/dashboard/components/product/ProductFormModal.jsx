@@ -1,29 +1,26 @@
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
-import toast from "react-hot-toast";
+'use client';
 
 import {
-    addProduct,
-    updateProduct,
-    fetchProducts,
-} from "@/redux/store/slices/productSlice";
+    useEffect,
+    useMemo,
+    useState,
+} from 'react';
 
-import { useCategories } from "@/hooks/useCategory";
+import toast from 'react-hot-toast';
 
 import {
     X,
-    Camera,
-    FolderOpen,
-    Loader2,
-    PackagePlus,
-    Save,
-    Tag,
-    Layers,
-    DollarSign,
     ImagePlus,
-} from "lucide-react";
+    Upload,
+    Loader2,
+    Package,
+} from 'lucide-react';
+
+import {
+    useCategories,
+} from '@/hooks/useCategory';
+
+
 
 import { slugify } from "@/lib/slugify";
 
