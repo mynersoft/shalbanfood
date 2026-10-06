@@ -423,10 +423,9 @@ export default function RootLayout({ children }) {
 				/>
 
 				
-<!-- Include the Eruda script library via jsDelivr CDN -->
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 
-<!-- Initialize the mobile console interface -->
+
 <script>
     eruda.init();
 </script>
