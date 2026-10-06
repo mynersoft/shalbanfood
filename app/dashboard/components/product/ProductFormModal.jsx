@@ -1,2292 +1,2292 @@
 'use client';
 
-import {
-    useEffect,
-    useMemo,
-    useState,
-} from 'react';
-
-import {useDispatch} from "react-redux";
-
-import toast from 'react-hot-toast';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
-    X,
-    ImagePlus,
-    Upload,
-    Loader2,
-    Package,
+  X,
+  Save,
+  Plus,
+  Trash2,
+  Image as ImageIcon,
+  Package,
+  Tag,
+  Search,
+  Layers,
+  Loader2,
 } from 'lucide-react';
 
+import { useDispatch } from 'react-redux';
+
 import {
-    useCategories,
-} from '@/hooks/useCategory';
+  addProduct,
+  updateProduct,
+  fetchProducts,
+} from '@/redux/features/product/productSlice';
+
+import { useCategories } from '@/hooks/useCategory';
 
 
+/* =========================================================
+   DEFAULT VARIANT
+   ========================================================= */
 
-import { slugify } from "@/lib/slugify";
+const createVariant = () => ({
+  value: '',
+  unit: 'gram',
+  regularPrice: '',
+  sellPrice: '',
+  stock: 0,
+  soldCount: 0,
+  sku: '',
+});
 
-// =====================================================
-// IMAGE RESIZE
-// =====================================================
 
-function resizeImage(file) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
+/* =========================================================
+   SLUG GENERATOR
+   ========================================================= */
 
-        const objectUrl =
-            URL.createObjectURL(file);
-
-        img.onload = () => {
-            URL.revokeObjectURL(objectUrl);
-
-            const canvas =
-                document.createElement(
-                    "canvas"
-                );
-
-            const MAX_WIDTH = 1000;
-
-            let width = img.width;
-            let height = img.height;
-
-            if (width > MAX_WIDTH) {
-                height =
-                    height *
-                    (MAX_WIDTH / width);
-
-                width = MAX_WIDTH;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            const ctx =
-                canvas.getContext("2d");
-
-            if (!ctx) {
-                reject(
-                    new Error(
-                        "Canvas is not supported."
-                    )
-                );
-
-                return;
-            }
-
-            // Better image rendering
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = "high";
-
-            ctx.drawImage(
-                img,
-                0,
-                0,
-                width,
-                height
-            );
-
-            canvas.toBlob(
-                (blob) => {
-                    if (!blob) {
-                        reject(
-                            new Error(
-                                "Image resize failed."
-                            )
-                        );
-
-                        return;
-                    }
-
-                    resolve(blob);
-                },
-                "image/jpeg",
-                0.82
-            );
-        };
-
-        img.onerror = () => {
-            URL.revokeObjectURL(objectUrl);
-
-            reject(
-                new Error(
-                    "Image loading failed."
-                )
-            );
-        };
-
-        img.src = objectUrl;
-    });
-}
-
-// =====================================================
-// RENAME IMAGE
-// =====================================================
-
-function renameFile(
-    blob,
-    productName
-) {
-    const safeName =
-        productName
-            ?.trim()
-            .replace(/\s+/g, "_")
-            .replace(
-                /[^a-zA-Z0-9_\-\u0980-\u09FF]/g,
-                ""
-            ) || "product";
-
-    return new File(
-        [blob],
-        `${safeName}_shalbanfood.jpg`,
-        {
-            type: "image/jpeg",
-        }
-    );
-}
-
-// =====================================================
-// DEFAULT FORM
-// =====================================================
-
-const defaultForm = {
-    name: "",
-    slug: "",
-
-    category: "",
-    subCategory: "",
-
-    brand: "",
-
-    size: {
-        value: "",
-        unit: "gram",
-    },
-
-    stock: "",
-
-    regularPrice: "",
-    sellPrice: "",
-
-    warranty: "",
-
-    image: "",
+const generateSlug = (text = '') => {
+  return text
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\u0980-\u09FF\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 };
 
-// =====================================================
-// COMPONENT
-// =====================================================
+
+/* =========================================================
+   UNIT LABEL
+   ========================================================= */
+
+const unitLabels = {
+  gram: 'গ্রাম',
+  kg: 'কেজি',
+  milliliter: 'মিলিলিটার',
+  litre: 'লিটার',
+  piece: 'পিস',
+};
+
+
+/* =========================================================
+   COMPONENT
+   ========================================================= */
 
 export default function ProductFormModal({
-    editingProduct = null,
-    onClose,
-    currentPage = 1,
+  isOpen,
+  onClose,
+  editingProduct = null,
+  currentPage = 1,
 }) {
-    const dispatch = useDispatch();
+  const dispatch = useDispatch();
 
-    // =====================================================
-    // CATEGORY QUERY
-    // =====================================================
+  const isEdit = Boolean(editingProduct);
 
-    const {
-        data: categoryData = [],
-        isLoading: categoriesLoading,
-        isFetching: categoriesFetching,
-        isError: categoriesError,
-    } = useCategories();
+  const {
+    categories = [],
+    isLoading: categoriesLoading,
+  } = useCategories();
 
-    const categories = Array.isArray(
-        categoryData
-    )
-        ? categoryData
-        : [];
 
-    // =====================================================
-    // FORM
-    // =====================================================
+  /* =======================================================
+     FORM STATE
+     ======================================================= */
 
-    const [form, setForm] =
-        useState(defaultForm);
+  const [form, setForm] = useState({
+    name: '',
+    slug: '',
+    category: '',
+    subCategory: '',
+    brand: '',
+    warranty: '',
 
-    const [file, setFile] =
-        useState(null);
+    shortDescription: '',
+    description: '',
 
-    const [previewUrl, setPreviewUrl] =
-        useState("");
+    sku: '',
 
-    const [saving, setSaving] =
-        useState(false);
+    seoTitle: '',
+    seoDescription: '',
+    keywords: '',
 
-    // =====================================================
-    // SLUG MANUAL STATE
-    // =====================================================
+    image: null,
+    existingImage: '',
 
-    const [slugEdited, setSlugEdited] =
-        useState(false);
+    isActive: true,
+    isFeatured: false,
 
-    // =====================================================
-    // LOAD PRODUCT
-    // =====================================================
+    variants: [createVariant()],
+  });
 
-    useEffect(() => {
-        if (editingProduct) {
-            setForm({
-                ...defaultForm,
 
-                name:
-                    editingProduct.name ||
-                    "",
+  const [preview, setPreview] = useState('');
 
-                slug:
-                    editingProduct.slug ||
-                    "",
+  const [loading, setLoading] = useState(false);
 
-                category:
-                    editingProduct.category ||
-                    "",
+  const [errors, setErrors] = useState({});
 
-                subCategory:
-                    editingProduct.subCategory ||
-                    "",
 
-                brand:
-                    editingProduct.brand ||
-                    "",
+  /* =======================================================
+     LOAD EDIT PRODUCT
+     ======================================================= */
 
-                size: {
-                    value:
-                        editingProduct
-                            .size
-                            ?.value ??
-                        "",
+  useEffect(() => {
+    if (!isOpen) return;
 
-                    unit:
-                        editingProduct
-                            .size
-                            ?.unit ||
-                        "gram",
-                },
+    if (editingProduct) {
+      setForm({
+        name: editingProduct.name || '',
 
-                stock:
-                    editingProduct.stock ??
-                    "",
+        slug: editingProduct.slug || '',
+
+        category: editingProduct.category || '',
+
+        subCategory:
+          editingProduct.subCategory || '',
+
+        brand: editingProduct.brand || '',
+
+        warranty:
+          editingProduct.warranty || '',
+
+        shortDescription:
+          editingProduct.shortDescription || '',
+
+        description:
+          editingProduct.description || '',
+
+        sku:
+          editingProduct.sku || '',
+
+        seoTitle:
+          editingProduct.seoTitle || '',
+
+        seoDescription:
+          editingProduct.seoDescription || '',
+
+        keywords:
+          Array.isArray(editingProduct.keywords)
+            ? editingProduct.keywords.join(', ')
+            : '',
+
+        image: null,
+
+        existingImage:
+          editingProduct.image || '',
+
+        isActive:
+          editingProduct.isActive !== false,
+
+        isFeatured:
+          Boolean(editingProduct.isFeatured),
+
+        variants:
+          Array.isArray(editingProduct.variants) &&
+          editingProduct.variants.length
+            ? editingProduct.variants.map((variant) => ({
+                _id: variant._id,
+
+                value:
+                  variant.value ?? '',
+
+                unit:
+                  variant.unit || 'gram',
 
                 regularPrice:
-                    editingProduct.regularPrice ??
-                    "",
+                  variant.regularPrice ?? '',
 
                 sellPrice:
-                    editingProduct.sellPrice ??
-                    "",
+                  variant.sellPrice ?? '',
 
-                warranty:
-                    editingProduct.warranty ||
-                    "",
+                stock:
+                  variant.stock ?? 0,
 
-                image:
-                    editingProduct.image ||
-                    "",
-            });
+                soldCount:
+                  variant.soldCount ?? 0,
 
-            setFile(null);
-            setPreviewUrl("");
+                sku:
+                  variant.sku || '',
+              }))
+            : [createVariant()],
+      });
 
-            setSlugEdited(true);
-        } else {
-            setForm({
-                ...defaultForm,
+      setPreview(editingProduct.image || '');
+    } else {
+      setForm({
+        name: '',
+        slug: '',
+        category: '',
+        subCategory: '',
+        brand: '',
+        warranty: '',
 
-                size: {
-                    value: "",
-                    unit: "gram",
-                },
-            });
+        shortDescription: '',
+        description: '',
 
-            setFile(null);
-            setPreviewUrl("");
+        sku: '',
 
-            setSlugEdited(false);
-        }
-    }, [editingProduct]);
+        seoTitle: '',
+        seoDescription: '',
+        keywords: '',
 
-    // =====================================================
-    // IMAGE PREVIEW
-    // =====================================================
+        image: null,
+        existingImage: '',
 
-    useEffect(() => {
-        if (!file) {
-            setPreviewUrl("");
-            return;
-        }
+        isActive: true,
+        isFeatured: false,
 
-        const url =
-            URL.createObjectURL(file);
+        variants: [createVariant()],
+      });
 
-        setPreviewUrl(url);
+      setPreview('');
+    }
 
-        return () => {
-            URL.revokeObjectURL(url);
-        };
-    }, [file]);
+    setErrors({});
+  }, [isOpen, editingProduct]);
 
-    // =====================================================
-    // SELECTED CATEGORY
-    // =====================================================
 
-    const selectedCategory =
-        useMemo(() => {
-            if (!form.category) {
-                return null;
-            }
+  /* =======================================================
+     UPDATE FIELD
+     ======================================================= */
 
-            return (
-                categories.find(
-                    (category) =>
-                        category.slug ===
-                        form.category
-                ) || null
-            );
-        }, [
-            categories,
-            form.category,
-        ]);
+  const updateField = (field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
 
-    // =====================================================
-    // SUBCATEGORIES
-    // =====================================================
+    setErrors((prev) => ({
+      ...prev,
+      [field]: '',
+    }));
+  };
 
-    const subCategories =
-        Array.isArray(
-            selectedCategory?.subCategories
-        )
-            ? selectedCategory.subCategories
-            : [];
 
-    // =====================================================
-    // UPDATE FIELD
-    // =====================================================
+  /* =======================================================
+     NAME -> SLUG
+     ======================================================= */
 
-    const updateField = (
-        field,
-        value
-    ) => {
-        setForm((previous) => ({
-            ...previous,
-            [field]: value,
-        }));
-    };
+  const handleNameChange = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      name: value,
 
-    // =====================================================
-    // PRODUCT NAME
-    // =====================================================
+      slug:
+        isEdit
+          ? prev.slug
+          : generateSlug(value),
 
-    const handleNameChange = (
-        event
-    ) => {
+      seoTitle:
+        prev.seoTitle ||
+        value,
+    }));
+  };
+
+
+  /* =======================================================
+     IMAGE
+     ======================================================= */
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    setForm((prev) => ({
+      ...prev,
+      image: file,
+    }));
+
+    const objectUrl = URL.createObjectURL(file);
+
+    setPreview(objectUrl);
+  };
+
+
+  /* =======================================================
+     VARIANT
+     ======================================================= */
+
+  const updateVariant = (
+    index,
+    field,
+    value
+  ) => {
+    setForm((prev) => {
+      const variants = [...prev.variants];
+
+      variants[index] = {
+        ...variants[index],
+        [field]: value,
+      };
+
+      return {
+        ...prev,
+        variants,
+      };
+    });
+
+    setErrors((prev) => ({
+      ...prev,
+      [`variant_${index}_${field}`]: '',
+    }));
+  };
+
+
+  /* =======================================================
+     ADD VARIANT
+     ======================================================= */
+
+  const addVariant = () => {
+    if (form.variants.length >= 4) return;
+
+    setForm((prev) => ({
+      ...prev,
+      variants: [
+        ...prev.variants,
+        createVariant(),
+      ],
+    }));
+  };
+
+
+  /* =======================================================
+     REMOVE VARIANT
+     ======================================================= */
+
+  const removeVariant = (index) => {
+    if (form.variants.length <= 1) return;
+
+    setForm((prev) => ({
+      ...prev,
+
+      variants: prev.variants.filter(
+        (_, i) => i !== index
+      ),
+    }));
+  };
+
+
+  /* =======================================================
+     VALIDATION
+     ======================================================= */
+
+  const validate = () => {
+    const newErrors = {};
+
+    if (!form.name.trim()) {
+      newErrors.name =
+        'Product name is required.';
+    }
+
+    if (!form.slug.trim()) {
+      newErrors.slug =
+        'Slug is required.';
+    }
+
+    if (!form.category.trim()) {
+      newErrors.category =
+        'Category is required.';
+    }
+
+    if (
+      !Array.isArray(form.variants) ||
+      form.variants.length < 1
+    ) {
+      newErrors.variants =
+        'At least one variant is required.';
+    }
+
+    if (form.variants.length > 4) {
+      newErrors.variants =
+        'Maximum 4 variants allowed.';
+    }
+
+
+    /* duplicate variants */
+
+    const variantKeys = new Set();
+
+    form.variants.forEach(
+      (variant, index) => {
         const value =
-            event.target.value;
+          Number(variant.value);
 
-        setForm((previous) => ({
-            ...previous,
+        const regularPrice =
+          Number(variant.regularPrice);
 
-            name: value,
+        const sellPrice =
+          Number(variant.sellPrice);
 
-            slug: slugEdited
-                ? previous.slug
-                : slugify(value),
-        }));
-    };
+        const stock =
+          Number(variant.stock);
 
-    // =====================================================
-    // PRODUCT SLUG
-    // =====================================================
 
-    const handleSlugChange = (
-        event
-    ) => {
-        const value =
-            event.target.value
-                .toLowerCase()
-                .replace(
-                    /[^a-z0-9-]/g,
-                    ""
-                )
-                .replace(
-                    /-+/g,
-                    "-"
-                )
-                .replace(
-                    /^-+|-+$/g,
-                    ""
-                );
-
-        setSlugEdited(true);
-
-        updateField(
-            "slug",
-            value
-        );
-    };
-
-    // =====================================================
-    // CATEGORY CHANGE
-    // =====================================================
-
-    const handleCategoryChange = (
-        event
-    ) => {
-        const categorySlug =
-            event.target.value;
-
-        setForm((previous) => ({
-            ...previous,
-
-            category:
-                categorySlug,
-
-            // Reset subcategory
-            subCategory: "",
-        }));
-    };
-
-    // =====================================================
-    // SIZE UPDATE
-    // =====================================================
-
-    const updateSize = (
-        field,
-        value
-    ) => {
-        setForm((previous) => ({
-            ...previous,
-
-            size: {
-                ...previous.size,
-
-                [field]: value,
-            },
-        }));
-    };
-
-    // =====================================================
-    // MOBILE INPUT SCROLL
-    // =====================================================
-
-    const focusScroll = (
-        event
-    ) => {
-        setTimeout(() => {
-            event.target.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-            });
-        }, 150);
-    };
-
-    // =====================================================
-    // IMAGE SELECT
-    // =====================================================
-
-    const handleImageSelect =
-        async (
-            selectedFile
-        ) => {
-            if (!selectedFile) {
-                return;
-            }
-
-            if (
-                !selectedFile.type.startsWith(
-                    "image/"
-                )
-            ) {
-                toast.error(
-                    "Please select a valid image."
-                );
-
-                return;
-            }
-
-            // Maximum original upload size
-            if (
-                selectedFile.size >
-                10 * 1024 * 1024
-            ) {
-                toast.error(
-                    "Image must be smaller than 10MB."
-                );
-
-                return;
-            }
-
-            try {
-                toast.loading(
-                    "Preparing image...",
-                    {
-                        id: "image-loading",
-                    }
-                );
-
-                const resizedBlob =
-                    await resizeImage(
-                        selectedFile
-                    );
-
-                const finalFile =
-                    renameFile(
-                        resizedBlob,
-                        form.name
-                    );
-
-                setFile(finalFile);
-
-                toast.success(
-                    "Image ready!",
-                    {
-                        id: "image-loading",
-                    }
-                );
-            } catch (error) {
-                console.error(
-                    "IMAGE ERROR:",
-                    error
-                );
-
-                toast.error(
-                    "Image processing failed.",
-                    {
-                        id: "image-loading",
-                    }
-                );
-            }
-        };
-
-    // =====================================================
-    // REMOVE NEW IMAGE
-    // =====================================================
-
-    const handleRemoveNewImage =
-        () => {
-            setFile(null);
-            setPreviewUrl("");
-        };
-
-    // =====================================================
-    // VALIDATION
-    // =====================================================
-
-    const validateForm = () => {
-        // -----------------------------------------------
-        // NAME
-        // -----------------------------------------------
-
-        if (!form.name.trim()) {
-            toast.error(
-                "Product name is required."
-            );
-
-            return false;
+        if (!value || value <= 0) {
+          newErrors[
+            `variant_${index}_value`
+          ] = 'Size required.';
         }
-
-        // -----------------------------------------------
-        // SLUG
-        // -----------------------------------------------
-
-        if (!form.slug.trim()) {
-            toast.error(
-                "Product slug is required."
-            );
-
-            return false;
-        }
-
-        // -----------------------------------------------
-        // CATEGORY
-        // -----------------------------------------------
-
-        if (!form.category) {
-            toast.error(
-                "Please select a category."
-            );
-
-            return false;
-        }
-
-        // -----------------------------------------------
-        // SUBCATEGORY
-        // -----------------------------------------------
-
-        /*
-         * Subcategory is optional.
-         *
-         * Some categories may not have
-         * subcategories.
-         */
-
-        // -----------------------------------------------
-        // SIZE
-        // -----------------------------------------------
 
         if (
-            form.size?.value === "" ||
-            Number(
-                form.size?.value
-            ) <= 0
+          regularPrice < 0 ||
+          Number.isNaN(regularPrice)
         ) {
-            toast.error(
-                "Please enter a valid product size."
-            );
-
-            return false;
+          newErrors[
+            `variant_${index}_regularPrice`
+          ] = 'Invalid price.';
         }
-
-        if (!form.size?.unit) {
-            toast.error(
-                "Please select product unit."
-            );
-
-            return false;
-        }
-
-        // -----------------------------------------------
-        // STOCK
-        // -----------------------------------------------
 
         if (
-            form.stock === "" ||
-            Number(form.stock) < 0
+          sellPrice < 0 ||
+          Number.isNaN(sellPrice)
         ) {
-            toast.error(
-                "Please enter valid stock."
-            );
-
-            return false;
+          newErrors[
+            `variant_${index}_sellPrice`
+          ] = 'Invalid price.';
         }
 
-        // -----------------------------------------------
-        // REGULAR PRICE
-        // -----------------------------------------------
+        if (sellPrice > regularPrice) {
+          newErrors[
+            `variant_${index}_sellPrice`
+          ] =
+            'Sell price cannot be higher.';
+        }
 
         if (
-            form.regularPrice === "" ||
-            Number(
-                form.regularPrice
-            ) < 0
+          stock < 0 ||
+          Number.isNaN(stock)
         ) {
-            toast.error(
-                "Please enter regular price."
-            );
-
-            return false;
+          newErrors[
+            `variant_${index}_stock`
+          ] = 'Invalid stock.';
         }
 
-        // -----------------------------------------------
-        // SELL PRICE
-        // -----------------------------------------------
 
-        if (
-            form.sellPrice === "" ||
-            Number(
-                form.sellPrice
-            ) < 0
-        ) {
-            toast.error(
-                "Please enter sell price."
-            );
+        /* duplicate size */
 
-            return false;
+        const key =
+          `${value}-${variant.unit}`;
+
+        if (variantKeys.has(key)) {
+          newErrors.variants =
+            'Duplicate variant size found.';
         }
 
-        // -----------------------------------------------
-        // PRICE RELATION
-        // -----------------------------------------------
+        variantKeys.add(key);
+      }
+    );
 
-        if (
-            Number(
-                form.sellPrice
-            ) >
-            Number(
-                form.regularPrice
-            )
-        ) {
-            toast.error(
-                "Sell price cannot be higher than regular price."
-            );
 
-            return false;
-        }
-
-        return true;
-    };
-
-    // =====================================================
-    // SUBMIT
-    // =====================================================
-
-    const handleSubmit = async (
-        event
-    ) => {
-        event.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
-
-        setSaving(true);
-
-        try {
-            const formData =
-                new FormData();
-
-            // =================================================
-            // IMAGE
-            // =================================================
-
-            if (file) {
-                formData.append(
-                    "image",
-                    file
-                );
-            }
-
-            // =================================================
-            // BASIC INFORMATION
-            // =================================================
-
-            formData.append(
-                "name",
-                form.name.trim()
-            );
-
-            formData.append(
-                "slug",
-                form.slug.trim()
-            );
-
-            /*
-             * IMPORTANT:
-             *
-             * Category stores SLUG.
-             *
-             * Example:
-             * honey
-             * dates
-             * ghee
-             */
-
-            formData.append(
-                "category",
-                form.category
-            );
-
-            /*
-             * Subcategory also stores SLUG.
-             *
-             * Example:
-             * lichu
-             * kalojira
-             * sundarban
-             */
-
-            formData.append(
-                "subCategory",
-                form.subCategory || ""
-            );
-
-            formData.append(
-                "brand",
-                form.brand.trim()
-            );
-
-            // =================================================
-            // STOCK
-            // =================================================
-
-            formData.append(
-                "stock",
-                String(
-                    Number(
-                        form.stock || 0
-                    )
-                )
-            );
-
-            // =================================================
-            // PRICE
-            // =================================================
-
-            formData.append(
-                "regularPrice",
-                String(
-                    Number(
-                        form.regularPrice
-                    )
-                )
-            );
-
-            formData.append(
-                "sellPrice",
-                String(
-                    Number(
-                        form.sellPrice
-                    )
-                )
-            );
-
-            // =================================================
-            // WARRANTY
-            // =================================================
-
-            formData.append(
-                "warranty",
-                form.warranty.trim()
-            );
-
-            // =================================================
-            // SIZE
-            // =================================================
-
-            formData.append(
-                "size",
-                JSON.stringify({
-                    value: Number(
-                        form.size.value
-                    ),
-
-                    unit:
-                        form.size.unit,
-                })
-            );
-
-            // =================================================
-            // EXISTING IMAGE
-            // =================================================
-
-            if (
-                editingProduct?.image
-            ) {
-                formData.append(
-                    "existingImage",
-                    editingProduct.image
-                );
-            }
-
-            // =================================================
-            // UPDATE ID
-            // =================================================
-
-            if (
-                editingProduct?._id
-            ) {
-                formData.append(
-                    "_id",
-                    editingProduct._id
-                );
-            }
-
-            // =================================================
-            // API
-            // =================================================
-
-            const response =
-                await fetch(
-                    "/api/products",
-                    {
-                        method:
-                            editingProduct
-                                ? "PUT"
-                                : "POST",
-
-                        body: formData,
-                    }
-                );
-
-            const data =
-                await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    data?.message ||
-                        data?.error ||
-                        "Product save failed."
-                );
-            }
-
-            const product =
-                data?.product;
-
-            if (!product) {
-                throw new Error(
-                    "Product data was not returned."
-                );
-            }
-
-            // =================================================
-            // REDUX UPDATE
-            // =================================================
-
-            if (editingProduct) {
-                await dispatch(
-                    updateProduct(
-                        product
-                    )
-                ).unwrap();
-
-                toast.success(
-                    "Product updated successfully!"
-                );
-            } else {
-                await dispatch(
-                    addProduct(
-                        product
-                    )
-                ).unwrap();
-
-                toast.success(
-                    "Product added successfully!"
-                );
-            }
-
-            // =================================================
-            // REFRESH
-            // =================================================
-
-            await dispatch(
-                fetchProducts({
-                    page: currentPage,
-                })
-            );
-
-            // =================================================
-            // CLOSE
-            // =================================================
-
-            onClose?.();
-        } catch (error) {
-            console.error(
-                "PRODUCT SAVE ERROR:",
-                error
-            );
-
-            toast.error(
-                error?.message ||
-                    "Failed to save product."
-            );
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    // =====================================================
-    // RENDER
-    // =====================================================
+    setErrors(newErrors);
 
     return (
-        <div className="
-            fixed
-            inset-0
-            z-[60]
+      Object.keys(newErrors).length === 0
+    );
+  };
+
+
+  /* =======================================================
+     IMAGE RESIZE
+     ======================================================= */
+
+  const resizeImage = (
+    file,
+    maxWidth = 1000,
+    quality = 0.82
+  ) => {
+    return new Promise(
+      (resolve, reject) => {
+        const img =
+          new Image();
+
+        const reader =
+          new FileReader();
+
+        reader.onload = (event) => {
+          img.src =
+            event.target.result;
+        };
+
+        img.onload = () => {
+          const scale =
+            Math.min(
+              1,
+              maxWidth / img.width
+            );
+
+          const width =
+            Math.round(
+              img.width * scale
+            );
+
+          const height =
+            Math.round(
+              img.height * scale
+            );
+
+          const canvas =
+            document.createElement(
+              'canvas'
+            );
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx =
+            canvas.getContext(
+              '2d'
+            );
+
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            width,
+            height
+          );
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(
+                  new Error(
+                    'Image resize failed.'
+                  )
+                );
+
+                return;
+              }
+
+              const cleanName =
+                form.name
+                  .trim()
+                  .replace(
+                    /[^\w\u0980-\u09FF]+/g,
+                    '_'
+                  );
+
+              const newFile =
+                new File(
+                  [
+                    blob,
+                  ],
+                  `${cleanName}_shalbanfood.jpg`,
+                  {
+                    type:
+                      'image/jpeg',
+                  }
+                );
+
+              resolve(newFile);
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+
+        img.onerror =
+          reject;
+
+        reader.onerror =
+          reject;
+
+        reader.readAsDataURL(file);
+      }
+    );
+  };
+
+
+  /* =======================================================
+     SUBMIT
+     ======================================================= */
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validate()) return;
+
+    setLoading(true);
+
+    try {
+      const formData =
+        new FormData();
+
+
+      /* basic */
+
+      formData.append(
+        'name',
+        form.name.trim()
+      );
+
+      formData.append(
+        'slug',
+        form.slug.trim().toLowerCase()
+      );
+
+      formData.append(
+        'category',
+        form.category.trim().toLowerCase()
+      );
+
+      formData.append(
+        'subCategory',
+        form.subCategory.trim().toLowerCase()
+      );
+
+      formData.append(
+        'brand',
+        form.brand.trim()
+      );
+
+      formData.append(
+        'warranty',
+        form.warranty.trim()
+      );
+
+
+      /* content */
+
+      formData.append(
+        'shortDescription',
+        form.shortDescription.trim()
+      );
+
+      formData.append(
+        'description',
+        form.description.trim()
+      );
+
+
+      /* sku */
+
+      formData.append(
+        'sku',
+        form.sku
+          .trim()
+          .toUpperCase()
+      );
+
+
+      /* SEO */
+
+      formData.append(
+        'seoTitle',
+        form.seoTitle.trim()
+      );
+
+      formData.append(
+        'seoDescription',
+        form.seoDescription.trim()
+      );
+
+      const keywords =
+        form.keywords
+          .split(',')
+          .map((item) =>
+            item.trim()
+          )
+          .filter(Boolean);
+
+      formData.append(
+        'keywords',
+        JSON.stringify(keywords)
+      );
+
+
+      /* variants */
+
+      const variants =
+        form.variants.map(
+          (variant) => ({
+            _id:
+              variant._id,
+
+            value:
+              Number(
+                variant.value
+              ),
+
+            unit:
+              variant.unit,
+
+            regularPrice:
+              Number(
+                variant.regularPrice
+              ),
+
+            sellPrice:
+              Number(
+                variant.sellPrice
+              ),
+
+            stock:
+              Number(
+                variant.stock || 0
+              ),
+
+            soldCount:
+              Number(
+                variant.soldCount || 0
+              ),
+
+            sku:
+              variant.sku
+                ?.trim()
+                .toUpperCase() || '',
+          })
+        );
+
+
+      formData.append(
+        'variants',
+        JSON.stringify(
+          variants
+        )
+      );
+
+
+      /* status */
+
+      formData.append(
+        'isActive',
+        String(form.isActive)
+      );
+
+      formData.append(
+        'isFeatured',
+        String(form.isFeatured)
+      );
+
+
+      /* existing image */
+
+      if (form.existingImage) {
+        formData.append(
+          'existingImage',
+          form.existingImage
+        );
+      }
+
+
+      /* new image */
+
+      if (form.image) {
+        const resized =
+          await resizeImage(
+            form.image
+          );
+
+        formData.append(
+          'image',
+          resized
+        );
+      }
+
+
+      /* EDIT */
+
+      if (isEdit) {
+        formData.append(
+          '_id',
+          editingProduct._id
+        );
+
+        const response =
+          await fetch(
+            '/api/products',
+            {
+              method: 'PUT',
+              body: formData,
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.message ||
+              'Product update failed.'
+          );
+        }
+
+        if (data?.product) {
+          dispatch(
+            updateProduct(
+              data.product
+            )
+          );
+        }
+      }
+
+
+      /* ADD */
+
+      else {
+        const response =
+          await fetch(
+            '/api/products',
+            {
+              method: 'POST',
+              body: formData,
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.message ||
+              'Product creation failed.'
+          );
+        }
+
+        if (data?.product) {
+          dispatch(
+            addProduct(
+              data.product
+            )
+          );
+        }
+      }
+
+
+      await dispatch(
+        fetchProducts({
+          page: currentPage,
+        })
+      );
+
+
+      onClose?.();
+
+    } catch (error) {
+      console.error(
+        'Product submit error:',
+        error
+      );
+
+      alert(
+        error?.message ||
+          'Something went wrong.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  /* =======================================================
+     SEO PREVIEW
+     ======================================================= */
+
+  const seoPreviewTitle =
+    form.seoTitle ||
+    form.name ||
+    'Product Title';
+
+  const seoPreviewDescription =
+    form.seoDescription ||
+    form.shortDescription ||
+    'Product description';
+
+
+  /* =======================================================
+     MODAL
+     ======================================================= */
+
+  if (!isOpen) return null;
+
+
+  return (
+    <div
+      className="
+        fixed inset-0 z-[100]
+        flex items-center justify-center
+        bg-black/70
+        backdrop-blur-sm
+        p-3
+        sm:p-6
+      "
+    >
+      <div
+        className="
+          flex
+          max-h-[95vh]
+          w-full
+          max-w-6xl
+          flex-col
+          overflow-hidden
+          rounded-2xl
+          border border-gray-800
+          bg-gray-950
+          shadow-2xl
+        "
+      >
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <div
+          className="
             flex
             items-center
-            justify-center
-            bg-black/75
-            p-3
-            backdrop-blur-sm
-            sm:p-5
-        ">
+            justify-between
+            border-b
+            border-gray-800
+            px-5
+            py-4
+          "
+        >
+          <div>
+            <h2
+              className="
+                text-lg
+                font-bold
+                text-white
+              "
+            >
+              {isEdit
+                ? 'Edit Product'
+                : 'Add Product'}
+            </h2>
 
-            <div className="
+            <p
+              className="
+                mt-1
+                text-xs
+                text-gray-500
+              "
+            >
+              Shalban Food Product
+              Management
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="
+              rounded-lg
+              p-2
+              text-gray-400
+              hover:bg-gray-800
+              hover:text-white
+            "
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+
+        {/* =================================================
+            FORM
+        ================================================= */}
+
+        <form
+          onSubmit={handleSubmit}
+          className="
+            overflow-y-auto
+            p-4
+            sm:p-6
+          "
+        >
+
+          {/* =================================================
+              BASIC INFORMATION
+          ================================================= */}
+
+          <section
+            className="
+              rounded-xl
+              border
+              border-gray-800
+              bg-gray-900/60
+              p-4
+            "
+          >
+            <div
+              className="
+                mb-5
                 flex
-                max-h-[94vh]
-                w-full
-                max-w-2xl
-                flex-col
-                overflow-hidden
-                rounded-2xl
+                items-center
+                gap-2
+              "
+            >
+              <Package
+                size={18}
+                className="text-green-500"
+              />
+
+              <h3
+                className="
+                  font-semibold
+                  text-white
+                "
+              >
+                Basic Information
+              </h3>
+            </div>
+
+
+            <div
+              className="
+                grid
+                gap-4
+                md:grid-cols-2
+              "
+            >
+
+              {/* name */}
+
+              <div>
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    text-gray-300
+                  "
+                >
+                  Product Name *
+                </label>
+
+                <input
+                  value={form.name}
+                  onChange={(e) =>
+                    handleNameChange(
+                      e.target.value
+                    )
+                  }
+                  placeholder="লিচু ফুলের মধু"
+                  className="
+                    w-full
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                    outline-none
+                    focus:border-green-500
+                  "
+                />
+
+                {errors.name && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {errors.name}
+                  </p>
+                )}
+              </div>
+
+
+              {/* slug */}
+
+              <div>
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    text-gray-300
+                  "
+                >
+                  Slug *
+                </label>
+
+                <input
+                  value={form.slug}
+                  onChange={(e) =>
+                    updateField(
+                      'slug',
+                      generateSlug(
+                        e.target.value
+                      )
+                    )
+                  }
+                  placeholder="lichu-fuler-madhu"
+                  className="
+                    w-full
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                    outline-none
+                    focus:border-green-500
+                  "
+                />
+
+                {errors.slug && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {errors.slug}
+                  </p>
+                )}
+              </div>
+
+
+              {/* category */}
+
+              <div>
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    text-gray-300
+                  "
+                >
+                  Category *
+                </label>
+
+                <select
+                  value={form.category}
+                  onChange={(e) =>
+                    updateField(
+                      'category',
+                      e.target.value
+                    )
+                  }
+                  className="
+                    w-full
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                    outline-none
+                  "
+                >
+                  <option value="">
+                    Select Category
+                  </option>
+
+                  {categories.map(
+                    (category) => (
+                      <option
+                        key={
+                          category._id
+                        }
+                        value={
+                          category.slug ||
+                          category.name
+                        }
+                      >
+                        {category.name}
+                      </option>
+                    )
+                  )}
+                </select>
+
+                {errors.category && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {errors.category}
+                  </p>
+                )}
+              </div>
+
+
+              {/* subcategory */}
+
+              <div>
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    text-gray-300
+                  "
+                >
+                  Sub Category
+                </label>
+
+                <input
+                  value={
+                    form.subCategory
+                  }
+                  onChange={(e) =>
+                    updateField(
+                      'subCategory',
+                      e.target.value
+                    )
+                  }
+                  placeholder="Natural Honey"
+                  className="
+                    w-full
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                    outline-none
+                    focus:border-green-500
+                  "
+                />
+              </div>
+
+
+              {/* brand */}
+
+              <div>
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    text-gray-300
+                  "
+                >
+                  Brand
+                </label>
+
+                <input
+                  value={form.brand}
+                  onChange={(e) =>
+                    updateField(
+                      'brand',
+                      e.target.value
+                    )
+                  }
+                  placeholder="Shalban Food"
+                  className="
+                    w-full
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                    outline-none
+                    focus:border-green-500
+                  "
+                />
+              </div>
+
+
+              {/* warranty */}
+
+              <div>
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    text-gray-300
+                  "
+                >
+                  Warranty
+                </label>
+
+                <input
+                  value={form.warranty}
+                  onChange={(e) =>
+                    updateField(
+                      'warranty',
+                      e.target.value
+                    )
+                  }
+                  placeholder="No Warranty"
+                  className="
+                    w-full
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                    outline-none
+                  "
+                />
+              </div>
+
+            </div>
+          </section>
+
+
+          {/* =================================================
+              IMAGE
+          ================================================= */}
+
+          <section
+            className="
+              mt-4
+              rounded-xl
+              border
+              border-gray-800
+              bg-gray-900/60
+              p-4
+            "
+          >
+            <div
+              className="
+                mb-4
+                flex
+                items-center
+                gap-2
+              "
+            >
+              <ImageIcon
+                size={18}
+                className="text-green-500"
+              />
+
+              <h3 className="font-semibold text-white">
+                Product Image
+              </h3>
+            </div>
+
+
+            <div
+              className="
+                grid
+                gap-5
+                md:grid-cols-[180px_1fr]
+              "
+            >
+
+              <div
+                className="
+                  flex
+                  h-44
+                  items-center
+                  justify-center
+                  overflow-hidden
+                  rounded-xl
+                  border
+                  border-dashed
+                  border-gray-700
+                  bg-gray-950
+                "
+              >
+                {preview ? (
+                  <img
+                    src={preview}
+                    alt={
+                      form.name ||
+                      'Product preview'
+                    }
+                    className="
+                      h-full
+                      w-full
+                      object-cover
+                    "
+                  />
+                ) : (
+                  <ImageIcon
+                    size={40}
+                    className="text-gray-700"
+                  />
+                )}
+              </div>
+
+
+              <div>
+                <label
+                  className="
+                    flex
+                    cursor-pointer
+                    flex-col
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-dashed
+                    border-gray-700
+                    bg-gray-950
+                    p-8
+                    text-center
+                    hover:border-green-500
+                  "
+                >
+                  <ImageIcon
+                    size={30}
+                    className="mb-2 text-gray-500"
+                  />
+
+                  <span className="text-sm text-gray-300">
+                    Choose Product Image
+                  </span>
+
+                  <span className="mt-1 text-xs text-gray-600">
+                    JPG / PNG / WEBP
+                  </span>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={
+                      handleImageChange
+                    }
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+            </div>
+          </section>
+
+
+          {/* =================================================
+              VARIANTS
+          ================================================= */}
+
+          <section
+            className="
+              mt-4
+              rounded-xl
+              border
+              border-gray-800
+              bg-gray-900/60
+              p-4
+            "
+          >
+
+            <div
+              className="
+                mb-5
+                flex
+                flex-wrap
+                items-center
+                justify-between
+                gap-3
+              "
+            >
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-2
+                "
+              >
+                <Layers
+                  size={18}
+                  className="text-green-500"
+                />
+
+                <h3
+                  className="
+                    font-semibold
+                    text-white
+                  "
+                >
+                  Product Variants
+                </h3>
+              </div>
+
+              {form.variants.length <
+                4 && (
+                <button
+                  type="button"
+                  onClick={
+                    addVariant
+                  }
+                  className="
+                    flex
+                    items-center
+                    gap-2
+                    rounded-lg
+                    bg-green-600
+                    px-3
+                    py-2
+                    text-sm
+                    font-medium
+                    text-white
+                    hover:bg-green-700
+                  "
+                >
+                  <Plus size={16} />
+                  Add Variant
+                </button>
+              )}
+            </div>
+
+
+            {errors.variants && (
+              <p className="mb-3 text-sm text-red-400">
+                {errors.variants}
+              </p>
+            )}
+
+
+            <div className="space-y-4">
+
+              {form.variants.map(
+                (variant, index) => (
+                  <div
+                    key={
+                      variant._id ||
+                      index
+                    }
+                    className="
+                      rounded-xl
+                      border
+                      border-gray-800
+                      bg-gray-950
+                      p-4
+                    "
+                  >
+
+                    <div
+                      className="
+                        mb-4
+                        flex
+                        items-center
+                        justify-between
+                      "
+                    >
+                      <span
+                        className="
+                          text-sm
+                          font-semibold
+                          text-green-400
+                        "
+                      >
+                        Variant #
+                        {index + 1}
+                      </span>
+
+                      {form.variants
+                        .length >
+                        1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeVariant(
+                              index
+                            )
+                          }
+                          className="
+                            rounded-lg
+                            p-2
+                            text-red-400
+                            hover:bg-red-500/10
+                          "
+                        >
+                          <Trash2
+                            size={16}
+                          />
+                        </button>
+                      )}
+                    </div>
+
+
+                    <div
+                      className="
+                        grid
+                        gap-3
+                        sm:grid-cols-2
+                        lg:grid-cols-4
+                      "
+                    >
+
+                      {/* size */}
+
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">
+                          Size
+                        </label>
+
+                        <input
+                          type="number"
+                          min="0"
+                          value={
+                            variant.value
+                          }
+                          onChange={(e) =>
+                            updateVariant(
+                              index,
+                              'value',
+                              e.target.value
+                            )
+                          }
+                          placeholder="500"
+                          className="
+                            w-full
+                            rounded-lg
+                            border
+                            border-gray-700
+                            bg-gray-900
+                            px-3
+                            py-2
+                            text-sm
+                            text-white
+                          "
+                        />
+
+                        {errors[
+                          `variant_${index}_value`
+                        ] && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {
+                              errors[
+                                `variant_${index}_value`
+                              ]
+                            }
+                          </p>
+                        )}
+                      </div>
+
+
+                      {/* unit */}
+
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">
+                          Unit
+                        </label>
+
+                        <select
+                          value={
+                            variant.unit
+                          }
+                          onChange={(e) =>
+                            updateVariant(
+                              index,
+                              'unit',
+                              e.target.value
+                            )
+                          }
+                          className="
+                            w-full
+                            rounded-lg
+                            border
+                            border-gray-700
+                            bg-gray-900
+                            px-3
+                            py-2
+                            text-sm
+                            text-white
+                          "
+                        >
+                          {Object.entries(
+                            unitLabels
+                          ).map(
+                            ([
+                              value,
+                              label,
+                            ]) => (
+                              <option
+                                key={
+                                  value
+                                }
+                                value={
+                                  value
+                                }
+                              >
+                                {label}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+
+
+                      {/* regular */}
+
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">
+                          Regular Price
+                        </label>
+
+                        <input
+                          type="number"
+                          min="0"
+                          value={
+                            variant.regularPrice
+                          }
+                          onChange={(e) =>
+                            updateVariant(
+                              index,
+                              'regularPrice',
+                              e.target.value
+                            )
+                          }
+                          placeholder="700"
+                          className="
+                            w-full
+                            rounded-lg
+                            border
+                            border-gray-700
+                            bg-gray-900
+                            px-3
+                            py-2
+                            text-sm
+                            text-white
+                          "
+                        />
+                      </div>
+
+
+                      {/* sell */}
+
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">
+                          Sell Price
+                        </label>
+
+                        <input
+                          type="number"
+                          min="0"
+                          value={
+                            variant.sellPrice
+                          }
+                          onChange={(e) =>
+                            updateVariant(
+                              index,
+                              'sellPrice',
+                              e.target.value
+                            )
+                          }
+                          placeholder="600"
+                          className="
+                            w-full
+                            rounded-lg
+                            border
+                            border-gray-700
+                            bg-gray-900
+                            px-3
+                            py-2
+                            text-sm
+                            text-white
+                          "
+                        />
+
+                        {errors[
+                          `variant_${index}_sellPrice`
+                        ] && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {
+                              errors[
+                                `variant_${index}_sellPrice`
+                              ]
+                            }
+                          </p>
+                        )}
+                      </div>
+
+
+                      {/* stock */}
+
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">
+                          Stock
+                        </label>
+
+                        <input
+                          type="number"
+                          min="0"
+                          value={
+                            variant.stock
+                          }
+                          onChange={(e) =>
+                            updateVariant(
+                              index,
+                              'stock',
+                              e.target.value
+                            )
+                          }
+                          className="
+                            w-full
+                            rounded-lg
+                            border
+                            border-gray-700
+                            bg-gray-900
+                            px-3
+                            py-2
+                            text-sm
+                            text-white
+                          "
+                        />
+                      </div>
+
+
+                      {/* SKU */}
+
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">
+                          Variant SKU
+                        </label>
+
+                        <input
+                          value={
+                            variant.sku
+                          }
+                          onChange={(e) =>
+                            updateVariant(
+                              index,
+                              'sku',
+                              e.target.value.toUpperCase()
+                            )
+                          }
+                          placeholder="HONEY-500"
+                          className="
+                            w-full
+                            rounded-lg
+                            border
+                            border-gray-700
+                            bg-gray-900
+                            px-3
+                            py-2
+                            text-sm
+                            uppercase
+                            text-white
+                          "
+                        />
+                      </div>
+
+                    </div>
+
+                  </div>
+                )
+              )}
+
+            </div>
+
+          </section>
+
+
+          {/* =================================================
+              DESCRIPTION
+          ================================================= */}
+
+          <section
+            className="
+              mt-4
+              rounded-xl
+              border
+              border-gray-800
+              bg-gray-900/60
+              p-4
+            "
+          >
+
+            <div
+              className="
+                mb-4
+                flex
+                items-center
+                gap-2
+              "
+            >
+              <Tag
+                size={18}
+                className="text-green-500"
+              />
+
+              <h3 className="font-semibold text-white">
+                Product Content
+              </h3>
+            </div>
+
+
+            <div className="space-y-4">
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-300">
+                  Short Description
+                </label>
+
+                <textarea
+                  rows={3}
+                  value={
+                    form.shortDescription
+                  }
+                  onChange={(e) =>
+                    updateField(
+                      'shortDescription',
+                      e.target.value
+                    )
+                  }
+                  placeholder="শালবন ফুডের প্রাকৃতিক লিচু ফুলের মধু..."
+                  className="
+                    w-full
+                    resize-none
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                    outline-none
+                    focus:border-green-500
+                  "
+                />
+              </div>
+
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-300">
+                  Full Description
+                </label>
+
+                <textarea
+                  rows={7}
+                  value={
+                    form.description
+                  }
+                  onChange={(e) =>
+                    updateField(
+                      'description',
+                      e.target.value
+                    )
+                  }
+                  placeholder="Product details..."
+                  className="
+                    w-full
+                    resize-y
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                    outline-none
+                    focus:border-green-500
+                  "
+                />
+              </div>
+
+            </div>
+          </section>
+
+
+          {/* =================================================
+              SEO
+          ================================================= */}
+
+          <section
+            className="
+              mt-4
+              rounded-xl
+              border
+              border-gray-800
+              bg-gray-900/60
+              p-4
+            "
+          >
+
+            <div
+              className="
+                mb-5
+                flex
+                items-center
+                gap-2
+              "
+            >
+              <Search
+                size={18}
+                className="text-green-500"
+              />
+
+              <h3 className="font-semibold text-white">
+                SEO Settings
+              </h3>
+            </div>
+
+
+            <div className="space-y-4">
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-300">
+                  SEO Title
+                </label>
+
+                <input
+                  value={form.seoTitle}
+                  maxLength={70}
+                  onChange={(e) =>
+                    updateField(
+                      'seoTitle',
+                      e.target.value
+                    )
+                  }
+                  placeholder="লিচু ফুলের মধু | Shalban Food"
+                  className="
+                    w-full
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                  "
+                />
+
+                <div className="mt-1 text-right text-xs text-gray-600">
+                  {form.seoTitle.length}/70
+                </div>
+              </div>
+
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-300">
+                  SEO Description
+                </label>
+
+                <textarea
+                  rows={3}
+                  maxLength={160}
+                  value={
+                    form.seoDescription
+                  }
+                  onChange={(e) =>
+                    updateField(
+                      'seoDescription',
+                      e.target.value
+                    )
+                  }
+                  placeholder="শালবন ফুডের খাঁটি লিচু ফুলের মধু..."
+                  className="
+                    w-full
+                    resize-none
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                  "
+                />
+
+                <div className="mt-1 text-right text-xs text-gray-600">
+                  {form.seoDescription.length}/160
+                </div>
+              </div>
+
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-300">
+                  Keywords
+                </label>
+
+                <input
+                  value={form.keywords}
+                  onChange={(e) =>
+                    updateField(
+                      'keywords',
+                      e.target.value
+                    )
+                  }
+                  placeholder="লিচু ফুলের মধু, খাঁটি মধু, honey, Shalban Food"
+                  className="
+                    w-full
+                    rounded-lg
+                    border
+                    border-gray-700
+                    bg-gray-950
+                    px-3
+                    py-2.5
+                    text-sm
+                    text-white
+                  "
+                />
+              </div>
+
+            </div>
+
+
+            {/* SEO PREVIEW */}
+
+            <div
+              className="
+                mt-5
+                rounded-xl
                 border
                 border-gray-800
                 bg-gray-950
-                text-gray-100
-                shadow-2xl
-            ">
-
-                {/* ==========================================
-                    HEADER
-                ========================================== */}
-
-                <div className="
-                    flex
-                    shrink-0
-                    items-center
-                    justify-between
-                    border-b
-                    border-gray-800
-                    bg-gray-950
-                    px-5
-                    py-4
-                    sm:px-6
-                ">
-
-                    <div className="
-                        flex
-                        items-center
-                        gap-3
-                    ">
-
-                        <div className="
-                            flex
-                            h-10
-                            w-10
-                            items-center
-                            justify-center
-                            rounded-xl
-                            bg-green-500/10
-                            text-green-400
-                        ">
-                            <PackagePlus
-                                size={21}
-                            />
-                        </div>
-
-                        <div>
-                            <h2 className="
-                                text-base
-                                font-semibold
-                                sm:text-lg
-                            ">
-                                {editingProduct
-                                    ? "Edit Product"
-                                    : "Add Product"}
-                            </h2>
-
-                            <p className="
-                                text-xs
-                                text-gray-500
-                            ">
-                                Manage product
-                                information
-                            </p>
-                        </div>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={
-                            onClose
-                        }
-                        disabled={
-                            saving
-                        }
-                        className="
-                            flex
-                            h-9
-                            w-9
-                            items-center
-                            justify-center
-                            rounded-lg
-                            text-gray-400
-                            transition
-                            hover:bg-gray-800
-                            hover:text-white
-                            disabled:opacity-50
-                        "
-                    >
-                        <X
-                            size={20}
-                        />
-                    </button>
-                </div>
-
-                {/* ==========================================
-                    BODY
-                ========================================== */}
-
-                <div className="
-                    overflow-y-auto
-                    px-5
-                    py-5
-                    sm:px-6
-                ">
-
-                    <form
-                        onSubmit={
-                            handleSubmit
-                        }
-                        className="
-                            space-y-6
-                        "
-                    >
-
-                        {/* ==================================
-                            PRODUCT NAME
-                        ================================== */}
-
-                        <div className="space-y-2">
-
-                            <div className="
-                                flex
-                                items-center
-                                gap-2
-                            ">
-                                <Tag
-                                    size={16}
-                                    className="text-green-400"
-                                />
-
-                                <label className="
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                ">
-                                    Product Name
-                                </label>
-                            </div>
-
-                            <input
-                                required
-                                value={
-                                    form.name
-                                }
-                                onFocus={
-                                    focusScroll
-                                }
-                                onChange={
-                                    handleNameChange
-                                }
-                                placeholder="লিচু ফুলের মধু"
-                                className="
-                                    w-full
-                                    rounded-xl
-                                    border
-                                    border-gray-800
-                                    bg-gray-900
-                                    px-4
-                                    py-3
-                                    text-sm
-                                    text-white
-                                    outline-none
-                                    transition
-                                    placeholder:text-gray-600
-                                    focus:border-green-500
-                                    focus:ring-2
-                                    focus:ring-green-500/10
-                                "
-                            />
-                        </div>
-
-                        {/* ==================================
-                            SLUG
-                        ================================== */}
-
-                        <div className="space-y-2">
-
-                            <label className="
-                                text-sm
-                                font-medium
-                                text-gray-300
-                            ">
-                                Product Slug
-                            </label>
-
-                            <input
-                                required
-                                value={
-                                    form.slug
-                                }
-                                onChange={
-                                    handleSlugChange
-                                }
-                                placeholder="lichu-fuler-modhu"
-                                className="
-                                    w-full
-                                    rounded-xl
-                                    border
-                                    border-gray-800
-                                    bg-gray-900
-                                    px-4
-                                    py-3
-                                    font-mono
-                                    text-sm
-                                    text-green-400
-                                    outline-none
-                                    transition
-                                    placeholder:text-gray-700
-                                    focus:border-green-500
-                                    focus:ring-2
-                                    focus:ring-green-500/10
-                                "
-                            />
-
-                            <p className="
-                                text-xs
-                                text-gray-600
-                            ">
-                                URL:
-                                {" "}
-                                /product/
-                                {form.slug ||
-                                    "product-slug"}
-                            </p>
-                        </div>
-
-                        {/* ==================================
-                            CATEGORY
-                        ================================== */}
-
-                        <div className="
-                            grid
-                            grid-cols-1
-                            gap-4
-                            sm:grid-cols-2
-                        ">
-
-                            {/* CATEGORY */}
-
-                            <div className="space-y-2">
-
-                                <label className="
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                ">
-                                    Category
-                                </label>
-
-                                <select
-                                    required
-                                    value={
-                                        form.category
-                                    }
-                                    disabled={
-                                        categoriesLoading ||
-                                        categoriesFetching
-                                    }
-                                    onChange={
-                                        handleCategoryChange
-                                    }
-                                    className="
-                                        w-full
-                                        rounded-xl
-                                        border
-                                        border-gray-800
-                                        bg-gray-900
-                                        px-4
-                                        py-3
-                                        text-sm
-                                        text-white
-                                        outline-none
-                                        focus:border-green-500
-                                        focus:ring-2
-                                        focus:ring-green-500/10
-                                        disabled:cursor-not-allowed
-                                        disabled:opacity-50
-                                    "
-                                >
-
-                                    <option value="">
-                                        {categoriesLoading
-                                            ? "Loading categories..."
-                                            : "Select category"}
-                                    </option>
-
-                                    {categories.map(
-                                        (
-                                            category
-                                        ) => (
-                                            <option
-                                                key={
-                                                    category._id
-                                                }
-                                                value={
-                                                    category.slug
-                                                }
-                                            >
-                                                {
-                                                    category.name
-                                                }
-                                            </option>
-                                        )
-                                    )}
-                                </select>
-
-                                {categoriesError && (
-                                    <p className="
-                                        text-xs
-                                        text-red-400
-                                    ">
-                                        Failed to
-                                        load
-                                        categories.
-                                    </p>
-                                )}
-
-                                {!categoriesLoading &&
-                                    categories.length ===
-                                        0 && (
-                                        <p className="
-                                            text-xs
-                                            text-yellow-400
-                                        ">
-                                            No categories
-                                            found.
-                                        </p>
-                                    )}
-                            </div>
-
-                            {/* SUBCATEGORY */}
-
-                            <div className="space-y-2">
-
-                                <label className="
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                ">
-                                    Subcategory
-                                    <span className="
-                                        ml-1
-                                        text-xs
-                                        text-gray-600
-                                    ">
-                                        (Optional)
-                                    </span>
-                                </label>
-
-                                <select
-                                    value={
-                                        form.subCategory
-                                    }
-                                    disabled={
-                                        !selectedCategory ||
-                                        subCategories.length ===
-                                            0
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        updateField(
-                                            "subCategory",
-                                            event
-                                                .target
-                                                .value
-                                        )
-                                    }
-                                    className="
-                                        w-full
-                                        rounded-xl
-                                        border
-                                        border-gray-800
-                                        bg-gray-900
-                                        px-4
-                                        py-3
-                                        text-sm
-                                        text-white
-                                        outline-none
-                                        focus:border-green-500
-                                        focus:ring-2
-                                        focus:ring-green-500/10
-                                        disabled:cursor-not-allowed
-                                        disabled:opacity-50
-                                    "
-                                >
-
-                                    <option value="">
-                                        {!selectedCategory
-                                            ? "Select category first"
-                                            : subCategories.length
-                                            ? "Select subcategory"
-                                            : "No subcategory"}
-                                    </option>
-
-                                    {subCategories.map(
-                                        (
-                                            subCategory
-                                        ) => (
-                                            <option
-                                                key={
-                                                    subCategory.slug
-                                                }
-                                                value={
-                                                    subCategory.slug
-                                                }
-                                            >
-                                                {
-                                                    subCategory.name
-                                                }
-                                            </option>
-                                        )
-                                    )}
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* ==================================
-                            BRAND + STOCK
-                        ================================== */}
-
-                        <div className="
-                            grid
-                            grid-cols-1
-                            gap-4
-                            sm:grid-cols-2
-                        ">
-
-                            <div className="space-y-2">
-
-                                <label className="
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                ">
-                                    Brand
-                                </label>
-
-                                <input
-                                    value={
-                                        form.brand
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        updateField(
-                                            "brand",
-                                            event
-                                                .target
-                                                .value
-                                        )
-                                    }
-                                    placeholder="Shalban Food"
-                                    className="
-                                        w-full
-                                        rounded-xl
-                                        border
-                                        border-gray-800
-                                        bg-gray-900
-                                        px-4
-                                        py-3
-                                        text-sm
-                                        text-white
-                                        outline-none
-                                        focus:border-green-500
-                                    "
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-
-                                <label className="
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                ">
-                                    Stock
-                                </label>
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={
-                                        form.stock
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        updateField(
-                                            "stock",
-                                            event
-                                                .target
-                                                .value
-                                        )
-                                    }
-                                    placeholder="50"
-                                    className="
-                                        w-full
-                                        rounded-xl
-                                        border
-                                        border-gray-800
-                                        bg-gray-900
-                                        px-4
-                                        py-3
-                                        text-sm
-                                        text-white
-                                        outline-none
-                                        focus:border-green-500
-                                    "
-                                />
-                            </div>
-                        </div>
-
-                        {/* ==================================
-                            SIZE
-                        ================================== */}
-
-                        <div className="space-y-2">
-
-                            <div className="
-                                flex
-                                items-center
-                                gap-2
-                            ">
-                                <Layers
-                                    size={16}
-                                    className="text-green-400"
-                                />
-
-                                <label className="
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                ">
-                                    Product Size
-                                </label>
-                            </div>
-
-                            <div className="
-                                grid
-                                grid-cols-2
-                                gap-4
-                            ">
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="any"
-                                    required
-                                    value={
-                                        form.size
-                                            ?.value
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        updateSize(
-                                            "value",
-                                            event
-                                                .target
-                                                .value
-                                        )
-                                    }
-                                    placeholder="500"
-                                    className="
-                                        w-full
-                                        rounded-xl
-                                        border
-                                        border-gray-800
-                                        bg-gray-900
-                                        px-4
-                                        py-3
-                                        text-sm
-                                        text-white
-                                        outline-none
-                                        focus:border-green-500
-                                    "
-                                />
-
-                                <select
-                                    required
-                                    value={
-                                        form.size
-                                            ?.unit ||
-                                        "gram"
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        updateSize(
-                                            "unit",
-                                            event
-                                                .target
-                                                .value
-                                        )
-                                    }
-                                    className="
-                                        w-full
-                                        rounded-xl
-                                        border
-                                        border-gray-800
-                                        bg-gray-900
-                                        px-4
-                                        py-3
-                                        text-sm
-                                        text-white
-                                        outline-none
-                                        focus:border-green-500
-                                    "
-                                >
-
-                                    <option value="gram">
-                                        Gram (g)
-                                    </option>
-
-                                    <option value="kg">
-                                        Kilogram (kg)
-                                    </option>
-
-                                    <option value="milliliter">
-                                        Milliliter (ml)
-                                    </option>
-
-                                    <option value="litre">
-                                        Litre (L)
-                                    </option>
-
-                                    <option value="piece">
-                                        Piece
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* ==================================
-                            PRICES
-                        ================================== */}
-
-                        <div className="
-                            grid
-                            grid-cols-1
-                            gap-4
-                            sm:grid-cols-2
-                        ">
-
-                            {/* REGULAR */}
-
-                            <div className="space-y-2">
-
-                                <label className="
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                ">
-                                    Regular Price
-                                </label>
-
-                                <div className="relative">
-
-                                    <span className="
-                                        absolute
-                                        left-4
-                                        top-1/2
-                                        -translate-y-1/2
-                                        text-gray-500
-                                    ">
-                                        ৳
-                                    </span>
-
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        required
-                                        value={
-                                            form.regularPrice
-                                        }
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            updateField(
-                                                "regularPrice",
-                                                event
-                                                    .target
-                                                    .value
-                                            )
-                                        }
-                                        placeholder="1200"
-                                        className="
-                                            w-full
-                                            rounded-xl
-                                            border
-                                            border-gray-800
-                                            bg-gray-900
-                                            py-3
-                                            pl-9
-                                            pr-4
-                                            text-sm
-                                            text-white
-                                            outline-none
-                                            focus:border-green-500
-                                        "
-                                    />
-                                </div>
-                            </div>
-
-                            {/* SELL */}
-
-                            <div className="space-y-2">
-
-                                <label className="
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                ">
-                                    Sell Price
-                                </label>
-
-                                <div className="relative">
-
-                                    <span className="
-                                        absolute
-                                        left-4
-                                        top-1/2
-                                        -translate-y-1/2
-                                        text-green-500
-                                    ">
-                                        ৳
-                                    </span>
-
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        required
-                                        value={
-                                            form.sellPrice
-                                        }
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            updateField(
-                                                "sellPrice",
-                                                event
-                                                    .target
-                                                    .value
-                                            )
-                                        }
-                                        placeholder="920"
-                                        className="
-                                            w-full
-                                            rounded-xl
-                                            border
-                                            border-gray-800
-                                            bg-gray-900
-                                            py-3
-                                            pl-9
-                                            pr-4
-                                            text-sm
-                                            text-white
-                                            outline-none
-                                            focus:border-green-500
-                                        "
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* DISCOUNT */}
-
-                        {Number(
-                            form.regularPrice
-                        ) >
-                            Number(
-                                form.sellPrice
-                            ) &&
-                            Number(
-                                form.sellPrice
-                            ) > 0 && (
-                                <div className="
-                                    rounded-xl
-                                    border
-                                    border-green-500/10
-                                    bg-green-500/5
-                                    px-4
-                                    py-3
-                                    text-sm
-                                    text-green-400
-                                ">
-                                    Discount:{" "}
-                                    <strong>
-                                        {Math.round(
-                                            ((Number(
-                                                form.regularPrice
-                                            ) -
-                                                Number(
-                                                    form.sellPrice
-                                                )) /
-                                                Number(
-                                                    form.regularPrice
-                                                )) *
-                                                100
-                                        )}
-                                        %
-                                    </strong>
-                                </div>
-                            )}
-
-                        {/* ==================================
-                            WARRANTY
-                        ================================== */}
-
-                        <div className="space-y-2">
-
-                            <label className="
-                                text-sm
-                                font-medium
-                                text-gray-300
-                            ">
-                                Warranty
-                            </label>
-
-                            <input
-                                value={
-                                    form.warranty
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    updateField(
-                                        "warranty",
-                                        event
-                                            .target
-                                            .value
-                                    )
-                                }
-                                placeholder="e.g. 7 Days"
-                                className="
-                                    w-full
-                                    rounded-xl
-                                    border
-                                    border-gray-800
-                                    bg-gray-900
-                                    px-4
-                                    py-3
-                                    text-sm
-                                    text-white
-                                    outline-none
-                                    focus:border-green-500
-                                "
-                            />
-                        </div>
-
-                        {/* ==================================
-                            IMAGE
-                        ================================== */}
-
-                        <div className="space-y-3">
-
-                            <div className="
-                                flex
-                                items-center
-                                gap-2
-                            ">
-                                <ImagePlus
-                                    size={17}
-                                    className="text-green-400"
-                                />
-
-                                <label className="
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                ">
-                                    Product Image
-                                </label>
-                            </div>
-
-                            <div className="
-                                grid
-                                grid-cols-2
-                                gap-3
-                            ">
-
-                                {/* CAMERA */}
-
-                                <label className="
-                                    flex
-                                    cursor-pointer
-                                    items-center
-                                    justify-center
-                                    gap-2
-                                    rounded-xl
-                                    border
-                                    border-blue-500/20
-                                    bg-blue-500/10
-                                    px-4
-                                    py-3
-                                    text-sm
-                                    font-medium
-                                    text-blue-400
-                                    transition
-                                    hover:bg-blue-500/20
-                                ">
-
-                                    <Camera
-                                        size={18}
-                                    />
-
-                                    Camera
-
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        capture="environment"
-                                        className="hidden"
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            handleImageSelect(
-                                                event
-                                                    .target
-                                                    .files?.[0]
-                                            )
-                                        }
-                                    />
-                                </label>
-
-                                {/* GALLERY */}
-
-                                <label className="
-                                    flex
-                                    cursor-pointer
-                                    items-center
-                                    justify-center
-                                    gap-2
-                                    rounded-xl
-                                    border
-                                    border-purple-500/20
-                                    bg-purple-500/10
-                                    px-4
-                                    py-3
-                                    text-sm
-                                    font-medium
-                                    text-purple-400
-                                    transition
-                                    hover:bg-purple-500/20
-                                ">
-
-                                    <FolderOpen
-                                        size={18}
-                                    />
-
-                                    Gallery
-
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            handleImageSelect(
-                                                event
-                                                    .target
-                                                    .files?.[0]
-                                            )
-                                        }
-                                    />
-                                </label>
-                            </div>
-
-                            {/* PREVIEW */}
-
-                            {(previewUrl ||
-                                (
-                                    form.image &&
-                                    !file
-                                )) && (
-                                <div className="
-                                    rounded-xl
-                                    border
-                                    border-gray-800
-                                    bg-gray-900
-                                    p-3
-                                ">
-
-                                    <div className="
-                                        flex
-                                        items-center
-                                        gap-4
-                                    ">
-
-                                        <img
-                                            src={
-                                                previewUrl ||
-                                                form.image
-                                            }
-                                            alt={
-                                                form.name ||
-                                                "Product preview"
-                                            }
-                                            className="
-                                                h-24
-                                                w-24
-                                                rounded-xl
-                                                border
-                                                border-gray-700
-                                                object-cover
-                                            "
-                                        />
-
-                                        <div className="min-w-0">
-
-                                            <p className="
-                                                text-sm
-                                                font-medium
-                                                text-gray-200
-                                            ">
-                                                Image
-                                                Preview
-                                            </p>
-
-                                            {file && (
-                                                <p className="
-                                                    mt-1
-                                                    truncate
-                                                    text-xs
-                                                    text-gray-500
-                                                ">
-                                                    {
-                                                        file.name
-                                                    }
-                                                </p>
-                                            )}
-
-                                            <p className="
-                                                mt-2
-                                                text-xs
-                                                text-gray-600
-                                            ">
-                                                Image will
-                                                be optimized
-                                                before upload.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* ==================================
-                            SUMMARY
-                        ================================== */}
-
-                        <div className="
-                            rounded-2xl
-                            border
-                            border-gray-800
-                            bg-gray-900/60
-                            p-4
-                        ">
-
-                            <div className="
-                                mb-3
-                                flex
-                                items-center
-                                gap-2
-                            ">
-                                <Layers
-                                    size={16}
-                                    className="text-green-400"
-                                />
-
-                                <span className="
-                                    text-xs
-                                    font-semibold
-                                    uppercase
-                                    tracking-wider
-                                    text-gray-500
-                                ">
-                                    Product Summary
-                                </span>
-                            </div>
-
-                            <div className="
-                                grid
-                                grid-cols-2
-                                gap-4
-                            ">
-
-                                <div>
-                                    <p className="
-                                        text-xs
-                                        text-gray-600
-                                    ">
-                                        Category
-                                    </p>
-
-                                    <p className="
-                                        mt-1
-                                        text-sm
-                                        text-gray-200
-                                    ">
-                                        {selectedCategory
-                                            ?.name ||
-                                            "—"}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p className="
-                                        text-xs
-                                        text-gray-600
-                                    ">
-                                        Subcategory
-                                    </p>
-
-                                    <p className="
-                                        mt-1
-                                        text-sm
-                                        text-gray-200
-                                    ">
-                                        {subCategories.find(
-                                            (
-                                                sub
-                                            ) =>
-                                                sub.slug ===
-                                                form.subCategory
-                                        )
-                                            ?.name ||
-                                            "—"}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p className="
-                                        text-xs
-                                        text-gray-600
-                                    ">
-                                        Size
-                                    </p>
-
-                                    <p className="
-                                        mt-1
-                                        text-sm
-                                        text-gray-200
-                                    ">
-                                        {form.size
-                                            ?.value ||
-                                            "—"}{" "}
-                                        {form.size
-                                            ?.value
-                                            ? form
-                                                  .size
-                                                  .unit
-                                            : ""}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p className="
-                                        text-xs
-                                        text-gray-600
-                                    ">
-                                        Selling Price
-                                    </p>
-
-                                    <p className="
-                                        mt-1
-                                        text-sm
-                                        font-semibold
-                                        text-green-400
-                                    ">
-                                        ৳
-                                        {form.sellPrice ||
-                                            "0"}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ==================================
-                            ACTIONS
-                        ================================== */}
-
-                        <div className="
-                            sticky
-                            bottom-0
-                            flex
-                            gap-3
-                            border-t
-                            border-gray-800
-                            bg-gray-950
-                            py-4
-                        ">
-
-                            <button
-                                type="button"
-                                onClick={
-                                    onClose
-                                }
-                                disabled={
-                                    saving
-                                }
-                                className="
-                                    flex-1
-                                    rounded-xl
-                                    border
-                                    border-gray-700
-                                    bg-gray-900
-                                    px-4
-                                    py-3
-                                    text-sm
-                                    font-medium
-                                    text-gray-300
-                                    transition
-                                    hover:bg-gray-800
-                                    disabled:opacity-50
-                                "
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                type="submit"
-                                disabled={
-                                    saving ||
-                                    categoriesLoading ||
-                                    categories.length ===
-                                        0
-                                }
-                                className="
-                                    flex
-                                    flex-1
-                                    items-center
-                                    justify-center
-                                    gap-2
-                                    rounded-xl
-                                    bg-green-600
-                                    px-4
-                                    py-3
-                                    text-sm
-                                    font-semibold
-                                    text-white
-                                    transition
-                                    hover:bg-green-700
-                                    disabled:cursor-not-allowed
-                                    disabled:opacity-50
-                                "
-                            >
-
-                                {saving ? (
-                                    <>
-                                        <Loader2
-                                            size={18}
-                                            className="animate-spin"
-                                        />
-
-                                        Saving...
-                                    </>
-                                ) : editingProduct ? (
-                                    <>
-                                        <Save
-                                            size={18}
-                                        />
-
-                                        Update Product
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save
-                                            size={18}
-                                        />
-
-                                        Add Product
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                p-4
+              "
+            >
+              <p className="mb-2 text-xs text-gray-600">
+                Search Preview
+              </p>
+
+              <h4 className="text-lg text-blue-400">
+                {seoPreviewTitle}
+              </h4>
+
+              <p className="mt-1 text-xs text-green-500">
+                shalbanfood.vercel.app/product/
+                {form.slug || 'product-slug'}
+              </p>
+
+              <p className="mt-1 text-sm text-gray-400">
+                {seoPreviewDescription}
+              </p>
             </div>
-        </div>
-    );
+
+          </section>
+
+
+          {/* =================================================
+              STATUS
+          ================================================= */}
+
+          <section
+            className="
+              mt-4
+              flex
+              flex-wrap
+              gap-6
+              rounded-xl
+              border
+              border-gray-800
+              bg-gray-900/60
+              p-4
+            "
+          >
+
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(e) =>
+                  updateField(
+                    'isActive',
+                    e.target.checked
+                  )
+                }
+                className="h-4 w-4 accent-green-600"
+              />
+
+              <span className="text-sm text-gray-300">
+                Active Product
+              </span>
+            </label>
+
+
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={form.isFeatured}
+                onChange={(e) =>
+                  updateField(
+                    'isFeatured',
+                    e.target.checked
+                  )
+                }
+                className="h-4 w-4 accent-green-600"
+              />
+
+              <span className="text-sm text-gray-300">
+                Featured Product
+              </span>
+            </label>
+
+          </section>
+
+
+          {/* =================================================
+              FOOTER
+          ================================================= */}
+
+          <div
+            className="
+              sticky
+              bottom-0
+              mt-5
+              flex
+              justify-end
+              gap-3
+              border-t
+              border-gray-800
+              bg-gray-950
+              pt-4
+            "
+          >
+
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="
+                rounded-lg
+                border
+                border-gray-700
+                px-5
+                py-2.5
+                text-sm
+                text-gray-300
+                hover:bg-gray-800
+              "
+            >
+              Cancel
+            </button>
+
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="
+                flex
+                items-center
+                gap-2
+                rounded-lg
+                bg-green-600
+                px-5
+                py-2.5
+                text-sm
+                font-semibold
+                text-white
+                hover:bg-green-700
+                disabled:cursor-not-allowed
+                disabled:opacity-60
+              "
+            >
+
+              {loading ? (
+                <>
+                  <Loader2
+                    size={17}
+                    className="animate-spin"
+                  />
+
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={17} />
+
+                  {isEdit
+                    ? 'Update Product'
+                    : 'Save Product'}
+                </>
+              )}
+
+            </button>
+
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  );
 }
