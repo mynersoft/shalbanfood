@@ -1,17 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import {
-	addProduct,
-	updateProduct,
-	setProducts,
-} from '@/redux/store/slices/productSlice';
+import { useDispatch } from "react-redux";
 import toast from "react-hot-toast";
+
+import {
+    addProduct,
+    updateProduct,
+    fetchProducts,
+} from "@/redux/store/slices/productSlice";
+
+import { useCategories } from "@/hooks/useCategory";
+
+import {
+    X,
+    ImagePlus,
+    Camera,
+    FolderOpen,
+    Loader2,
+    PackagePlus,
+    Save,
+} from "lucide-react";
 
 // =====================================================
 // IMAGE RESIZE
 // =====================================================
+
 function resizeImage(file) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -42,25 +56,37 @@ function resizeImage(file) {
                 return;
             }
 
-            ctx.drawImage(img, 0, 0, width, height);
+            ctx.drawImage(
+                img,
+                0,
+                0,
+                width,
+                height
+            );
 
             canvas.toBlob(
                 (blob) => {
                     if (!blob) {
-                        reject(new Error("Image resize failed"));
+                        reject(
+                            new Error(
+                                "Image resize failed"
+                            )
+                        );
                         return;
                     }
 
                     resolve(blob);
                 },
-                file.type || "image/jpeg",
-                0.7
+                "image/jpeg",
+                0.75
             );
         };
 
         img.onerror = () => {
             URL.revokeObjectURL(objectUrl);
-            reject(new Error("Image loading failed"));
+            reject(
+                new Error("Image loading failed")
+            );
         };
 
         img.src = objectUrl;
@@ -70,30 +96,41 @@ function resizeImage(file) {
 // =====================================================
 // RENAME IMAGE
 // =====================================================
-function renameFile(blob, productName, fileType) {
-    const ext = fileType?.split("/")[1] || "jpg";
 
+function renameFile(
+    blob,
+    productName,
+    fileType = "image/jpeg"
+) {
     const safeName =
         productName
             ?.trim()
             .replace(/\s+/g, "_")
-            .replace(/[^a-zA-Z0-9_\-\u0980-\u09FF]/g, "") ||
-        "product";
+            .replace(
+                /[^a-zA-Z0-9_\-\u0980-\u09FF]/g,
+                ""
+            ) || "product";
 
-    const finalName = `${safeName}_shalbanfood.${ext}`;
-
-    return new File([blob], finalName, {
-        type: fileType || "image/jpeg",
-    });
+    return new File(
+        [blob],
+        `${safeName}_shalbanfood.jpg`,
+        {
+            type: fileType,
+        }
+    );
 }
 
 // =====================================================
 // DEFAULT FORM
 // =====================================================
+
 const defaultForm = {
     name: "",
+
     category: "",
+
     subCategory: "",
+
     brand: "",
 
     size: {
@@ -102,42 +139,111 @@ const defaultForm = {
     },
 
     stock: "",
+
     regularPrice: "",
+
     sellPrice: "",
+
     warranty: "",
+
     image: "",
 };
 
 // =====================================================
 // COMPONENT
 // =====================================================
+
 export default function ProductFormModal({
-
-
     editingProduct,
     onClose,
     currentPage = 1,
 }) {
     const dispatch = useDispatch();
 
-    const {categories}  = useSelector((state) => state.category);
-   
-    
-    const [form, setForm] = useState(defaultForm);
-    const [file, setFile] = useState(null);
-    const [saving, setSaving] = useState(false);
-    const [previewUrl, setPreviewUrl] = useState("");
+    // =====================================================
+    // CATEGORIES
+    // =====================================================
+
+    const {
+        data: categoryData = [],
+        isLoading: categoriesLoading,
+        isFetching: categoriesFetching,
+        isError: categoriesError,
+    } = useCategories();
+
+    const categories = Array.isArray(categoryData)
+        ? categoryData
+        : [];
 
     // =====================================================
-    // LOAD EDITING PRODUCT
+    // FORM STATE
     // =====================================================
+
+    const [form, setForm] =
+        useState(defaultForm);
+
+    const [file, setFile] =
+        useState(null);
+
+    const [previewUrl, setPreviewUrl] =
+        useState("");
+
+    const [saving, setSaving] =
+        useState(false);
+
+    // =====================================================
+    // LOAD EDIT PRODUCT
+    // =====================================================
+
     useEffect(() => {
         if (editingProduct) {
             setForm({
                 ...defaultForm,
+
                 ...editingProduct,
 
-                size: editingProduct.size || {
+                size: {
+                    value:
+                        editingProduct.size?.value ??
+                        "",
+
+                    unit:
+                        editingProduct.size?.unit ??
+                        "gram",
+                },
+
+                category:
+                    editingProduct.category || "",
+
+                subCategory:
+                    editingProduct.subCategory || "",
+
+                brand:
+                    editingProduct.brand || "",
+
+                stock:
+                    editingProduct.stock ?? "",
+
+                regularPrice:
+                    editingProduct.regularPrice ?? "",
+
+                sellPrice:
+                    editingProduct.sellPrice ?? "",
+
+                warranty:
+                    editingProduct.warranty || "",
+
+                image:
+                    editingProduct.image || "",
+            });
+
+            setFile(null);
+            setPreviewUrl("");
+        } else {
+            setForm({
+                ...defaultForm,
+
+                size: {
                     value: "",
                     unit: "gram",
                 },
@@ -145,23 +251,21 @@ export default function ProductFormModal({
 
             setFile(null);
             setPreviewUrl("");
-        } else {
-            setForm(defaultForm);
-            setFile(null);
-            setPreviewUrl("");
         }
     }, [editingProduct]);
 
     // =====================================================
-    // CREATE IMAGE PREVIEW
+    // IMAGE PREVIEW
     // =====================================================
+
     useEffect(() => {
         if (!file) {
             setPreviewUrl("");
             return;
         }
 
-        const url = URL.createObjectURL(file);
+        const url =
+            URL.createObjectURL(file);
 
         setPreviewUrl(url);
 
@@ -171,114 +275,166 @@ export default function ProductFormModal({
     }, [file]);
 
     // =====================================================
-    // AUTO SCROLL INPUT ON MOBILE
+    // SELECTED CATEGORY
     // =====================================================
-    const focusScroll = (e) => {
-        e.target.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-        });
-    };
+
+    const selectedCategory =
+        categories.find(
+            (category) =>
+                category.name ===
+                form.category
+        ) || null;
 
     // =====================================================
-    // UPDATE NORMAL FIELD
+    // FIELD UPDATE
     // =====================================================
-    const updateField = (field, value) => {
-        setForm((prev) => ({
-            ...prev,
+
+    const updateField = (
+        field,
+        value
+    ) => {
+        setForm((previous) => ({
+            ...previous,
             [field]: value,
         }));
     };
 
     // =====================================================
-    // UPDATE SIZE
+    // SIZE UPDATE
     // =====================================================
-    const updateSize = (field, value) => {
-        setForm((prev) => ({
-            ...prev,
+
+    const updateSize = (
+        field,
+        value
+    ) => {
+        setForm((previous) => ({
+            ...previous,
+
             size: {
-                ...prev.size,
+                ...previous.size,
                 [field]: value,
             },
         }));
     };
 
     // =====================================================
-    // SELECTED CATEGORY
+    // MOBILE INPUT SCROLL
     // =====================================================
-    const selectedCategory =
-     categories.length >= 0 &&  categories.find(
-            (cat) => cat.name === form.category
-        ) || {};
+
+    const focusScroll = (event) => {
+        setTimeout(() => {
+            event.target.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+            });
+        }, 150);
+    };
 
     // =====================================================
     // IMAGE SELECT
     // =====================================================
-    const handleImageSelect = async (selectedFile) => {
-        if (!selectedFile) return;
 
-        if (!selectedFile.type.startsWith("image/")) {
-            toast.error("Please select an image file!");
-            return;
-        }
+    const handleImageSelect =
+        async (selectedFile) => {
+            if (!selectedFile) return;
 
-        try {
-            toast.loading("Preparing image...", {
-                id: "image-loading",
-            });
+            if (
+                !selectedFile.type.startsWith(
+                    "image/"
+                )
+            ) {
+                toast.error(
+                    "Please select an image file."
+                );
 
-            const resizedBlob = await resizeImage(selectedFile);
+                return;
+            }
 
-            const finalFile = renameFile(
-                resizedBlob,
-                form.name || "product",
-                selectedFile.type
-            );
+            try {
+                toast.loading(
+                    "Preparing image...",
+                    {
+                        id: "image-loading",
+                    }
+                );
 
-            setFile(finalFile);
+                const resizedBlob =
+                    await resizeImage(
+                        selectedFile
+                    );
 
-            toast.success("Image ready!", {
-                id: "image-loading",
-            });
-        } catch (error) {
-            console.error(error);
+                const finalFile =
+                    renameFile(
+                        resizedBlob,
+                        form.name,
+                        "image/jpeg"
+                    );
 
-            toast.error("Image processing failed!", {
-                id: "image-loading",
-            });
-        }
-    };
+                setFile(finalFile);
+
+                toast.success(
+                    "Image ready!",
+                    {
+                        id: "image-loading",
+                    }
+                );
+            } catch (error) {
+                console.error(error);
+
+                toast.error(
+                    "Image processing failed.",
+                    {
+                        id: "image-loading",
+                    }
+                );
+            }
+        };
 
     // =====================================================
     // VALIDATION
     // =====================================================
+
     const validateForm = () => {
         if (!form.name.trim()) {
-            toast.error("Product name is required!");
+            toast.error(
+                "Product name is required."
+            );
+
             return false;
         }
 
         if (!form.category) {
-            toast.error("Please select a category!");
+            toast.error(
+                "Please select a category."
+            );
+
             return false;
         }
 
         if (!form.subCategory) {
-            toast.error("Please select a subcategory!");
+            toast.error(
+                "Please select a subcategory."
+            );
+
             return false;
         }
 
         if (
             form.size?.value === "" ||
-            form.size?.value === null ||
             Number(form.size?.value) <= 0
         ) {
-            toast.error("Please enter product size!");
+            toast.error(
+                "Please enter product size."
+            );
+
             return false;
         }
 
         if (!form.size?.unit) {
-            toast.error("Please select product unit!");
+            toast.error(
+                "Please select product unit."
+            );
+
             return false;
         }
 
@@ -286,7 +442,10 @@ export default function ProductFormModal({
             form.regularPrice === "" ||
             Number(form.regularPrice) < 0
         ) {
-            toast.error("Please enter regular price!");
+            toast.error(
+                "Please enter regular price."
+            );
+
             return false;
         }
 
@@ -294,7 +453,21 @@ export default function ProductFormModal({
             form.sellPrice === "" ||
             Number(form.sellPrice) < 0
         ) {
-            toast.error("Please enter sell price!");
+            toast.error(
+                "Please enter sell price."
+            );
+
+            return false;
+        }
+
+        if (
+            Number(form.sellPrice) >
+            Number(form.regularPrice)
+        ) {
+            toast.error(
+                "Sell price cannot be higher than regular price."
+            );
+
             return false;
         }
 
@@ -304,47 +477,78 @@ export default function ProductFormModal({
     // =====================================================
     // SUBMIT
     // =====================================================
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+
+    const handleSubmit = async (
+        event
+    ) => {
+        event.preventDefault();
 
         if (!validateForm()) return;
 
         setSaving(true);
 
         try {
-            const formData = new FormData();
+            const formData =
+                new FormData();
 
-            // -------------------------------
+            // -----------------------------------------
             // IMAGE
-            // -------------------------------
+            // -----------------------------------------
+
             if (file) {
-                formData.append("image", file);
+                formData.append(
+                    "image",
+                    file
+                );
             }
 
-            // -------------------------------
+            // -----------------------------------------
             // NORMAL FIELDS
-            // -------------------------------
-            formData.append("name", form.name.trim());
-            formData.append("category", form.category);
+            // -----------------------------------------
+
+            formData.append(
+                "name",
+                form.name.trim()
+            );
+
+            formData.append(
+                "category",
+                form.category
+            );
+
             formData.append(
                 "subCategory",
                 form.subCategory || ""
             );
-            formData.append("brand", form.brand || "");
+
+            formData.append(
+                "brand",
+                form.brand || ""
+            );
 
             formData.append(
                 "stock",
-                Number(form.stock || 0)
+                String(
+                    Number(form.stock || 0)
+                )
             );
 
             formData.append(
                 "regularPrice",
-                Number(form.regularPrice)
+                String(
+                    Number(
+                        form.regularPrice
+                    )
+                )
             );
 
             formData.append(
                 "sellPrice",
-                Number(form.sellPrice)
+                String(
+                    Number(
+                        form.sellPrice
+                    )
+                )
             );
 
             formData.append(
@@ -352,48 +556,81 @@ export default function ProductFormModal({
                 form.warranty || ""
             );
 
-            // -------------------------------
+            // -----------------------------------------
             // SIZE
-            // -------------------------------
+            // -----------------------------------------
+
             formData.append(
                 "size",
                 JSON.stringify({
-                    value: Number(form.size.value),
-                    unit: form.size.unit,
+                    value: Number(
+                        form.size.value
+                    ),
+
+                    unit:
+                        form.size.unit,
                 })
             );
 
-            // -------------------------------
-            // UPDATE / CREATE
-            // -------------------------------
-            if (editingProduct?._id) {
+            // -----------------------------------------
+            // UPDATE ID
+            // -----------------------------------------
+
+            if (
+                editingProduct?._id
+            ) {
                 formData.append(
                     "_id",
                     editingProduct._id
                 );
             }
 
-            const res = await fetch("/api/products", {
-                method: editingProduct ? "PUT" : "POST",
-                body: formData,
-            });
+            // -----------------------------------------
+            // API REQUEST
+            // -----------------------------------------
 
-            const data = await res.json();
+            const response =
+                await fetch(
+                    "/api/products",
+                    {
+                        method:
+                            editingProduct
+                                ? "PUT"
+                                : "POST",
 
-            if (!res.ok) {
+                        body: formData,
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
                 throw new Error(
-                    data?.error || "Product save failed"
+                    data?.message ||
+                        data?.error ||
+                        "Product save failed."
                 );
             }
 
-            const payload = data.product;
+            const product =
+                data?.product;
 
-            // -------------------------------
-            // REDUX UPDATE
-            // -------------------------------
+            if (!product) {
+                throw new Error(
+                    "Product data was not returned."
+                );
+            }
+
+            // -----------------------------------------
+            // REDUX
+            // -----------------------------------------
+
             if (editingProduct) {
                 await dispatch(
-                    updateProduct(payload)
+                    updateProduct(
+                        product
+                    )
                 ).unwrap();
 
                 toast.success(
@@ -401,7 +638,9 @@ export default function ProductFormModal({
                 );
             } else {
                 await dispatch(
-                    addProduct(payload)
+                    addProduct(
+                        product
+                    )
                 ).unwrap();
 
                 toast.success(
@@ -409,9 +648,10 @@ export default function ProductFormModal({
                 );
             }
 
-            // -------------------------------
+            // -----------------------------------------
             // REFRESH PRODUCT LIST
-            // -------------------------------
+            // -----------------------------------------
+
             await dispatch(
                 fetchProducts({
                     page: currentPage,
@@ -420,10 +660,14 @@ export default function ProductFormModal({
 
             onClose();
         } catch (error) {
-            console.error("Product save error:", error);
+            console.error(
+                "PRODUCT SAVE ERROR:",
+                error
+            );
 
             toast.error(
-                error?.message || "Save failed!"
+                error?.message ||
+                    "Failed to save product."
             );
         } finally {
             setSaving(false);
@@ -433,486 +677,684 @@ export default function ProductFormModal({
     // =====================================================
     // RENDER
     // =====================================================
+
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3 sm:p-4">
-            <div className="bg-gray-900 text-gray-100 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-5">
 
-                {/* ================================================= */}
-                {/* HEADER */}
-                {/* ================================================= */}
-                <div className="flex justify-between items-center mb-4 sticky top-0 bg-gray-900 pb-3 z-10">
+            <div className="flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 text-gray-100 shadow-2xl">
 
-                    <h3 className="text-lg font-semibold">
-                        {editingProduct
-                            ? "Edit Product"
-                            : "Add Product"}
-                    </h3>
+                {/* =================================================
+                    HEADER
+                ================================================= */}
+
+                <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-800 bg-gray-950 px-5 py-4 sm:px-6">
+
+                    <div className="flex items-center gap-3">
+
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10 text-green-400">
+                            <PackagePlus
+                                size={21}
+                            />
+                        </div>
+
+                        <div>
+                            <h2 className="text-base font-semibold sm:text-lg">
+                                {editingProduct
+                                    ? "Edit Product"
+                                    : "Add Product"}
+                            </h2>
+
+                            <p className="text-xs text-gray-500">
+                                Product information
+                            </p>
+                        </div>
+                    </div>
 
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={saving}
-                        className="text-gray-400 hover:text-white text-xl disabled:opacity-50"
+                        aria-label="Close"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        ✕
+                        <X size={20} />
                     </button>
                 </div>
 
-                {/* ================================================= */}
-                {/* FORM */}
-                {/* ================================================= */}
-                <form
-                    onSubmit={handleSubmit}
-                    className="grid gap-4"
-                >
+                {/* =================================================
+                    BODY
+                ================================================= */}
 
-                    {/* ================================================= */}
-                    {/* PRODUCT NAME */}
-                    {/* ================================================= */}
-                    <div className="flex flex-col gap-1">
+                <div className="overflow-y-auto px-5 py-5 sm:px-6">
 
-                        <label className="text-gray-300">
-                            Product Name
-                        </label>
+                    <form
+                        onSubmit={
+                            handleSubmit
+                        }
+                        className="space-y-5"
+                    >
 
-                        <input
-                            required
-                            placeholder="Product Name"
-                            value={form.name}
-                            onFocus={focusScroll}
-                            onChange={(e) =>
-                                updateField(
-                                    "name",
-                                    e.target.value
-                                )
-                            }
-                            className="p-3 rounded bg-gray-800 w-full text-base outline-none focus:ring-2 focus:ring-green-500"
-                        />
-                    </div>
+                        {/* =================================================
+                            PRODUCT NAME
+                        ================================================= */}
 
-                    {/* ================================================= */}
-                    {/* CATEGORY + SUBCATEGORY */}
-                    {/* ================================================= */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
 
-                        {/* CATEGORY */}
-                        <div className="flex flex-col gap-1">
-
-                            <label className="text-gray-300">
-                                Category
+                            <label className="text-sm font-medium text-gray-300">
+                                Product Name
                             </label>
 
-                            <select
+                            <input
                                 required
-                                value={form.category}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        category:
-                                            e.target.value,
-                                        subCategory: "",
-                                    }))
+                                value={
+                                    form.name
                                 }
-                                className="p-3 rounded bg-gray-800 outline-none focus:ring-2 focus:ring-green-500"
-                            >
-                                <option value="">
-                                    Select category
-                                </option>
+                                onFocus={
+                                    focusScroll
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    updateField(
+                                        "name",
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                placeholder="e.g. লিচু ফুলের মধু"
+                                className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                            />
+                        </div>
 
-                                {categories.length >= 0 && categories.map((cat) => (
-                                    <option
-                                        key={
-                                            cat._id ||
-                                            cat.name
-                                        }
-                                        value={cat.name}
-                                    >
-                                        {cat.name}
+                        {/* =================================================
+                            CATEGORY
+                        ================================================= */}
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                            {/* CATEGORY */}
+
+                            <div className="space-y-1.5">
+
+                                <label className="text-sm font-medium text-gray-300">
+                                    Category
+                                </label>
+
+                                <select
+                                    required
+                                    value={
+                                        form.category
+                                    }
+                                    disabled={
+                                        categoriesLoading ||
+                                        categoriesFetching
+                                    }
+                                    onChange={(
+                                        event
+                                    ) => {
+                                        setForm(
+                                            (
+                                                previous
+                                            ) => ({
+                                                ...previous,
+
+                                                category:
+                                                    event
+                                                        .target
+                                                        .value,
+
+                                                subCategory:
+                                                    "",
+                                            })
+                                        );
+                                    }}
+                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+
+                                    <option value="">
+                                        {categoriesLoading
+                                            ? "Loading categories..."
+                                            : "Select category"}
                                     </option>
-                                ))}
-                            </select>
-                        </div>
 
-                        {/* SUBCATEGORY */}
-                        <div className="flex flex-col gap-1">
-
-                            <label className="text-gray-300">
-                                Subcategory
-                            </label>
-
-                            <select
-                                required
-                                value={
-                                    form.subCategory
-                                }
-                                onChange={(e) =>
-                                    updateField(
-                                        "subCategory",
-                                        e.target.value
-                                    )
-                                }
-                                disabled={
-                                    !selectedCategory
-                                        .subCategories
-                                        ?.length
-                                }
-                                className="p-3 rounded bg-gray-800 outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
-                            >
-                                <option value="">
-                                    Select subcategory
-                                </option>
-
-                                {selectedCategory.subCategories?.map(
-                                    (sub) => (
-                                        <option
-                                            key={sub}
-                                            value={sub}
-                                        >
-                                            {sub}
-                                        </option>
-                                    )
-                                )}
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* ================================================= */}
-                    {/* BRAND + STOCK */}
-                    {/* ================================================= */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-                        {/* BRAND */}
-                        <div className="flex flex-col gap-1">
-
-                            <label className="text-gray-300">
-                                Brand
-                            </label>
-
-                            <input
-                                placeholder="Brand"
-                                value={form.brand}
-                                onChange={(e) =>
-                                    updateField(
-                                        "brand",
-                                        e.target.value
-                                    )
-                                }
-                                className="p-3 rounded bg-gray-800 outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-
-                        {/* STOCK */}
-                        <div className="flex flex-col gap-1">
-
-                            <label className="text-gray-300">
-                                Stock
-                            </label>
-
-                            <input
-                                type="number"
-                                min="0"
-                                placeholder="Stock"
-                                value={form.stock}
-                                onChange={(e) =>
-                                    updateField(
-                                        "stock",
-                                        e.target.value
-                                            ? Number(
-                                                  e.target
-                                                      .value
-                                              )
-                                            : ""
-                                    )
-                                }
-                                className="p-3 rounded bg-gray-800 outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-                    </div>
-
-                    {/* ================================================= */}
-                    {/* PRODUCT SIZE */}
-                    {/* ================================================= */}
-                    <div className="flex flex-col gap-1">
-
-                        <label className="text-gray-300">
-                            Product Size
-                        </label>
-
-                        <div className="grid grid-cols-2 gap-3">
-
-                            {/* SIZE VALUE */}
-                            <input
-                                type="number"
-                                min="0"
-                                step="any"
-                                required
-                                placeholder="e.g. 250"
-                                value={
-                                    form.size?.value ??
-                                    ""
-                                }
-                                onChange={(e) =>
-                                    updateSize(
-                                        "value",
-                                        e.target.value
-                                            ? Number(
-                                                  e.target
-                                                      .value
-                                              )
-                                            : ""
-                                    )
-                                }
-                                className="p-3 rounded bg-gray-800 outline-none focus:ring-2 focus:ring-green-500"
-                            />
-
-                            {/* UNIT */}
-                            <select
-                                required
-                                value={
-                                    form.size?.unit ||
-                                    "gram"
-                                }
-                                onChange={(e) =>
-                                    updateSize(
-                                        "unit",
-                                        e.target.value
-                                    )
-                                }
-                                className="p-3 rounded bg-gray-800 outline-none focus:ring-2 focus:ring-green-500"
-                            >
-                                <option value="gram">
-                                    Gram (g)
-                                </option>
-
-                                <option value="kg">
-                                    Kilogram (kg)
-                                </option>
-
-                                <option value="milliliter">
-                                    Milliliter (ml)
-                                </option>
-
-                                <option value="litre">
-                                    Litre (L)
-                                </option>
-                            </select>
-                        </div>
-
-                        {/* SIZE PREVIEW */}
-                        {form.size?.value && (
-                            <p className="text-sm text-gray-400 mt-1">
-                                Size:{" "}
-                                <span className="text-green-400 font-medium">
-                                    {form.size.value}{" "}
-                                    {form.size.unit ===
-                                    "gram"
-                                        ? "g"
-                                        : form.size
-                                              .unit ===
-                                          "kg"
-                                        ? "kg"
-                                        : form.size
-                                              .unit ===
-                                          "milliliter"
-                                        ? "ml"
-                                        : "L"}
-                                </span>
-                            </p>
-                        )}
-                    </div>
-
-                    {/* ================================================= */}
-                    {/* PRICE */}
-                    {/* ================================================= */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-                        {/* REGULAR PRICE */}
-                        <div className="flex flex-col gap-1">
-
-                            <label className="text-gray-300">
-                                Regular Price
-                            </label>
-
-                            <input
-                                type="number"
-                                min="0"
-                                required
-                                placeholder="Regular Price"
-                                value={
-                                    form.regularPrice
-                                }
-                                onChange={(e) =>
-                                    updateField(
-                                        "regularPrice",
-                                        e.target.value
-                                            ? Number(
-                                                  e.target
-                                                      .value
-                                              )
-                                            : ""
-                                    )
-                                }
-                                className="p-3 rounded bg-gray-800 outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-
-                        {/* SELL PRICE */}
-                        <div className="flex flex-col gap-1">
-
-                            <label className="text-gray-300">
-                                Sell Price
-                            </label>
-
-                            <input
-                                type="number"
-                                min="0"
-                                required
-                                placeholder="Sell Price"
-                                value={form.sellPrice}
-                                onChange={(e) =>
-                                    updateField(
-                                        "sellPrice",
-                                        e.target.value
-                                            ? Number(
-                                                  e.target
-                                                      .value
-                                              )
-                                            : ""
-                                    )
-                                }
-                                className="p-3 rounded bg-gray-800 outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-                    </div>
-
-                    {/* ================================================= */}
-                    {/* WARRANTY */}
-                    {/* ================================================= */}
-                    <div className="flex flex-col gap-1">
-
-                        <label className="text-gray-300">
-                            Warranty
-                        </label>
-
-                        <input
-                            placeholder="Warranty"
-                            value={form.warranty}
-                            onChange={(e) =>
-                                updateField(
-                                    "warranty",
-                                    e.target.value
-                                )
-                            }
-                            className="p-3 rounded bg-gray-800 outline-none focus:ring-2 focus:ring-green-500"
-                        />
-                    </div>
-
-                    {/* ================================================= */}
-                    {/* IMAGE UPLOAD */}
-                    {/* ================================================= */}
-                    <div className="flex flex-col gap-1">
-
-                        <label className="text-gray-300">
-                            Product Image
-                        </label>
-
-                        <div className="flex gap-3 mt-1 flex-wrap">
-
-                            {/* CAMERA */}
-                            <label className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded cursor-pointer text-sm transition">
-
-                                📸 Take Photo
-
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    className="hidden"
-                                    onChange={(e) =>
-                                        handleImageSelect(
-                                            e.target
-                                                .files?.[0]
+                                    {categories.map(
+                                        (
+                                            category
+                                        ) => (
+                                            <option
+                                                key={
+                                                    category._id
+                                                }
+                                                value={
+                                                    category.name
+                                                }
+                                            >
+                                                {
+                                                    category.name
+                                                }
+                                            </option>
                                         )
-                                    }
-                                />
-                            </label>
+                                    )}
+                                </select>
 
-                            {/* GALLERY */}
-                            <label className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded cursor-pointer text-sm transition">
-
-                                📁 Choose From Gallery
-
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) =>
-                                        handleImageSelect(
-                                            e.target
-                                                .files?.[0]
-                                        )
-                                    }
-                                />
-                            </label>
-                        </div>
-
-                        {/* ================================================= */}
-                        {/* IMAGE PREVIEW */}
-                        {/* ================================================= */}
-                        {(previewUrl ||
-                            (form.image && !file)) && (
-                            <div className="mt-3">
-
-                                <img
-                                    src={
-                                        previewUrl ||
-                                        form.image
-                                    }
-                                    alt={
-                                        form.name ||
-                                        "Product preview"
-                                    }
-                                    className="w-24 h-24 object-cover rounded-lg border border-gray-700"
-                                />
-
-                                {file && (
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        {file.name}
+                                {categoriesError && (
+                                    <p className="text-xs text-red-400">
+                                        Failed to load
+                                        categories.
                                     </p>
                                 )}
+
+                                {!categoriesLoading &&
+                                    categories.length ===
+                                        0 && (
+                                        <p className="text-xs text-yellow-400">
+                                            No categories
+                                            found.
+                                        </p>
+                                    )}
                             </div>
-                        )}
-                    </div>
 
-                    {/* ================================================= */}
-                    {/* BUTTONS */}
-                    {/* ================================================= */}
-                    <div className="flex justify-end gap-3 mt-4 sticky bottom-0 bg-gray-900 pt-3">
+                            {/* SUBCATEGORY */}
 
-                        {/* CANCEL */}
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            disabled={saving}
-                            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
-                        >
-                            Cancel
-                        </button>
+                            <div className="space-y-1.5">
 
-                        {/* SAVE */}
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {saving
-                                ? "Saving..."
-                                : editingProduct
-                                ? "Update"
-                                : "Add"}
-                        </button>
-                    </div>
-                </form>
+                                <label className="text-sm font-medium text-gray-300">
+                                    Subcategory
+                                </label>
+
+                                <select
+                                    required
+                                    value={
+                                        form.subCategory
+                                    }
+                                    disabled={
+                                        !selectedCategory ||
+                                        !selectedCategory
+                                            .subCategories
+                                            ?.length
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
+                                        updateField(
+                                            "subCategory",
+                                            event
+                                                .target
+                                                .value
+                                        )
+                                    }
+                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+
+                                    <option value="">
+                                        {!selectedCategory
+                                            ? "Select category first"
+                                            : selectedCategory
+                                                  .subCategories
+                                                  ?.length
+                                            ? "Select subcategory"
+                                            : "No subcategory"}
+                                    </option>
+
+                                    {selectedCategory?.subCategories?.map(
+                                        (
+                                            subCategory
+                                        ) => (
+                                            <option
+                                                key={
+                                                    subCategory
+                                                }
+                                                value={
+                                                    subCategory
+                                                }
+                                            >
+                                                {
+                                                    subCategory
+                                                }
+                                            </option>
+                                        )
+                                    )}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* =================================================
+                            BRAND + STOCK
+                        ================================================= */}
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                            <div className="space-y-1.5">
+
+                                <label className="text-sm font-medium text-gray-300">
+                                    Brand
+                                </label>
+
+                                <input
+                                    value={
+                                        form.brand
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
+                                        updateField(
+                                            "brand",
+                                            event
+                                                .target
+                                                .value
+                                        )
+                                    }
+                                    placeholder="Brand name"
+                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+
+                                <label className="text-sm font-medium text-gray-300">
+                                    Stock
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={
+                                        form.stock
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
+                                        updateField(
+                                            "stock",
+                                            event
+                                                .target
+                                                .value
+                                                ? Number(
+                                                      event
+                                                          .target
+                                                          .value
+                                                  )
+                                                : ""
+                                        )
+                                    }
+                                    placeholder="0"
+                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                />
+                            </div>
+                        </div>
+
+                        {/* =================================================
+                            SIZE
+                        ================================================= */}
+
+                        <div className="space-y-1.5">
+
+                            <label className="text-sm font-medium text-gray-300">
+                                Product Size
+                            </label>
+
+                            <div className="grid grid-cols-2 gap-4">
+
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    required
+                                    value={
+                                        form.size
+                                            ?.value
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
+                                        updateSize(
+                                            "value",
+                                            event
+                                                .target
+                                                .value
+                                                ? Number(
+                                                      event
+                                                          .target
+                                                          .value
+                                                  )
+                                                : ""
+                                        )
+                                    }
+                                    placeholder="250"
+                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                />
+
+                                <select
+                                    required
+                                    value={
+                                        form.size
+                                            ?.unit ||
+                                        "gram"
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
+                                        updateSize(
+                                            "unit",
+                                            event
+                                                .target
+                                                .value
+                                        )
+                                    }
+                                    className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                >
+
+                                    <option value="gram">
+                                        Gram (g)
+                                    </option>
+
+                                    <option value="kg">
+                                        Kilogram (kg)
+                                    </option>
+
+                                    <option value="milliliter">
+                                        Milliliter (ml)
+                                    </option>
+
+                                    <option value="litre">
+                                        Litre (L)
+                                    </option>
+
+                                    <option value="piece">
+                                        Piece
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* =================================================
+                            PRICE
+                        ================================================= */}
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                            <div className="space-y-1.5">
+
+                                <label className="text-sm font-medium text-gray-300">
+                                    Regular Price
+                                </label>
+
+                                <div className="relative">
+
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                                        ৳
+                                    </span>
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        required
+                                        value={
+                                            form.regularPrice
+                                        }
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            updateField(
+                                                "regularPrice",
+                                                event
+                                                    .target
+                                                    .value
+                                                    ? Number(
+                                                          event
+                                                              .target
+                                                              .value
+                                                      )
+                                                    : ""
+                                            )
+                                        }
+                                        placeholder="1200"
+                                        className="w-full rounded-xl border border-gray-800 bg-gray-900 py-3 pl-9 pr-4 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+
+                                <label className="text-sm font-medium text-gray-300">
+                                    Sell Price
+                                </label>
+
+                                <div className="relative">
+
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500">
+                                        ৳
+                                    </span>
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        required
+                                        value={
+                                            form.sellPrice
+                                        }
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            updateField(
+                                                "sellPrice",
+                                                event
+                                                    .target
+                                                    .value
+                                                    ? Number(
+                                                          event
+                                                              .target
+                                                              .value
+                                                      )
+                                                    : ""
+                                            )
+                                        }
+                                        placeholder="920"
+                                        className="w-full rounded-xl border border-gray-800 bg-gray-900 py-3 pl-9 pr-4 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* =================================================
+                            WARRANTY
+                        ================================================= */}
+
+                        <div className="space-y-1.5">
+
+                            <label className="text-sm font-medium text-gray-300">
+                                Warranty
+                            </label>
+
+                            <input
+                                value={
+                                    form.warranty
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    updateField(
+                                        "warranty",
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                placeholder="e.g. 7 Days"
+                                className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10"
+                            />
+                        </div>
+
+                        {/* =================================================
+                            IMAGE
+                        ================================================= */}
+
+                        <div className="space-y-3">
+
+                            <label className="text-sm font-medium text-gray-300">
+                                Product Image
+                            </label>
+
+                            <div className="grid grid-cols-2 gap-3">
+
+                                {/* CAMERA */}
+
+                                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm font-medium text-blue-400 transition hover:bg-blue-500/20">
+
+                                    <Camera
+                                        size={18}
+                                    />
+
+                                    <span>
+                                        Camera
+                                    </span>
+
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        className="hidden"
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            handleImageSelect(
+                                                event
+                                                    .target
+                                                    .files?.[0]
+                                            )
+                                        }
+                                    />
+                                </label>
+
+                                {/* GALLERY */}
+
+                                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-purple-500/20 bg-purple-500/10 px-4 py-3 text-sm font-medium text-purple-400 transition hover:bg-purple-500/20">
+
+                                    <FolderOpen
+                                        size={18}
+                                    />
+
+                                    <span>
+                                        Gallery
+                                    </span>
+
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            handleImageSelect(
+                                                event
+                                                    .target
+                                                    .files?.[0]
+                                            )
+                                        }
+                                    />
+                                </label>
+                            </div>
+
+                            {/* PREVIEW */}
+
+                            {(previewUrl ||
+                                (form.image &&
+                                    !file)) && (
+                                <div className="rounded-xl border border-gray-800 bg-gray-900 p-3">
+
+                                    <div className="flex items-center gap-4">
+
+                                        <img
+                                            src={
+                                                previewUrl ||
+                                                form.image
+                                            }
+                                            alt={
+                                                form.name ||
+                                                "Product preview"
+                                            }
+                                            className="h-24 w-24 rounded-xl border border-gray-700 object-cover"
+                                        />
+
+                                        <div className="min-w-0">
+
+                                            <p className="text-sm font-medium text-gray-200">
+                                                Image
+                                                Preview
+                                            </p>
+
+                                            {file && (
+                                                <p className="mt-1 truncate text-xs text-gray-500">
+                                                    {
+                                                        file.name
+                                                    }
+                                                </p>
+                                            )}
+
+                                            <p className="mt-2 text-xs text-gray-600">
+                                                Optimized
+                                                before
+                                                upload
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* =================================================
+                            ACTIONS
+                        ================================================= */}
+
+                        <div className="sticky bottom-0 flex gap-3 border-t border-gray-800 bg-gray-950 py-4">
+
+                            <button
+                                type="button"
+                                onClick={
+                                    onClose
+                                }
+                                disabled={
+                                    saving
+                                }
+                                className="flex-1 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm font-medium text-gray-300 transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="submit"
+                                disabled={
+                                    saving ||
+                                    categoriesLoading
+                                }
+                                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+
+                                {saving ? (
+                                    <>
+                                        <Loader2
+                                            size={18}
+                                            className="animate-spin"
+                                        />
+
+                                        Saving...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save
+                                            size={18}
+                                        />
+
+                                        {editingProduct
+                                            ? "Update Product"
+                                            : "Add Product"}
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );
