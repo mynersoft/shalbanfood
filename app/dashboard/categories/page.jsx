@@ -26,7 +26,7 @@ import {
     useDeleteSubCategory,
 } from '@/hooks/useCategory';
 
-import CategoryForm from './components/CategoryForm';
+import CategoryForm from '../components/CategoryForm';
 
 export default function CategoriesPage() {
     const [search, setSearch] = useState('');
