@@ -1,143 +1,194 @@
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-import { useDispatch } from 'react-redux';
+'use client';
+
 import {
-	setProducts,
-	addProduct,
-	removeProduct,
-	updateProduct,
-} from '@/redux/store/slices/productSlice';
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+
+import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useDispatch } from 'react-redux';
 
-// Fetch products hook
-export function useProducts() {
-	const dispatch = useDispatch();
+import {
+  setProducts,
+  addProduct,
+  updateProduct,
+  removeProduct,
+} from '@/redux/store/slices/productSlice';
 
-	return useQuery({
-		queryKey: ['products'],
-		queryFn: async () => {
-			const res = await axios.get('/api/products');
-			dispatch(setProducts(res.data)); // store in Redux
-			return res.data.products;
-		},
-		onError: (error) => {
-			toast.error(`Failed to fetch products: ${error.message}`);
-		},
-		onSuccess: () => {
-			toast.success('Products fetched successfully');
-		},
-		staleTime: 1000 * 60 * 5, // 5 minutes
-		refetchOnWindowFocus: false,
-	});
+const API_URL = '/api/products';
+
+/* ========================================
+   GET PRODUCTS
+======================================== */
+
+export function useProducts({
+  page = 1,
+  limit = 10,
+} = {}) {
+  const dispatch = useDispatch();
+
+  return useQuery({
+    queryKey: ['products', page, limit],
+
+    queryFn: async () => {
+      const response = await axios.get(API_URL, {
+        params: {
+          page,
+          limit,
+        },
+      });
+
+      const data = response.data || {};
+
+      const products = Array.isArray(data.products)
+        ? data.products
+        : [];
+
+      dispatch(setProducts(products));
+
+      return {
+        products,
+        totalProducts: Number(data.totalProducts || 0),
+        totalAmount: Number(data.totalAmount || 0),
+        page: Number(data.page || page),
+        limit: Number(data.limit || limit),
+        totalPages: Number(data.totalPages || 1),
+      };
+    },
+
+    staleTime: 5 * 60 * 1000,
+
+    refetchOnWindowFocus: false,
+
+    placeholderData: (previousData) => previousData,
+  });
 }
 
-// Add product hook
+/* ========================================
+   ADD PRODUCT
+======================================== */
+
 export function useAddProduct() {
-	const queryClient = useQueryClient();
-	const dispatch = useDispatch();
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
 
-	return useMutation({
-		mutationFn: async (productData) => {
-			const res = await axios.post('/api/products', productData);
-			return res.data.product;
-		},
+  return useMutation({
+    mutationFn: async (formData) => {
+      const response = await axios.post(
+        API_URL,
+        formData
+      );
 
-		onMutate: () => {
-			toast.loading('Adding product...', { id: 'add-product' });
-		},
+      return response.data;
+    },
 
-		onSuccess: (newProduct) => {
-			dispatch(addProduct(newProduct));
-			queryClient.invalidateQueries({ queryKey: ['products'] });
+    onSuccess: (data) => {
+      if (data?.product) {
+        dispatch(addProduct(data.product));
+      }
 
-			toast.success('Product added successfully!', {
-				id: 'add-product',
-			});
-		},
+      queryClient.invalidateQueries({
+        queryKey: ['products'],
+      });
 
-		onError: (error) => {
-			let message = 'Failed to add product';
+      toast.success(
+        data?.message || 'Product added successfully'
+      );
+    },
 
-			if (axios.isAxiosError(error)) {
-				message =
-					error.response?.data?.error ||
-					error.response?.data?.message ||
-					error.message;
-			} else if (error instanceof Error) {
-				message = error.message;
-			}
-
-			toast.error(message, { id: 'add-product' });
-		},
-	});
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ||
+          'Failed to add product'
+      );
+    },
+  });
 }
 
-// delete products
-export const useDeleteProduct = () => {
-	const queryClient = useQueryClient();
-	const dispatch = useDispatch();
+/* ========================================
+   UPDATE PRODUCT
+======================================== */
 
-	return useMutation({
-		mutationFn: async (id) => {
-			const res = await axios.delete(`/api/products/id/${id}`);
-			return res.data;
-		},
-
-		onMutate: (id) => {
-			toast.loading('Deleting product...', { id: 'delete-product' });
-		},
-		onSuccess: (_, id) => {
-			dispatch(removeProduct(id));
-			queryClient.invalidateQueries(['products']);
-			toast.success('Product deleted successfully!', {
-				id: 'delete-product',
-			});
-		},
-		onError: (error) => {
-			toast.error('Failed to delete product: ' + error.message, {
-				id: 'delete-product',
-			});
-		},
-	});
-};
-
-// update
 export function useUpdateProduct() {
-	const queryClient = useQueryClient();
-	const dispatch = useDispatch();
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
 
-	return useMutation({
-		mutationFn: async ({ id, data }) => {
-			const res = await axios.put(`/api/products/id/${id}`, data);
-			return res.data.product;
-		},
+  return useMutation({
+    mutationFn: async (formData) => {
+      const response = await axios.put(
+        API_URL,
+        formData
+      );
 
-		onMutate: () => {
-			toast.loading('Updating product...', { id: 'update-product' });
-		},
+      return response.data;
+    },
 
-		onSuccess: (data) => {
-			dispatch(updateProduct(data));
-			queryClient.invalidateQueries({ queryKey: ['products'] });
+    onSuccess: (data) => {
+      if (data?.product) {
+        dispatch(updateProduct(data.product));
+      }
 
-			toast.success('Product updated successfully!', {
-				id: 'update-product',
-			});
-		},
+      queryClient.invalidateQueries({
+        queryKey: ['products'],
+      });
 
-		onError: (error) => {
-			let message = 'Failed to update product';
+      toast.success(
+        data?.message || 'Product updated successfully'
+      );
+    },
 
-			if (axios.isAxiosError(error)) {
-				message =
-					error.response?.data?.message ||
-					error.response?.data?.error ||
-					error.message;
-			} else if (error instanceof Error) {
-				message = error.message;
-			}
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ||
+          'Failed to update product'
+      );
+    },
+  });
+}
 
-			toast.error(message, { id: 'update-product' });
-		},
-	});
+/* ========================================
+   DELETE PRODUCT
+======================================== */
+
+export function useDeleteProduct() {
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id) => {
+      const response = await axios.delete(API_URL, {
+        params: {
+          id,
+        },
+      });
+
+      return {
+        ...response.data,
+        id,
+      };
+    },
+
+    onSuccess: (data) => {
+      if (data?.id) {
+        dispatch(removeProduct(data.id));
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: ['products'],
+      });
+
+      toast.success(
+        data?.message || 'Product deleted successfully'
+      );
+    },
+
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ||
+          'Failed to delete product'
+      );
+    },
+  });
 }
