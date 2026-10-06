@@ -9,7 +9,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-import connectDB from '@/lib/dbConnect';
+import {connectDB} from '@/lib/dbConnect';
 import Product from '@/models/Product';
 
 
