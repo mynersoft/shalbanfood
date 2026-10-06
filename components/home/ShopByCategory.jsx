@@ -29,7 +29,7 @@ const categories = [
     {
         name: 'খেজুর',
         slug: 'dates',
-        image: '/images/categories/dates.jpg',
+        image: '/images/categories/dates.png',
     },
     {
         name: 'ন্যাচারাল ফুড',
