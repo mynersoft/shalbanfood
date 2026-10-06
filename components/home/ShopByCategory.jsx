@@ -9,22 +9,22 @@ const categories = [
     {
         name: 'মধু',
         slug: 'honey',
-        image: '/images/categories/honey.jpg',
+        image: '/images/categories/honey.png',
     },
     {
         name: 'গাওয়া ঘি',
         slug: 'ghee',
-        image: '/images/categories/ghee.jpg',
+        image: '/images/categories/ghee.png',
     },
     {
         name: 'ড্রাই ফ্রুটস',
         slug: 'dry-fruits',
-        image: '/images/categories/dry-fruits.jpg',
+        image: '/images/categories/dry-fruits.png',
     },
     {
         name: 'নাটস & সিডস',
         slug: 'nuts-seeds',
-        image: '/images/categories/nuts-seeds.jpg',
+        image: '/images/categories/nuts-seeds.png',
     },
     {
         name: 'খেজুর',
@@ -34,7 +34,7 @@ const categories = [
     {
         name: 'ন্যাচারাল ফুড',
         slug: 'natural-food',
-        image: '/images/categories/natural-food.jpg',
+        image: '/images/categories/natural-food.png',
     },
 ];
 
