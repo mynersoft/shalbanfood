@@ -1,170 +1,124 @@
-"use client";
+'use client';
 
-import {
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
+import { useEffect, useState } from 'react';
 
 import {
     Plus,
     Save,
     X,
-    Link2,
-    Tags,
-} from "lucide-react";
+    Link as LinkIcon,
+} from 'lucide-react';
 
-import { slugify } from "@/lib/slugify";
+const CATEGORY_SLUG_MAP = {
+    'মধু': 'honey',
+    'গাওয়া ঘি': 'ghee',
+    'ঘি': 'ghee',
+    'খেজুর': 'dates',
+    'বাদাম': 'nuts',
+    'ড্রাই ফ্রুটস': 'dry-fruits',
+    'শুকনা খাবার': 'dry-foods',
+    'ন্যাচারাল ফুড': 'natural-foods',
+};
 
-// ========================================
-// CATEGORY FORM
-// ========================================
+const slugify = (value) => {
+    const text = value.trim().toLowerCase();
+
+    if (CATEGORY_SLUG_MAP[text]) {
+        return CATEGORY_SLUG_MAP[text];
+    }
+
+    return text
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+};
 
 export default function CategoryForm({
     onSubmit,
-    editingCategory,
+    editingCategory = null,
     onCancel,
     loading = false,
 }) {
-    const [name, setName] =
-        useState("");
-
-    const [slug, setSlug] =
-        useState("");
-
+    const [name, setName] = useState('');
+    const [slug, setSlug] = useState('');
     const [subCategories, setSubCategories] =
-        useState("");
+        useState('');
 
     const [slugManuallyEdited, setSlugManuallyEdited] =
         useState(false);
 
-    // ========================================
-    // EDIT DATA
-    // ========================================
+    // ==========================================
+    // LOAD EDIT DATA
+    // ==========================================
 
     useEffect(() => {
         if (editingCategory) {
             setName(
-                editingCategory.name || ""
+                editingCategory.name || ''
             );
 
             setSlug(
-                editingCategory.slug || ""
+                editingCategory.slug || ''
             );
 
-            const subNames =
+            setSubCategories(
                 Array.isArray(
                     editingCategory.subCategories
                 )
-                    ? editingCategory.subCategories
-                          .map((sub) =>
-                              typeof sub ===
-                              "string"
-                                  ? sub
-                                  : sub?.name
-                          )
-                          .filter(Boolean)
-                          .join(", ")
-                    : "";
-
-            setSubCategories(
-                subNames
+                    ? editingCategory.subCategories.join(
+                          ', '
+                      )
+                    : ''
             );
 
-            setSlugManuallyEdited(
-                true
-            );
+            setSlugManuallyEdited(true);
         } else {
-            setName("");
-            setSlug("");
-            setSubCategories("");
+            setName('');
+            setSlug('');
+            setSubCategories('');
             setSlugManuallyEdited(false);
         }
     }, [editingCategory]);
 
-    // ========================================
-    // AUTO SLUG
-    // ========================================
-
-    const generatedSlug = useMemo(() => {
-        return slugify(name);
-    }, [name]);
-
-    useEffect(() => {
-        if (
-            !editingCategory &&
-            !slugManuallyEdited
-        ) {
-            setSlug(
-                generatedSlug
-            );
-        }
-    }, [
-        generatedSlug,
-        editingCategory,
-        slugManuallyEdited,
-    ]);
-
-    // ========================================
+    // ==========================================
     // NAME CHANGE
-    // ========================================
+    // ==========================================
 
-    const handleNameChange = (
-        e
-    ) => {
-        const value =
-            e.target.value;
+    const handleNameChange = (e) => {
+        const value = e.target.value;
 
         setName(value);
 
-        if (
-            !slugManuallyEdited
-        ) {
-            setSlug(
-                slugify(value)
-            );
+        if (!slugManuallyEdited) {
+            setSlug(slugify(value));
         }
     };
 
-    // ========================================
+    // ==========================================
     // SLUG CHANGE
-    // ========================================
+    // ==========================================
 
-    const handleSlugChange = (
-        e
-    ) => {
-        const value =
-            e.target.value
-                .toLowerCase()
-                .replace(
-                    /[^a-z0-9-]/g,
-                    ""
-                )
-                .replace(
-                    /-+/g,
-                    "-"
-                );
+    const handleSlugChange = (e) => {
+        const value = e.target.value
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '')
+            .replace(/-+/g, '-');
 
         setSlug(value);
-        setSlugManuallyEdited(
-            true
-        );
+        setSlugManuallyEdited(true);
     };
 
-    // ========================================
+    // ==========================================
     // SUBMIT
-    // ========================================
+    // ==========================================
 
-    const handleSubmit = async (
-        e
-    ) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const cleanName =
-            name.trim();
-
-        const cleanSlug =
-            slugify(slug);
+        const cleanName = name.trim();
+        const cleanSlug = slug.trim().toLowerCase();
 
         if (!cleanName) {
             return;
@@ -174,139 +128,70 @@ export default function CategoryForm({
             return;
         }
 
-        // ------------------------------------
-        // Convert comma separated names
-        // into objects
-        // ------------------------------------
+        if (
+            !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(
+                cleanSlug
+            )
+        ) {
+            return;
+        }
 
         const subCategoryArray =
             subCategories
-                .split(",")
-                .map((item) =>
-                    item.trim()
-                )
-                .filter(Boolean)
-                .map((item) => ({
-                    name: item,
-                    slug: slugify(item),
-                }))
-                .filter(
-                    (item) =>
-                        item.slug
-                );
-
-        // ------------------------------------
-        // Remove duplicate slug
-        // ------------------------------------
-
-        const uniqueSubCategories =
-            Array.from(
-                new Map(
-                    subCategoryArray.map(
-                        (item) => [
-                            item.slug,
-                            item,
-                        ]
-                    )
-                ).values()
-            );
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean);
 
         await onSubmit({
             name: cleanName,
-
             slug: cleanSlug,
-
-            subCategories:
-                uniqueSubCategories,
+            subCategories: subCategoryArray,
         });
-
-        // ------------------------------------
-        // Reset only for ADD
-        // ------------------------------------
-
-        if (!editingCategory) {
-            setName("");
-            setSlug("");
-            setSubCategories("");
-            setSlugManuallyEdited(
-                false
-            );
-        }
     };
 
-    // ========================================
-    // UI
-    // ========================================
-
     return (
-        <form
-            onSubmit={handleSubmit}
-            className="
-                rounded-2xl
-                border border-white/10
-                bg-[#131318]
-                p-5
-                shadow-xl
-            "
-        >
-            {/* ================================= */}
+        <div className="rounded-2xl bg-white shadow-2xl">
+
             {/* HEADER */}
-            {/* ================================= */}
 
-            <div className="mb-6 flex items-start justify-between">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+
                 <div>
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/10 text-green-400">
-                            <Tags
-                                size={19}
-                            />
-                        </div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                        {editingCategory
+                            ? 'Edit Category'
+                            : 'Add Category'}
+                    </h2>
 
-                        <h2 className="text-lg font-semibold text-white">
-                            {editingCategory
-                                ? "Edit Category"
-                                : "Add Category"}
-                        </h2>
-                    </div>
-
-                    <p className="mt-2 text-sm text-gray-400">
-                        Manage your store
-                        category and
-                        sub-categories.
+                    <p className="mt-0.5 text-xs text-gray-500">
+                        {editingCategory
+                            ? 'Update category information'
+                            : 'Create a new product category'}
                     </p>
                 </div>
 
-                {editingCategory && (
-                    <button
-                        type="button"
-                        onClick={
-                            onCancel
-                        }
-                        className="
-                            rounded-lg
-                            p-2
-                            text-gray-400
-                            transition
-                            hover:bg-white/10
-                            hover:text-white
-                        "
-                        aria-label="Cancel editing"
-                    >
-                        <X
-                            size={20}
-                        />
-                    </button>
-                )}
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    disabled={loading}
+                    className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+                >
+                    <X size={20} />
+                </button>
+
             </div>
 
-            <div className="space-y-5">
+            {/* FORM */}
 
-                {/* ================================= */}
-                {/* CATEGORY NAME */}
-                {/* ================================= */}
+            <form
+                onSubmit={handleSubmit}
+                className="space-y-5 p-5"
+            >
+
+                {/* NAME */}
 
                 <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-300">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
                         Category Name
                     </label>
 
@@ -316,35 +201,19 @@ export default function CategoryForm({
                         onChange={
                             handleNameChange
                         }
-                        placeholder="Example: মধু"
-                        className="
-                            w-full
-                            rounded-xl
-                            border border-white/10
-                            bg-[#0d0d11]
-                            px-4 py-3
-                            text-white
-                            outline-none
-                            placeholder:text-gray-600
-                            focus:border-green-500
-                            focus:ring-2
-                            focus:ring-green-500/10
-                        "
-                        required
+                        placeholder="e.g. মধু"
+                        autoFocus
+                        disabled={loading}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-black focus:ring-1 focus:ring-black disabled:bg-gray-100"
                     />
                 </div>
 
-                {/* ================================= */}
                 {/* SLUG */}
-                {/* ================================= */}
 
                 <div>
-                    <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-300">
-                        <Link2
-                            size={15}
-                        />
-
-                        Category Slug
+                    <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <LinkIcon size={15} />
+                        URL Slug
                     </label>
 
                     <input
@@ -353,41 +222,22 @@ export default function CategoryForm({
                         onChange={
                             handleSlugChange
                         }
-                        placeholder="honey"
-                        className="
-                            w-full
-                            rounded-xl
-                            border border-white/10
-                            bg-[#0d0d11]
-                            px-4 py-3
-                            font-mono
-                            text-sm
-                            text-green-400
-                            outline-none
-                            placeholder:text-gray-700
-                            focus:border-green-500
-                            focus:ring-2
-                            focus:ring-green-500/10
-                        "
-                        required
+                        placeholder="e.g. honey"
+                        disabled={loading}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-black focus:ring-1 focus:ring-black disabled:bg-gray-100"
                     />
 
-                    <p className="mt-2 text-xs text-gray-500">
-                        URL:
-                        {" "}
-                        /category/
-                        {slug ||
-                            "category-slug"}
+                    <p className="mt-1.5 text-xs text-gray-400">
+                        Example: /category/
+                        {slug || 'honey'}
                     </p>
                 </div>
 
-                {/* ================================= */}
-                {/* SUB CATEGORIES */}
-                {/* ================================= */}
+                {/* SUBCATEGORIES */}
 
                 <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-300">
-                        Sub Categories
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                        Subcategories
                     </label>
 
                     <input
@@ -397,121 +247,57 @@ export default function CategoryForm({
                         }
                         onChange={(e) =>
                             setSubCategories(
-                                e.target
-                                    .value
+                                e.target.value
                             )
                         }
-                        placeholder="লিচু, কালোজিরা, সুন্দরবন"
-                        className="
-                            w-full
-                            rounded-xl
-                            border border-white/10
-                            bg-[#0d0d11]
-                            px-4 py-3
-                            text-white
-                            outline-none
-                            placeholder:text-gray-600
-                            focus:border-green-500
-                            focus:ring-2
-                            focus:ring-green-500/10
-                        "
+                        placeholder="e.g. লিচু ফুলের মধু, কালোজিরা ফুলের মধু"
+                        disabled={loading}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-black focus:ring-1 focus:ring-black disabled:bg-gray-100"
                     />
 
-                    <p className="mt-2 text-xs text-gray-500">
-                        Separate multiple
-                        sub-categories
-                        with commas.
+                    <p className="mt-1.5 text-xs text-gray-400">
+                        Separate multiple subcategories with commas.
                     </p>
                 </div>
 
-                {/* ================================= */}
-                {/* PREVIEW */}
-                {/* ================================= */}
+                {/* ACTIONS */}
 
-                {(name || slug) && (
-                    <div className="
-                        rounded-xl
-                        border border-white/10
-                        bg-[#0d0d11]
-                        p-4
-                    ">
-                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-                            Preview
-                        </p>
+                <div className="flex justify-end gap-3 border-t border-gray-100 pt-5">
 
-                        <div className="flex items-center justify-between gap-4">
-                            <div>
-                                <p className="font-medium text-white">
-                                    {name ||
-                                        "Category Name"}
-                                </p>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        disabled={loading}
+                        className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
 
-                                <p className="mt-1 font-mono text-xs text-gray-500">
-                                    /category/
-                                    {slug ||
-                                        "..."}
-                                </p>
-                            </div>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="inline-flex min-w-[130px] items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
 
-                            <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs text-green-400">
-                                Active
+                        {loading ? (
+                            <span className="animate-spin">
+                                <Save size={16} />
                             </span>
-                        </div>
-                    </div>
-                )}
+                        ) : editingCategory ? (
+                            <Save size={16} />
+                        ) : (
+                            <Plus size={17} />
+                        )}
 
-                {/* ================================= */}
-                {/* BUTTON */}
-                {/* ================================= */}
+                        {editingCategory
+                            ? 'Update Category'
+                            : 'Add Category'}
 
-                <button
-                    type="submit"
-                    disabled={
-                        loading ||
-                        !name.trim() ||
-                        !slug
-                    }
-                    className="
-                        flex
-                        w-full
-                        items-center
-                        justify-center
-                        gap-2
-                        rounded-xl
-                        bg-green-600
-                        px-4
-                        py-3
-                        font-medium
-                        text-white
-                        transition
-                        hover:bg-green-700
-                        disabled:cursor-not-allowed
-                        disabled:opacity-50
-                    "
-                >
-                    {editingCategory ? (
-                        <>
-                            <Save
-                                size={18}
-                            />
+                    </button>
 
-                            {loading
-                                ? "Updating..."
-                                : "Update Category"}
-                        </>
-                    ) : (
-                        <>
-                            <Plus
-                                size={18}
-                            />
+                </div>
 
-                            {loading
-                                ? "Adding..."
-                                : "Add Category"}
-                        </>
-                    )}
-                </button>
-            </div>
-        </form>
+            </form>
+        </div>
     );
 }
