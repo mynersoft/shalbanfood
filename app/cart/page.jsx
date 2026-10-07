@@ -21,15 +21,9 @@ import CartItems from '@/components/Cart/CartItems';
 const FREE_SHIPPING_LIMIT = 1000;
 
 export default function CartPage() {
-    const { items = [] } = useSelector(
-        (state) => state.cart
-    );
-
-    /*
-    |--------------------------------------------------------------------------
-    | Calculate final product price
-    |--------------------------------------------------------------------------
-    */
+       const { items } = useSelector((state) => state.cart || {});
+   
+  
     const calculateFinalPrice = (item) => {
         const sellPrice = Number(item.sellPrice);
         const regularPrice = Number(item.regularPrice);
@@ -87,11 +81,7 @@ export default function CartPage() {
         return basePrice;
     };
 
-    /*
-    |--------------------------------------------------------------------------
-    | Cart calculations
-    |--------------------------------------------------------------------------
-    */
+
     const {
         subtotal,
         totalQty,

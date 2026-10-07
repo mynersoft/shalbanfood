@@ -422,31 +422,22 @@ export default function RootLayout({ children }) {
 					}}
 				/>
 
-				
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+				<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 
-
-<script>
-    eruda.init();
-</script>
-
-
-
-
+				<script>eruda.init();</script>
 			</head>
 
 			<body className="bg-white text-gray-900">
-				<InitialLoader>
-					<Toaster position="top-right" reverseOrder={false} />
-					<InternetStatus />
-					<Providers>
-						<ConditionalMainLayout>
-							<GlobalInitializer />
-							<InitData />
-							{children}
-						</ConditionalMainLayout>
-					</Providers>
-				</InitialLoader>
+				{/* <InitialLoader> */}
+				<Toaster position="top-right" reverseOrder={false} />
+				<InternetStatus />
+				<Providers>
+					<ConditionalMainLayout>
+						<GlobalInitializer />
+						{children}
+					</ConditionalMainLayout>
+				</Providers>
+				{/* </InitialLoader> */}
 			</body>
 		</html>
 	);

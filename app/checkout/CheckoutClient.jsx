@@ -1,14 +1,13 @@
 'use client';
 
 import { useSelector } from 'react-redux';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAddOrder } from '@/hooks/useOrder';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import useLoginUser from '@/hooks/useAuth';
 import ShippingInfo from './ShippingInfo';
-import { shippingCost } from '@/utils/shippingCost';
 
 import {
 	ArrowLeft,
@@ -24,13 +23,45 @@ import {
 
 import CartItems from '@/components/Cart/CartItems';
 import CheckEmptyCart from '@/components/Cart/CheckEmptyCart';
+import { calculateShippingFee } from '@/lib/calculateShippingFee';
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const PHONE_REGEX = /^(?:\+?88)?01[3-9]\d{8}$/;
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const UNIT_LABELS = {
+	gram: 'গ্রাম',
+	kg: 'কেজি',
+	milliliter: 'মিলিলিটার',
+	litre: 'লিটার',
+	piece: 'পিস',
+};
+
+/* Size text, e.g. "500 গ্রাম" (empty if the item has no size) */
+
+const getSizeLabel = (item) => {
+	const value = item?.size?.value;
+	const unit = item?.size?.unit;
+
+	if (!value || !unit) return '';
+
+	return `${value} ${UNIT_LABELS[unit] || unit}`;
+};
+
+/* Unit price comes from the selected variant's sellPrice */
+
+const getUnitPrice = (item) => Math.max(Number(item?.sellPrice) || 0, 0);
+
+const getQuantity = (item) => Math.max(1, Number(item?.quantity) || 1);
+
+const getProductId = (item) => item?.productId || item?._id || item?.id || '';
 
 export default function CheckoutClient() {
 	const router = useRouter();
-
-	/* =========================================================
-	   AUTH
-	========================================================= */
 
 	const { status } = useSession();
 	const { user } = useLoginUser();
@@ -50,7 +81,7 @@ export default function CheckoutClient() {
 
 	const [processing, setProcessing] = useState(false);
 
-	const [parentVoucher, setParentVoucher] = useState('');
+	const [orderPlaced, setOrderPlaced] = useState(false);
 
 	const [orderData, setOrderData] = useState({
 		customer: {
@@ -64,10 +95,6 @@ export default function CheckoutClient() {
 			city: '',
 			thana: '',
 		},
-
-		cartItems: [],
-
-		voucherCode: '',
 
 		payment: {
 			method: 'COD',
@@ -98,17 +125,6 @@ export default function CheckoutClient() {
 	}, [status, router]);
 
 	/* =========================================================
-	   CART ITEMS
-	========================================================= */
-
-	useEffect(() => {
-		setOrderData((prev) => ({
-			...prev,
-			cartItems: cart,
-		}));
-	}, [cart]);
-
-	/* =========================================================
 	   AUTO FILL LOGGED-IN USER
 	========================================================= */
 
@@ -137,49 +153,31 @@ export default function CheckoutClient() {
 	}, [user]);
 
 	/* =========================================================
-	   SUBTOTAL
+	   TOTALS
+	   (display only: the server must recalculate everything)
 	========================================================= */
 
-	const subtotal = cart.reduce((sum, item) => {
-		let price = Number(item.salePrice) || 0;
-
-		if (item.discount) {
-			if (item.discount.type === 'percentage') {
-				price =
-					price - (price * Number(item.discount.value || 0)) / 100;
-			}
-
-			if (item.discount.type === 'fixed') {
-				price = price - Number(item.discount.value || 0);
-			}
-		}
-
-		price = Math.max(price, 0);
-
-		return sum + price * Number(item.quantity || 1);
-	}, 0);
-
-	/* =========================================================
-	   DISCOUNT
-	========================================================= */
+	const subtotal = useMemo(
+		() =>
+			cart.reduce(
+				(sum, item) => sum + getUnitPrice(item) * getQuantity(item),
+				0
+			),
+		[cart]
+	);
 
 	const discount = Number(applyVoucher?.discount || 0);
 
-	const grandTotal = subtotal - discount + Number(shippingCost || 0);
+	const voucherCode = applyVoucher?.code || applyVoucher?.voucherCode || '';
+
+	const deliveryCharge = Number(
+		calculateShippingFee({ subtotal, dis: orderData.address.city }) || 0
+	);
+
+	const grandTotal = Math.max(subtotal - discount, 0) + deliveryCharge;
 
 	/* =========================================================
-	   VOUCHER
-	========================================================= */
-
-	useEffect(() => {
-		setOrderData((prev) => ({
-			...prev,
-			voucherCode: parentVoucher,
-		}));
-	}, [parentVoucher]);
-
-	/* =========================================================
-	   HANDLE CHANGE
+	   FORM CHANGE
 	========================================================= */
 
 	const handleChange = (e) => {
@@ -212,64 +210,14 @@ export default function CheckoutClient() {
 
 	const placeOrder = (payload) => {
 		mutation.mutate(payload, {
-			onSuccess: () => {
+			onSuccess: (response) => {
+				setOrderPlaced(true);
+
 				try {
-					const whatsappNumber = '01603816721';
-
-					const itemsText = payload.orderItems
-						.map(
-							(item, index) =>
-								`${index + 1}. ${item.name}
-পরিমাণ: ${item.quantity}
-দাম: ৳${Number(item.price).toFixed(0)}`
-						)
-						.join('\n\n');
-
-					const address = payload.shippingAddress;
-
-					const message = `🛒 শালবন ফুডে নতুন অর্ডার
-
-👤 নাম: ${payload.customer.name}
-📞 ফোন: ${payload.customer.phone}
-
-📍 ঠিকানা:
-থানা: ${address.thana || '-'}
-এলাকা: ${address.area || '-'}
-জেলা: ${address.city || '-'}
-
-📦 পণ্য:
-${itemsText}
-
-💰 মোট: ৳${Number(grandTotal).toFixed(0)}
-
-💳 পেমেন্ট: ক্যাশ অন ডেলিভারি
-
-অর্ডারটি কনফার্ম করার জন্য ধন্যবাদ ❤️`;
-
-					const whatsappUrl =
-						`https://wa.me/${whatsappNumber}` +
-						`?text=${encodeURIComponent(message)}`;
-
-					toast.success('অর্ডার সফল হয়েছে! WhatsApp চেক করুন');
-
-					const whatsappWindow = window.open(
-						whatsappUrl,
-						'_blank',
-						'noopener,noreferrer'
-					);
-
-					if (!whatsappWindow) {
-						toast.error(
-							'WhatsApp খুলতে পারেনি। Browser popup allow করুন।'
-						);
-					}
-
-					setProcessing(false);
+					toast.success('অর্ডার সফল হয়েছে!');
 				} catch (error) {
-					console.error('WhatsApp error:', error);
-
-					toast.success('অর্ডার সফল হয়েছে!');
-
+					console.error(error);
+				} finally {
 					setProcessing(false);
 				}
 			},
@@ -279,6 +227,7 @@ ${itemsText}
 
 				toast.error(
 					error?.response?.data?.message ||
+						error?.message ||
 						'Order failed. Please try again.'
 				);
 
@@ -292,6 +241,8 @@ ${itemsText}
 	========================================================= */
 
 	const handleConfirmOrder = () => {
+		if (processing || orderPlaced) return;
+
 		/* Extra security check */
 
 		if (status !== 'authenticated' || !user) {
@@ -310,7 +261,7 @@ ${itemsText}
 
 		const email = orderData.customer.email.trim();
 
-		const phone = orderData.customer.phone.trim();
+		const phone = orderData.customer.phone.trim().replace(/[\s-]/g, '');
 
 		const area = orderData.address.area.trim();
 
@@ -330,6 +281,21 @@ ${itemsText}
 			return;
 		}
 
+		if (!PHONE_REGEX.test(phone)) {
+			toast.error('সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)');
+			return;
+		}
+
+		if (email && !EMAIL_REGEX.test(email)) {
+			toast.error('Please enter a valid email address');
+			return;
+		}
+
+		if (!city) {
+			toast.error('Please select your district');
+			return;
+		}
+
 		if (!area) {
 			toast.error('Please enter your delivery area');
 			return;
@@ -341,34 +307,34 @@ ${itemsText}
 		}
 
 		/* =====================================================
-		   ORDER ITEMS
+		   ORDER ITEMS (matches the Order model)
 		===================================================== */
 
+		const hasInvalidItem = cart.some(
+			(item) => !getProductId(item) || getUnitPrice(item) <= 0
+		);
+
+		if (hasInvalidItem) {
+			toast.error(
+				'কার্টে একটি পণ্যের তথ্য ঠিক নেই। পণ্যটি সরিয়ে আবার যোগ করুন।'
+			);
+			return;
+		}
+
 		const orderItems = cart.map((item) => {
-			let price = Number(item.salePrice) || 0;
+			const sizeLabel = getSizeLabel(item);
 
-			if (item.discount) {
-				if (item.discount.type === 'percentage') {
-					price =
-						price -
-						(price * Number(item.discount.value || 0)) / 100;
-				}
-
-				if (item.discount.type === 'fixed') {
-					price = price - Number(item.discount.value || 0);
-				}
-			}
-
-			price = Math.max(price, 0);
+			const baseName = item.name || '';
 
 			return {
-				productId: item.productId || item._id || item.id || '',
+				productId: String(getProductId(item)),
 
-				name: item.name || '',
+				/* The model has no size field, so the size goes into the name */
+				name: sizeLabel ? `${baseName} - ${sizeLabel}` : baseName,
 
-				quantity: Number(item.quantity) || 1,
+				quantity: getQuantity(item),
 
-				price,
+				price: getUnitPrice(item),
 
 				image: item.image || item.images?.[0] || '',
 			};
@@ -391,11 +357,12 @@ ${itemsText}
 				thana,
 				area,
 				city,
+				phone,
 			},
 
 			orderItems,
 
-			voucherCode: orderData.voucherCode,
+			voucherCode,
 
 			payment: {
 				method: 'COD',
@@ -555,7 +522,7 @@ ${itemsText}
 
 								<div>
 									<label className="block text-sm font-medium text-gray-700 mb-1.5">
-										Email
+										Email (optional)
 									</label>
 
 									<div className="relative">
@@ -800,15 +767,13 @@ ${itemsText}
 
 									<span
 										className={
-											shippingCost === 0
+											deliveryCharge === 0
 												? 'font-medium text-green-600'
 												: 'font-medium text-gray-900'
 										}>
-										{shippingCost === 0
+										{deliveryCharge === 0
 											? 'FREE'
-											: `৳${Number(shippingCost).toFixed(
-													2
-												)}`}
+											: `৳${deliveryCharge.toFixed(2)}`}
 									</span>
 								</div>
 							</div>
@@ -837,7 +802,11 @@ ${itemsText}
 							<button
 								type="button"
 								onClick={handleConfirmOrder}
-								disabled={processing || cart.length === 0}
+								disabled={
+									processing ||
+									orderPlaced ||
+									cart.length === 0
+								}
 								className="w-full mt-6 flex items-center justify-center gap-2 bg-gray-900 text-white py-4 px-5 rounded-xl font-semibold text-base hover:bg-black active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
 								{processing ? (
 									<>
@@ -846,6 +815,11 @@ ${itemsText}
 											className="animate-spin"
 										/>
 										Placing Order...
+									</>
+								) : orderPlaced ? (
+									<>
+										<CheckCircle2 size={19} />
+										Order Placed
 									</>
 								) : (
 									<>

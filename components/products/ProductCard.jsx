@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingCart, Eye, Package } from 'lucide-react';
@@ -7,53 +9,103 @@ import { useDispatch } from 'react-redux';
 import { addToCart } from '@/redux/store/slices/cartSlice';
 import toast from 'react-hot-toast';
 
+const UNIT_LABELS = {
+	gram: 'গ্রাম',
+	kg: 'কেজি',
+	milliliter: 'মিলিলিটার',
+	litre: 'লিটার',
+	piece: 'পিস',
+};
+
+const formatSize = (variant) =>
+	`${variant.value} ${UNIT_LABELS[variant.unit] || variant.unit}`;
+
 export default function ProductCard({ product }) {
-    const dispatch = useDispatch();
+	const dispatch = useDispatch();
 
-    const regularPrice = Number(product.regularPrice || 0);
-    const sellPrice = Number(product.sellPrice || 0);
+	const variants = Array.isArray(product?.variants) ? product.variants : [];
 
-    // Sell price থাকলে সেটাই current price
-    const finalPrice = sellPrice > 0 ? sellPrice : regularPrice;
+	/* Default: first in-stock variant, otherwise the first one */
 
-    const hasDiscount =
-        regularPrice > 0 &&
-        sellPrice > 0 &&
-        sellPrice < regularPrice;
+	const [selectedId, setSelectedId] = useState(() => {
+		const firstAvailable = variants.find((v) => Number(v.stock) > 0);
 
-    const discountPercent = hasDiscount
-        ? Math.round(((regularPrice - sellPrice) / regularPrice) * 100)
-        : 0;
+		return String((firstAvailable || variants[0])?._id || '');
+	});
 
-    const isOutOfStock = Number(product.stock || 0) <= 0;
+	const selected =
+		variants.find((v) => String(v._id) === selectedId) || variants[0];
 
-    const handleAddToCart = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+	/* Prices and stock come from the selected variant */
 
-        if (isOutOfStock) return;
+	const regularPrice = Number(selected?.regularPrice || 0);
+	const sellPrice = Number(selected?.sellPrice || 0);
 
-        dispatch(
-            addToCart({
-                product,
-                quantity: 1,
-            })
-        );
+	const finalPrice = sellPrice > 0 ? sellPrice : regularPrice;
 
-        toast.success('Product added to cart');
-    };
+	const hasDiscount =
+		regularPrice > 0 && sellPrice > 0 && sellPrice < regularPrice;
 
+	const discountPercent = hasDiscount
+		? Math.round(((regularPrice - sellPrice) / regularPrice) * 100)
+		: 0;
 
-    return (
+	const selectedOutOfStock = Number(selected?.stock || 0) <= 0;
+
+	const allOutOfStock = variants.every((v) => Number(v.stock || 0) <= 0);
+
+	const productHref = `/product/${encodeURIComponent(product.slug || '')}`;
+
+	const categoryLabel = (product.category || '').replace(/-/g, ' ');
+
+	const handleSelectVariant = (event, variant) => {
+		event.preventDefault();
+		event.stopPropagation();
+
+		setSelectedId(String(variant._id));
+	};
+
+	const handleAddToCart = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		if (!selected || selectedOutOfStock) return;
+
+		/*
+		 * The cart receives a flat product for the chosen variant,
+		 * so it still has price, stock, size and image to work with.
+		 */
+
+		dispatch(
+			addToCart({
+				product: {
+					...product,
+					variantId: String(selected._id),
+					regularPrice,
+					sellPrice: finalPrice,
+					stock: Number(selected.stock || 0),
+					sku: selected.sku || product.sku || '',
+					size: { value: selected.value, unit: selected.unit },
+				},
+				quantity: 1,
+			})
+		);
+
+		toast.success(
+			`${product.name} (${formatSize(selected)}) added to cart`
+		);
+	};
+
+	return (
 		<article className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
 			{/* Product Image */}
-			<Link href={`/${product.slug || ''}`} className="block">
+			<Link href={productHref} className="block">
 				<div className="relative aspect-square overflow-hidden bg-gray-50">
 					{product.image ? (
 						<Image
 							src={product.image}
 							alt={product.name || 'Product'}
-                            fill
+							fill
 							sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
 							className="object-cover transition-transform duration-500 group-hover:scale-105"
 						/>
@@ -71,8 +123,8 @@ export default function ProductCard({ product }) {
 						</span>
 					)}
 
-					{/* Out of Stock */}
-					{isOutOfStock && (
+					{/* Out of Stock (only when every variant is sold out) */}
+					{allOutOfStock && (
 						<div className="absolute inset-0 flex items-center justify-center bg-black/40">
 							<span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 shadow">
 								Out of Stock
@@ -92,24 +144,52 @@ export default function ProductCard({ product }) {
 			{/* Product Content */}
 			<div className="p-3 sm:p-4">
 				{/* Category */}
-				{product.category && (
+				{categoryLabel && (
 					<p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">
-						{product.category}
+						{categoryLabel}
 					</p>
 				)}
 
 				{/* Product Name */}
-				<Link href={`/${product.slug || ''}`}>
+				<Link href={productHref}>
 					<h2 className="line-clamp-2 min-h-[40px] text-sm font-semibold leading-5 text-gray-800 transition-colors hover:text-green-600 sm:text-[15px]">
 						{product.name}
 					</h2>
 				</Link>
 
-				{/* Size */}
-				{product.size?.value && product.size?.unit && (
-					<p className="mt-1 text-xs text-gray-500">
-						{product.size.value} {product.size.unit}
-					</p>
+				{/* Size selector */}
+				{variants.length > 1 ? (
+					<div className="mt-2 flex flex-wrap gap-1.5">
+						{variants.map((variant) => {
+							const isSelected =
+								String(variant._id) === selectedId;
+
+							const soldOut = Number(variant.stock || 0) <= 0;
+
+							return (
+								<button
+									key={variant._id}
+									type="button"
+									aria-pressed={isSelected}
+									onClick={(e) =>
+										handleSelectVariant(e, variant)
+									}
+									className={`rounded-md border px-2 py-1 text-[11px] font-medium transition ${
+										isSelected
+											? 'border-green-600 bg-green-50 text-green-700'
+											: 'border-gray-200 text-gray-600 hover:border-green-400'
+									} ${soldOut ? 'line-through opacity-50' : ''}`}>
+									{formatSize(variant)}
+								</button>
+							);
+						})}
+					</div>
+				) : (
+					selected && (
+						<p className="mt-1 text-xs text-gray-500">
+							{formatSize(selected)}
+						</p>
+					)
 				)}
 
 				{/* Price */}
@@ -127,7 +207,7 @@ export default function ProductCard({ product }) {
 
 				{/* Stock Status */}
 				<div className="mt-1.5">
-					{product.stock > 0 ? (
+					{!selectedOutOfStock ? (
 						<span className="text-xs font-medium text-green-600">
 							✓ In Stock
 						</span>
@@ -141,12 +221,12 @@ export default function ProductCard({ product }) {
 				{/* Add To Cart */}
 				<button
 					type="button"
-					disabled={isOutOfStock}
+					disabled={selectedOutOfStock}
 					onClick={handleAddToCart}
 					className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-3 py-2.5 text-sm font-semibold text-white transition-all hover:bg-green-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400">
 					<ShoppingCart size={17} strokeWidth={2} />
 
-					{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+					{selectedOutOfStock ? 'Out of Stock' : 'Add to Cart'}
 				</button>
 			</div>
 		</article>

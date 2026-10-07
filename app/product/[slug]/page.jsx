@@ -1,960 +1,556 @@
+import { cache } from 'react';
+
 import Image from 'next/image';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
-import {
-  ChevronRight,
-  ShoppingCart,
-  Star,
-  Truck,
-  ShieldCheck,
-} from 'lucide-react';
+import { ChevronRight, Truck, ShieldCheck, BadgeCheck } from 'lucide-react';
 
-import {connectDB} from '@/lib/dbConnect';
+import { connectDB } from '@/lib/dbConnect';
 import Product from '@/models/Product';
 
+import ProductPurchase from './ProductPurchase';
 
 /* =========================================================
-   HELPERS
-   ========================================================= */
+   CACHING (ISR): page is rebuilt at most every 5 minutes.
+   Call revalidatePath('/product/' + slug) in your product
+   API after create/update/delete for instant updates.
+========================================================= */
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://shalbanfood.vercel.app';
-
-const SITE_NAME =
-  'Shalban Food';
-
-
-const getUnitLabel = (unit) => {
-  const labels = {
-    gram: 'গ্রাম',
-    kg: 'কেজি',
-    milliliter: 'মিলিলিটার',
-    litre: 'লিটার',
-    piece: 'পিস',
-  };
-
-  return labels[unit] || unit;
-};
-
-
-const formatSize = (variant) => {
-  return `${variant.value} ${getUnitLabel(
-    variant.unit
-  )}`;
-};
-
+export const revalidate = 300;
 
 /* =========================================================
-   FIND PRODUCT
-   ========================================================= */
+   CONSTANTS & HELPERS
+========================================================= */
 
-async function getProduct(slug) {
-  await connectDB();
+const SITE_URL = (
+	process.env.NEXT_PUBLIC_SITE_URL || 'https://shalbanfood.vercel.app'
+).replace(/\/+$/, '');
 
-  const product =
-    await Product.findOne({
-      slug,
-      isActive: true,
-    }).lean();
+const SITE_NAME = 'Shalban Food';
 
-  if (!product) return null;
+const UNIT_LABELS = {
+	gram: 'গ্রাম',
+	kg: 'কেজি',
+	milliliter: 'মিলিলিটার',
+	litre: 'লিটার',
+	piece: 'পিস',
+};
 
-  return JSON.parse(
-    JSON.stringify(product)
-  );
-}
+const formatSize = (variant) =>
+	`${variant.value} ${UNIT_LABELS[variant.unit] || variant.unit}`;
 
+const formatCategory = (category = '') => category.replace(/-/g, ' ');
+
+const safeDecode = (value = '') => {
+	try {
+		return decodeURIComponent(value);
+	} catch {
+		return value;
+	}
+};
+
+const absoluteUrl = (url = '') => {
+	if (!url) return '';
+
+	return url.startsWith('http') ? url : `${SITE_URL}${url}`;
+};
+
+const truncate = (text = '', max = 160) => {
+	const clean = text.replace(/\s+/g, ' ').trim();
+
+	return clean.length > max ? `${clean.slice(0, max - 1).trim()}…` : clean;
+};
+
+const productPath = (slug) => `/product/${encodeURIComponent(slug)}`;
+
+/* Escape "<" so product text can never close the <script> tag */
+
+const toJsonLd = (data) => JSON.stringify(data).replace(/</g, '\\u003c');
+
+/* =========================================================
+   DATA
+   cache() makes generateMetadata and the page share one query
+========================================================= */
+
+const getProduct = cache(async (rawSlug) => {
+	await connectDB();
+
+	const product = await Product.findOne({
+		slug: safeDecode(rawSlug).toLowerCase(),
+		isActive: true,
+	})
+		.select('-__v')
+		.lean();
+
+	if (!product) return null;
+
+	return JSON.parse(JSON.stringify(product));
+});
+
+const getRelatedProducts = cache(async (category, excludeId) => {
+	await connectDB();
+
+	const related = await Product.find({
+		category,
+		isActive: true,
+		_id: { $ne: excludeId },
+	})
+		.select('name slug image variants.sellPrice')
+		.sort({ isFeatured: -1, createdAt: -1 })
+		.limit(4)
+		.lean();
+
+	return JSON.parse(JSON.stringify(related));
+});
 
 /* =========================================================
    SEO METADATA
-   ========================================================= */
+========================================================= */
 
-export async function generateMetadata({
-  params,
-}) {
-  const { slug } = await params;
+export async function generateMetadata({ params }) {
+	const { slug } = await params;
 
-  const product =
-    await getProduct(slug);
+	const product = await getProduct(slug);
 
-  if (!product) {
-    return {
-      title:
-        `Product Not Found | ${SITE_NAME}`,
+	if (!product) {
+		return {
+			title: { absolute: `Product Not Found | ${SITE_NAME}` },
+			robots: { index: false, follow: false },
+		};
+	}
 
-      description:
-        `Product not found on ${SITE_NAME}.`,
-    };
-  }
+	const title = product.seoTitle?.trim() || `${product.name} | ${SITE_NAME}`;
 
+	const description = truncate(
+		product.seoDescription?.trim() ||
+			product.shortDescription?.trim() ||
+			product.description?.trim() ||
+			`${product.name} কিনুন ${SITE_NAME} থেকে।`
+	);
 
-  const title =
-    product.seoTitle?.trim() ||
-    `${product.name} | ${SITE_NAME}`;
+	const canonical =
+		product.canonicalUrl?.trim() ||
+		`${SITE_URL}${productPath(product.slug)}`;
 
+	const image = absoluteUrl(product.image) || `${SITE_URL}/og-image.png`;
 
-  const description =
-    product.seoDescription?.trim() ||
-    product.shortDescription?.trim() ||
-    `${product.name} কিনুন Shalban Food থেকে।`;
+	return {
+		metadataBase: new URL(SITE_URL),
 
+		title: { absolute: title },
 
-  const canonical =
-    product.canonicalUrl?.trim() ||
-    `${SITE_URL}/product/${product.slug}`;
+		description,
 
+		keywords: Array.isArray(product.keywords) ? product.keywords : [],
 
-  const image =
-    product.image ||
-    `${SITE_URL}/og-image.png`;
+		alternates: { canonical },
 
+		openGraph: {
+			title,
+			description,
+			url: canonical,
+			siteName: SITE_NAME,
+			type: 'website',
+			locale: 'bn_BD',
+			images: [{ url: image, alt: product.name }],
+		},
 
-  return {
-    title,
+		twitter: {
+			card: 'summary_large_image',
+			title,
+			description,
+			images: [image],
+		},
 
-    description,
-
-    keywords:
-      Array.isArray(
-        product.keywords
-      )
-        ? product.keywords
-        : [],
-
-    alternates: {
-      canonical,
-    },
-
-    openGraph: {
-      title,
-
-      description,
-
-      url: canonical,
-
-      siteName: SITE_NAME,
-
-      type: 'website',
-
-      locale: 'bn_BD',
-
-      images: [
-        {
-          url: image,
-
-          width: 1200,
-
-          height: 1200,
-
-          alt: product.name,
-        },
-      ],
-    },
-
-    twitter: {
-      card:
-        'summary_large_image',
-
-      title,
-
-      description,
-
-      images: [image],
-    },
-
-    robots: {
-      index: true,
-
-      follow: true,
-
-      googleBot: {
-        index: true,
-
-        follow: true,
-
-        'max-image-preview':
-          'large',
-
-        'max-snippet':
-          -1,
-
-        'max-video-preview':
-          -1,
-      },
-    },
-  };
+		robots: {
+			index: true,
+			follow: true,
+			googleBot: {
+				index: true,
+				follow: true,
+				'max-image-preview': 'large',
+				'max-snippet': -1,
+				'max-video-preview': -1,
+			},
+		},
+	};
 }
-
 
 /* =========================================================
    PAGE
-   ========================================================= */
-
-export default async function ProductPage({
-  params,
-}) {
-  const { slug } = await params;
-
-  const product =
-    await getProduct(slug);
-
-
-  /* =======================================================
-     404
-     ======================================================= */
-
-  if (!product) {
-    return (
-      <main className="mx-auto max-w-5xl px-4 py-20 text-center">
-        <h1 className="text-3xl font-bold">
-          Product Not Found
-        </h1>
-
-        <p className="mt-3 text-gray-500">
-          এই পণ্যটি পাওয়া যায়নি।
-        </p>
-
-        <Link
-          href="/shop"
-          className="
-            mt-6
-            inline-flex
-            rounded-lg
-            bg-green-600
-            px-5
-            py-3
-            text-white
-          "
-        >
-          Shop Now
-        </Link>
-      </main>
-    );
-  }
-
-
-  /* =======================================================
-     VARIANTS
-     ======================================================= */
-
-  const variants =
-    Array.isArray(product.variants)
-      ? product.variants
-      : [];
-
-
-  const availableVariants =
-    variants.filter(
-      (variant) =>
-        Number(variant.stock) > 0
-    );
-
-
-  const minPrice =
-    variants.length
-      ? Math.min(
-          ...variants.map(
-            (variant) =>
-              Number(
-                variant.sellPrice
-              )
-          )
-        )
-      : 0;
-
-
-  const maxPrice =
-    variants.length
-      ? Math.max(
-          ...variants.map(
-            (variant) =>
-              Number(
-                variant.sellPrice
-              )
-          )
-        )
-      : 0;
-
-
-  /* =======================================================
-     PRODUCT URL
-     ======================================================= */
-
-  const productUrl =
-    `${SITE_URL}/product/${product.slug}`;
-
-
-  /* =======================================================
-     JSON-LD
-     ======================================================= */
-
-  const productJsonLd = {
-    '@context':
-      'https://schema.org',
-
-    '@type':
-      'Product',
-
-    '@id':
-      `${productUrl}#product`,
-
-    name:
-      product.name,
-
-    description:
-      product.description ||
-      product.shortDescription ||
-      product.seoDescription ||
-      '',
-
-    image:
-      product.image
-        ? [product.image]
-        : [],
-
-    sku:
-      product.sku || undefined,
-
-    brand: product.brand
-      ? {
-          '@type':
-            'Brand',
-
-          name:
-            product.brand,
-        }
-      : {
-          '@type':
-            'Brand',
-
-          name:
-            SITE_NAME,
-        },
-
-    category:
-      product.category,
-
-    url:
-      productUrl,
-
-    offers: variants.map(
-      (variant) => ({
-        '@type':
-          'Offer',
-
-        url:
-          productUrl,
-
-        priceCurrency:
-          'BDT',
-
-        price:
-          Number(
-            variant.sellPrice
-          ).toFixed(2),
-
-        availability:
-          Number(
-            variant.stock
-          ) > 0
-            ? 'https://schema.org/InStock'
-            : 'https://schema.org/OutOfStock',
-
-        itemCondition:
-          'https://schema.org/NewCondition',
-
-        seller: {
-          '@type':
-            'Organization',
-
-          name:
-            SITE_NAME,
-
-          url:
-            SITE_URL,
-        },
-
-        name:
-          `${product.name} - ${formatSize(
-            variant
-          )}`,
-      })
-    ),
-  };
-
-
-  /* =======================================================
-     BREADCRUMB JSON-LD
-     ======================================================= */
-
-  const breadcrumbJsonLd = {
-    '@context':
-      'https://schema.org',
-
-    '@type':
-      'BreadcrumbList',
-
-    itemListElement: [
-      {
-        '@type':
-          'ListItem',
-
-        position: 1,
-
-        name:
-          'Home',
-
-        item:
-          SITE_URL,
-      },
-
-      {
-        '@type':
-          'ListItem',
-
-        position: 2,
-
-        name:
-          'Shop',
-
-        item:
-          `${SITE_URL}/shop`,
-      },
-
-      {
-        '@type':
-          'ListItem',
-
-        position: 3,
-
-        name:
-          product.name,
-
-        item:
-          productUrl,
-      },
-    ],
-  };
-
-
-  return (
-    <main className="min-h-screen bg-white">
-
-      {/* ===================================================
-          STRUCTURED DATA
-      =================================================== */}
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html:
-            JSON.stringify(
-              productJsonLd
-            ),
-        }}
-      />
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html:
-            JSON.stringify(
-              breadcrumbJsonLd
-            ),
-        }}
-      />
-
-
-      {/* ===================================================
-          BREADCRUMB
-      =================================================== */}
-
-      <div
-        className="
-          border-b
-          border-gray-100
-        "
-      >
-        <div
-          className="
-            mx-auto
-            flex
-            max-w-7xl
-            items-center
-            gap-1
-            overflow-hidden
-            px-4
-            py-3
-            text-xs
-            text-gray-500
-          "
-        >
-
-          <Link
-            href="/"
-            className="hover:text-green-600"
-          >
-            Home
-          </Link>
-
-          <ChevronRight size={14} />
-
-          <Link
-            href="/shop"
-            className="hover:text-green-600"
-          >
-            Shop
-          </Link>
-
-          <ChevronRight size={14} />
-
-          <span className="truncate text-gray-700">
-            {product.name}
-          </span>
-
-        </div>
-      </div>
-
-
-      {/* ===================================================
-          PRODUCT
-      =================================================== */}
-
-      <section
-        className="
-          mx-auto
-          max-w-7xl
-          px-4
-          py-8
-          sm:py-12
-        "
-      >
-
-        <div
-          className="
-            grid
-            gap-8
-            lg:grid-cols-2
-          "
-        >
-
-          {/* =================================================
-              IMAGE
-          ================================================= */}
-
-          <div>
-
-            <div
-              className="
-                relative
-                aspect-square
-                overflow-hidden
-                rounded-2xl
-                bg-gray-50
-              "
-            >
-
-              {product.image ? (
-                <Image
-                  src={
-                    product.image
-                  }
-                  alt={
-                    product.name
-                  }
-                  fill
-                  priority
-                  sizes="
-                    (max-width: 768px) 100vw,
-                    50vw
-                  "
-                  className="
-                    object-contain
-                    p-5
-                  "
-                />
-              ) : (
-                <div
-                  className="
-                    flex
-                    h-full
-                    items-center
-                    justify-center
-                    text-gray-400
-                  "
-                >
-                  No Image
-                </div>
-              )}
-
-            </div>
-
-          </div>
-
-
-          {/* =================================================
-              INFORMATION
-          ================================================= */}
-
-          <div>
-
-            {/* category */}
-
-            <Link
-              href={`/category/${product.category}`}
-              className="
-                text-sm
-                font-medium
-                text-green-600
-                hover:underline
-              "
-            >
-              {product.category}
-            </Link>
-
-
-            {/* title */}
-
-            <h1
-              className="
-                mt-2
-                text-3xl
-                font-bold
-                leading-tight
-                text-gray-900
-                sm:text-4xl
-              "
-            >
-              {product.name}
-            </h1>
-
-
-            {/* brand */}
-
-            {product.brand && (
-              <p
-                className="
-                  mt-2
-                  text-sm
-                  text-gray-500
-                "
-              >
-                Brand: {product.brand}
-              </p>
-            )}
-
-
-            {/* rating placeholder */}
-
-            <div
-              className="
-                mt-4
-                flex
-                items-center
-                gap-2
-              "
-            >
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-1
-                  text-yellow-500
-                "
-              >
-                <Star
-                  size={16}
-                  fill="currentColor"
-                />
-
-                <span className="text-sm">
-                  New Product
-                </span>
-              </div>
-            </div>
-
-
-            {/* price */}
-
-            <div
-              className="
-                mt-5
-                text-2xl
-                font-bold
-                text-green-600
-              "
-            >
-              {minPrice === maxPrice
-                ? `৳${minPrice}`
-                : `৳${minPrice} - ৳${maxPrice}`}
-            </div>
-
-
-            {/* short description */}
-
-            {product.shortDescription && (
-              <p
-                className="
-                  mt-5
-                  leading-7
-                  text-gray-600
-                "
-              >
-                {
-                  product.shortDescription
-                }
-              </p>
-            )}
-
-
-            {/* variants */}
-
-            <div className="mt-7">
-
-              <h2
-                className="
-                  mb-3
-                  text-sm
-                  font-semibold
-                  text-gray-900
-                "
-              >
-                Available Sizes
-              </h2>
-
-
-              <div
-                className="
-                  flex
-                  flex-wrap
-                  gap-2
-                "
-              >
-                {variants.map(
-                  (variant) => (
-                    <div
-                      key={
-                        variant._id
-                      }
-                      className="
-                        rounded-lg
-                        border
-                        border-gray-200
-                        px-4
-                        py-3
-                      "
-                    >
-                      <div
-                        className="
-                          font-semibold
-                          text-gray-900
-                        "
-                      >
-                        {formatSize(
-                          variant
-                        )}
-                      </div>
-
-                      <div
-                        className="
-                          mt-1
-                          text-sm
-                          font-medium
-                          text-green-600
-                        "
-                      >
-                        ৳
-                        {
-                          variant.sellPrice
-                        }
-                      </div>
-
-                      <div
-                        className="
-                          mt-1
-                          text-xs
-                          text-gray-500
-                        "
-                      >
-                        {Number(
-                          variant.stock
-                        ) > 0
-                          ? 'In Stock'
-                          : 'Out of Stock'}
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-
-            </div>
-
-
-            {/* features */}
-
-            <div
-              className="
-                mt-7
-                grid
-                gap-3
-                sm:grid-cols-3
-              "
-            >
-
-              <div
-                className="
-                  rounded-xl
-                  bg-gray-50
-                  p-3
-                "
-              >
-                <Truck
-                  size={20}
-                  className="text-green-600"
-                />
-
-                <p
-                  className="
-                    mt-2
-                    text-xs
-                    text-gray-600
-                  "
-                >
-                  বাংলাদেশজুড়ে
-                  ডেলিভারি
-                </p>
-              </div>
-
-
-              <div
-                className="
-                  rounded-xl
-                  bg-gray-50
-                  p-3
-                "
-              >
-                <ShieldCheck
-                  size={20}
-                  className="text-green-600"
-                />
-
-                <p
-                  className="
-                    mt-2
-                    text-xs
-                    text-gray-600
-                  "
-                >
-                  Quality
-                  Checked
-                </p>
-              </div>
-
-
-              <div
-                className="
-                  rounded-xl
-                  bg-gray-50
-                  p-3
-                "
-              >
-                <ShoppingCart
-                  size={20}
-                  className="text-green-600"
-                />
-
-                <p
-                  className="
-                    mt-2
-                    text-xs
-                    text-gray-600
-                  "
-                >
-                  Easy
-                  Ordering
-                </p>
-              </div>
-
-            </div>
-
-
-            {/* CTA */}
-
-            <button
-              type="button"
-              className="
-                mt-7
-                flex
-                w-full
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-green-600
-                px-6
-                py-4
-                font-semibold
-                text-white
-                transition
-                hover:bg-green-700
-              "
-            >
-              <ShoppingCart
-                size={20}
-              />
-
-              Add to Cart
-            </button>
-
-          </div>
-
-        </div>
-
-
-        {/* =================================================
-            DESCRIPTION
-        ================================================= */}
-
-        {product.description && (
-          <section
-            className="
-              mt-12
-              border-t
-              border-gray-100
-              pt-10
-            "
-          >
-
-            <h2
-              className="
-                text-2xl
-                font-bold
-                text-gray-900
-              "
-            >
-              Product Details
-            </h2>
-
-            <div
-              className="
-                mt-5
-                max-w-4xl
-                whitespace-pre-line
-                leading-8
-                text-gray-600
-              "
-            >
-              {
-                product.description
-              }
-            </div>
-
-          </section>
-        )}
-
-      </section>
-
-    </main>
-  );
+========================================================= */
+
+export default async function ProductPage({ params }) {
+	const { slug } = await params;
+
+	const product = await getProduct(slug);
+
+	/* Real 404 status so Google drops dead URLs */
+
+	if (!product) {
+		notFound();
+	}
+
+	const relatedProducts = await getRelatedProducts(
+		product.category,
+		product._id
+	);
+
+	/* -------------------------------------------------------
+	   VARIANTS
+	------------------------------------------------------- */
+
+	const variants = (
+		Array.isArray(product.variants) ? product.variants : []
+	).map((variant) => ({
+		_id: String(variant._id),
+		label: formatSize(variant),
+		value: variant.value,
+		unit: variant.unit,
+		regularPrice: Number(variant.regularPrice) || 0,
+		sellPrice: Number(variant.sellPrice) || 0,
+		stock: Number(variant.stock) || 0,
+		sku: variant.sku || '',
+		soldCount: Number(variant.soldCount) || 0,
+	}));
+
+	const prices = variants.map((variant) => variant.sellPrice);
+
+	const minPrice = prices.length ? Math.min(...prices) : 0;
+
+	const maxPrice = prices.length ? Math.max(...prices) : 0;
+
+	const inStock = variants.some((variant) => variant.stock > 0);
+
+	const totalSold = variants.reduce(
+		(sum, variant) => sum + variant.soldCount,
+		0
+	);
+
+	/* -------------------------------------------------------
+	   URLS
+	------------------------------------------------------- */
+
+	const productUrl = `${SITE_URL}${productPath(product.slug)}`;
+
+	const categoryUrl = `${SITE_URL}/category/${encodeURIComponent(
+		product.category
+	)}`;
+
+	const imageUrl = absoluteUrl(product.image);
+
+	/* -------------------------------------------------------
+	   JSON-LD: PRODUCT
+	   (No fake aggregateRating: add it only when you have
+	   real reviews, otherwise Google may penalise the site.)
+	------------------------------------------------------- */
+
+	const priceValidUntil = new Date(new Date().getFullYear() + 1, 11, 31)
+		.toISOString()
+		.split('T')[0];
+
+	const productJsonLd = {
+		'@context': 'https://schema.org',
+		'@type': 'Product',
+		'@id': `${productUrl}#product`,
+		name: product.name,
+		description: truncate(
+			product.description ||
+				product.shortDescription ||
+				product.seoDescription ||
+				product.name,
+			5000
+		),
+		image: imageUrl ? [imageUrl] : undefined,
+		sku: product.sku || undefined,
+		category: formatCategory(product.category),
+		url: productUrl,
+		brand: {
+			'@type': 'Brand',
+			name: product.brand || SITE_NAME,
+		},
+		offers: {
+			'@type': 'AggregateOffer',
+			priceCurrency: 'BDT',
+			lowPrice: minPrice.toFixed(2),
+			highPrice: maxPrice.toFixed(2),
+			offerCount: variants.length,
+			availability: inStock
+				? 'https://schema.org/InStock'
+				: 'https://schema.org/OutOfStock',
+			offers: variants.map((variant) => ({
+				'@type': 'Offer',
+				name: `${product.name} - ${variant.label}`,
+				url: productUrl,
+				sku: variant.sku || undefined,
+				priceCurrency: 'BDT',
+				price: variant.sellPrice.toFixed(2),
+				priceValidUntil,
+				availability:
+					variant.stock > 0
+						? 'https://schema.org/InStock'
+						: 'https://schema.org/OutOfStock',
+				itemCondition: 'https://schema.org/NewCondition',
+				seller: {
+					'@type': 'Organization',
+					name: SITE_NAME,
+					url: SITE_URL,
+				},
+			})),
+		},
+	};
+
+	/* -------------------------------------------------------
+	   JSON-LD: BREADCRUMB
+	------------------------------------------------------- */
+
+	const breadcrumbJsonLd = {
+		'@context': 'https://schema.org',
+		'@type': 'BreadcrumbList',
+		itemListElement: [
+			{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+			{
+				'@type': 'ListItem',
+				position: 2,
+				name: 'Shop',
+				item: `${SITE_URL}/shop`,
+			},
+			{
+				'@type': 'ListItem',
+				position: 3,
+				name: formatCategory(product.category),
+				item: categoryUrl,
+			},
+			{
+				'@type': 'ListItem',
+				position: 4,
+				name: product.name,
+				item: productUrl,
+			},
+		],
+	};
+
+	return (
+		<main className="min-h-screen bg-white">
+			{/* STRUCTURED DATA */}
+
+			<script
+				type="application/ld+json"
+				dangerouslySetInnerHTML={{ __html: toJsonLd(productJsonLd) }}
+			/>
+
+			<script
+				type="application/ld+json"
+				dangerouslySetInnerHTML={{ __html: toJsonLd(breadcrumbJsonLd) }}
+			/>
+
+			{/* BREADCRUMB */}
+
+			<nav aria-label="Breadcrumb" className="border-b border-gray-100">
+				<ol className="mx-auto flex max-w-7xl items-center gap-1 overflow-hidden px-4 py-3 text-xs text-gray-500">
+					<li>
+						<Link href="/" className="hover:text-green-600">
+							Home
+						</Link>
+					</li>
+
+					<li aria-hidden="true">
+						<ChevronRight size={14} />
+					</li>
+
+					<li>
+						<Link href="/shop" className="hover:text-green-600">
+							Shop
+						</Link>
+					</li>
+
+					<li aria-hidden="true">
+						<ChevronRight size={14} />
+					</li>
+
+					<li>
+						<Link
+							href={`/category/${encodeURIComponent(product.category)}`}
+							className="capitalize hover:text-green-600">
+							{formatCategory(product.category)}
+						</Link>
+					</li>
+
+					<li aria-hidden="true">
+						<ChevronRight size={14} />
+					</li>
+
+					<li className="truncate text-gray-700" aria-current="page">
+						{product.name}
+					</li>
+				</ol>
+			</nav>
+
+			{/* PRODUCT */}
+
+			<article className="mx-auto max-w-7xl px-4 py-8 sm:py-12">
+				<div className="grid gap-8 lg:grid-cols-2">
+					{/* IMAGE */}
+
+					<div>
+						<div className="relative aspect-square overflow-hidden rounded-2xl bg-gray-50">
+							{product.image ? (
+								<Image
+									src={product.image}
+									alt={`${product.name} - ${SITE_NAME}`}
+									fill
+									priority
+									sizes="(max-width: 1024px) 100vw, 50vw"
+									className="object-contain p-5"
+								/>
+							) : (
+								<div className="flex h-full items-center justify-center text-gray-400">
+									No Image
+								</div>
+							)}
+						</div>
+					</div>
+
+					{/* INFORMATION */}
+
+					<div>
+						<Link
+							href={`/category/${encodeURIComponent(product.category)}`}
+							className="text-sm font-medium capitalize text-green-600 hover:underline">
+							{formatCategory(product.category)}
+						</Link>
+
+						<h1 className="mt-2 text-3xl font-bold leading-tight text-gray-900 sm:text-4xl">
+							{product.name}
+						</h1>
+
+						<div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+							{product.brand && (
+								<span>Brand: {product.brand}</span>
+							)}
+
+							{product.sku && <span>SKU: {product.sku}</span>}
+
+							{totalSold > 0 && <span>{totalSold}+ sold</span>}
+						</div>
+
+						{product.shortDescription && (
+							<p className="mt-5 leading-7 text-gray-600">
+								{product.shortDescription}
+							</p>
+						)}
+
+						{/* Interactive: price, size, quantity, cart */}
+
+						<ProductPurchase
+							productId={String(product._id)}
+							name={product.name}
+							slug={product.slug}
+							image={product.image || ''}
+							variants={variants}
+						/>
+
+						{/* TRUST */}
+
+						<ul className="mt-7 grid gap-3 sm:grid-cols-3">
+							<li className="rounded-xl bg-gray-50 p-3">
+								<Truck size={20} className="text-green-600" />
+
+								<p className="mt-2 text-xs text-gray-600">
+									বাংলাদেশজুড়ে ডেলিভারি
+								</p>
+							</li>
+
+							<li className="rounded-xl bg-gray-50 p-3">
+								<ShieldCheck
+									size={20}
+									className="text-green-600"
+								/>
+
+								<p className="mt-2 text-xs text-gray-600">
+									Quality Checked
+								</p>
+							</li>
+
+							<li className="rounded-xl bg-gray-50 p-3">
+								<BadgeCheck
+									size={20}
+									className="text-green-600"
+								/>
+
+								<p className="mt-2 text-xs text-gray-600">
+									{product.warranty || 'খাঁটি ও প্রাকৃতিক'}
+								</p>
+							</li>
+						</ul>
+					</div>
+				</div>
+
+				{/* DESCRIPTION */}
+
+				{product.description && (
+					<section className="mt-12 border-t border-gray-100 pt-10">
+						<h2 className="text-2xl font-bold text-gray-900">
+							Product Details
+						</h2>
+
+						<div className="mt-5 max-w-4xl whitespace-pre-line leading-8 text-gray-600">
+							{product.description}
+						</div>
+					</section>
+				)}
+
+				{/* RELATED PRODUCTS (internal links help SEO) */}
+
+				{relatedProducts.length > 0 && (
+					<section className="mt-12 border-t border-gray-100 pt-10">
+						<h2 className="text-2xl font-bold text-gray-900">
+							আরও দেখুন
+						</h2>
+
+						<div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+							{relatedProducts.map((item) => {
+								const itemPrices = (item.variants || []).map(
+									(v) => Number(v.sellPrice)
+								);
+
+								const itemMin = itemPrices.length
+									? Math.min(...itemPrices)
+									: 0;
+
+								return (
+									<Link
+										key={item._id}
+										href={productPath(item.slug)}
+										className="group block rounded-xl border border-gray-100 p-3 transition hover:border-green-300 hover:shadow-sm">
+										<div className="relative aspect-square overflow-hidden rounded-lg bg-gray-50">
+											{item.image && (
+												<Image
+													src={item.image}
+													alt={item.name}
+													fill
+													sizes="(max-width: 768px) 50vw, 25vw"
+													className="object-contain p-2"
+												/>
+											)}
+										</div>
+
+										<h3 className="mt-3 line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-green-600">
+											{item.name}
+										</h3>
+
+										<p className="mt-1 text-sm font-bold text-green-600">
+											৳{itemMin}
+											{itemPrices.length > 1 ? '+' : ''}
+										</p>
+									</Link>
+								);
+							})}
+						</div>
+					</section>
+				)}
+			</article>
+		</main>
+	);
 }

@@ -13,9 +13,7 @@ export async function GET() {
     try {
         await connectDB();
 
-        const categories = await Category.find({
-            isActive: true,
-        })
+        const categories = await Category.find()
             .sort({
                 sortOrder: 1,
                 createdAt: -1,

@@ -36,6 +36,7 @@ import AdminOrderDetailsModal, {
 	getOrderId,
 	ORDER_STATUSES,
 } from '../components/order/AdminOrderDetailsModal';
+import { STATUS_ICON } from '@/constants/icons';
 
 const PAGE_SIZE = 10;
 
@@ -50,16 +51,6 @@ const BADGE = {
 
 	cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
 };
-
-const STATUS_ICON = {
-	pending: Clock,
-	processing: Package,
-	shipped: Truck,
-	delivered: CheckCircle,
-	cancelled: XCircle,
-};
-
-
 
 function StatusBadge({ status }) {
 	const normalized = String(status || 'pending').toLowerCase();
@@ -91,7 +82,6 @@ function formatCurrency(value) {
 	}).format(number);
 }
 
-
 function formatDate(value) {
 	if (!value) return '—';
 
@@ -104,7 +94,6 @@ function formatDate(value) {
 		return '—';
 	}
 }
-
 
 function StatsCard({ title, value, icon: Icon, description }) {
 	return (
@@ -140,11 +129,11 @@ function StatsCard({ title, value, icon: Icon, description }) {
 export default function AdminOrders() {
 	const { data, isLoading, isError, error, refetch, isFetching } =
 		useAdminOrders();
+
 	const updateOrder = useUpdateOrder();
 	const deleteOrder = useDeleteOrder();
 
 	const orders = Array.isArray(data) ? data : [];
-
 
 	const [search, setSearch] = useState('');
 
@@ -791,9 +780,8 @@ export default function AdminOrders() {
 									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
 										Customer
 									</th>
-
 									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-										Items
+										Location
 									</th>
 
 									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -908,23 +896,11 @@ export default function AdminOrders() {
 													</div>
 
 													<span className="text-sm text-gray-700 dark:text-gray-300">
-														{Array.isArray(
-															order.items
-														)
-															? order.items.reduce(
-																	(
-																		sum,
-																		item
-																	) =>
-																		sum +
-																		Number(
-																			item.quantity ||
-																				1
-																		),
-																	0
-																)
-															: 0}{' '}
-														item(s)
+														{
+															order
+																.shippingAddress
+																.city
+														}
 													</span>
 												</div>
 											</td>

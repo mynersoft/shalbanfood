@@ -27,9 +27,6 @@ import { useDashboardOverview } from '@/hooks/useDashboard';
 import SalesCompare from "./components/overview/SalesCompare.jsx";
 
 
-// ======================================================
-// HELPERS
-// ======================================================
 
 function formatCurrency(value = 0) {
     return `৳${Number(value || 0).toLocaleString('en-BD')}`;
@@ -112,9 +109,6 @@ function getProductSoldCount(product) {
 }
 
 
-// ======================================================
-// STATUS CONFIG
-// ======================================================
 
 const STATUS_CONFIG = {
     pending: {

@@ -62,9 +62,6 @@ export default function CategoriesPage() {
         ? categoryData
         : [];
 
-    // ==========================================
-    // MUTATIONS
-    // ==========================================
 
     const addCategoryMutation = useAddCategory();
 
@@ -83,34 +80,34 @@ export default function CategoriesPage() {
 
     const searchText = search.trim().toLowerCase();
 
-    const filteredCategories = categories.filter(
-        (category) => {
-            const categoryMatch =
-                category.name
-                    ?.toLowerCase()
-                    .includes(searchText);
+    // const filteredCategories = categories.filter(
+    //     (category) => {
+    //         const categoryMatch =
+    //             category.name
+    //                 ?.toLowerCase()
+    //                 .includes(searchText);
 
-            const slugMatch =
-                category.slug
-                    ?.toLowerCase()
-                    .includes(searchText);
+    //         const slugMatch =
+    //             category.slug
+    //                 ?.toLowerCase()
+    //                 .includes(searchText);
 
-            const subCategoryMatch =
-                category.subCategories?.some(
-                    (subCategory) =>
-                        subCategory
-                            ?.toLowerCase()
-                            .includes(searchText)
-                );
+    //         const subCategoryMatch =
+    //             category?.subCategories?.some(
+    //                 (subCategory) =>
+    //                     subCategory
+    //                         ?.toLowerCase()
+    //                         .includes(searchText)
+    //             );
 
-            return (
-                !searchText ||
-                categoryMatch ||
-                slugMatch ||
-                subCategoryMatch
-            );
-        }
-    );
+    //         return (
+    //             !searchText ||
+    //             categoryMatch ||
+    //             slugMatch ||
+    //             subCategoryMatch
+    //         );
+    //     }
+    // );
 
     // ==========================================
     // TOGGLE CATEGORY
@@ -406,53 +403,16 @@ export default function CategoriesPage() {
                     </div>
                 </div>
 
-                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
-                            <Search
-                                size={22}
-                                className="text-gray-700"
-                            />
-                        </div>
-
-                        <div>
-                            <p className="text-sm text-gray-500">
-                                Showing
-                            </p>
-
-                            <p className="mt-1 text-2xl font-bold text-gray-900">
-                                {filteredCategories.length}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+             
 
             </div>
 
-            {/* SEARCH */}
-            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="relative">
-                    <Search
-                        size={18}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) =>
-                            setSearch(e.target.value)
-                        }
-                        placeholder="Search categories, slug or subcategories..."
-                        className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                    />
-                </div>
-            </div>
+        
 
             {/* CATEGORY LIST */}
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
-                {filteredCategories.length === 0 ? (
+                {categories.length === 0 ? (
                     <div className="flex min-h-[300px] flex-col items-center justify-center px-4 text-center">
 
                         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
@@ -482,7 +442,7 @@ export default function CategoriesPage() {
                 ) : (
                     <div className="divide-y divide-gray-100">
 
-                        {filteredCategories.map(
+                        {categories.map(
                             (category, index) => {
                                 const subCategories =
                                     category.subCategories ||
