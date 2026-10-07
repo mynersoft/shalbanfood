@@ -784,7 +784,7 @@ export default function AdminOrders() {
 										Location
 									</th>
 
-{/* dfkj */}
+
 									
 									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
 										Total
