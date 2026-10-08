@@ -1,179 +1,435 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
-import {connectDB} from "@/lib/dbConnect";
-import User from "@/models/User";
-import Order from "@/models/Order";
+import {connectDB} from '@/lib/dbConnect';
+import User from '@/models/User';
+import Order from '@/models/Order';
 
 export async function GET(request) {
-    try {
-        await connectDB();
+	try {
+		await connectDB();
 
-        const { searchParams } = new URL(request.url);
+		const { searchParams } = new URL(request.url);
 
-        const search = searchParams.get("search")?.trim() || "";
+		const page = Math.max(1, Number(searchParams.get('page')) || 1);
 
-        const page = Math.max(
-            Number(searchParams.get("page")) || 1,
-            1
-        );
+		const limit = Math.min(
+			100,
+			Math.max(1, Number(searchParams.get('limit')) || 10)
+		);
 
-        const limit = Math.min(
-            Math.max(
-                Number(searchParams.get("limit")) || 10,
-                1
-            ),
-            100
-        );
+		const search = searchParams.get('search')?.trim() || '';
 
-        const skip = (page - 1) * limit;
+		// ==================================================
+		// USER FILTER
+		// ==================================================
 
-        // --------------------------------
-        // Customer filter
-        // --------------------------------
-        const userFilter = {
-            role: "user",
-        };
+		const userMatch = {
+			role: { $ne: 'admin' },
+		};
 
-        if (search) {
-            const regex = new RegExp(search, "i");
+		if (search) {
+			userMatch.$or = [
+				{
+					name: {
+						$regex: search,
+						$options: 'i',
+					},
+				},
+				{
+					email: {
+						$regex: search,
+						$options: 'i',
+					},
+				},
+				{
+					phone: {
+						$regex: search,
+						$options: 'i',
+					},
+				},
+			];
+		}
 
-            userFilter.$or = [
-                { name: regex },
-                { email: regex },
-                { phone: regex },
-            ];
-        }
+		// ==================================================
+		// TOTAL CUSTOMERS
+		// ==================================================
 
-        // --------------------------------
-        // Get users
-        // --------------------------------
-        const [users, totalCustomers] = await Promise.all([
-            User.find(userFilter)
-                .select("_id name email phone role createdAt")
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
+		const totalCustomers = await User.countDocuments(userMatch);
 
-            User.countDocuments(userFilter),
-        ]);
+		const totalPages = Math.ceil(totalCustomers / limit);
 
-        // --------------------------------
-        // User IDs
-        // --------------------------------
-        const userIds = users.map((user) => user._id);
+		// ==================================================
+		// CUSTOMERS
+		// ==================================================
 
-        // --------------------------------
-        // Order statistics
-        // --------------------------------
-        const orderStats = await Order.aggregate([
-            {
-                $match: {
-                    userId: {
-                        $in: userIds,
-                    },
+		const customers = await User.aggregate([
+			{
+				$match: userMatch,
+			},
 
-                    // Cancelled order বাদ
-                    status: {
-                        $ne: "cancelled",
-                    },
-                },
-            },
+			// ----------------------------------------------
+			// Get orders belonging to this user
+			// ----------------------------------------------
 
-            {
-                $group: {
-                    _id: "$userId",
+			{
+				$lookup: {
+					from: 'orders',
+					let: {
+						customerId: '$_id',
+					},
+					pipeline: [
+						{
+							$match: {
+								$expr: {
+									$eq: ['$userId', '$$customerId'],
+								},
+							},
+						},
 
-                    totalOrders: {
-                        $sum: 1,
-                    },
+						{
+							$sort: {
+								createdAt: -1,
+							},
+						},
+					],
+					as: 'orders',
+				},
+			},
 
-                    totalSpent: {
-                        $sum: "$total",
-                    },
+			// ----------------------------------------------
+			// Statistics
+			// ----------------------------------------------
 
-                    lastOrder: {
-                        $max: "$createdAt",
-                    },
-                },
-            },
-        ]);
+			{
+				$addFields: {
+					totalOrders: {
+						$size: '$orders',
+					},
 
-        // --------------------------------
-        // Create Map
-        // --------------------------------
-        const statsMap = new Map();
+					totalSpent: {
+						$sum: '$orders.total',
+					},
 
-        orderStats.forEach((item) => {
-            statsMap.set(item._id.toString(), item);
-        });
+					deliveredOrders: {
+						$size: {
+							$filter: {
+								input: '$orders',
+								as: 'order',
+								cond: {
+									$eq: ['$$order.status', 'delivered'],
+								},
+							},
+						},
+					},
 
-        // --------------------------------
-        // Combine User + Order data
-        // --------------------------------
-        const customers = users.map((user) => {
-            const stats = statsMap.get(
-                user._id.toString()
-            );
+					cancelledOrders: {
+						$size: {
+							$filter: {
+								input: '$orders',
+								as: 'order',
+								cond: {
+									$eq: ['$$order.status', 'cancelled'],
+								},
+							},
+						},
+					},
 
-            return {
-                _id: user._id.toString(),
+					returnOrders: {
+						$size: {
+							$filter: {
+								input: '$orders',
+								as: 'order',
+								cond: {
+									$eq: ['$$order.status', 'return'],
+								},
+							},
+						},
+					},
 
-                name: user.name || "N/A",
+					pendingOrders: {
+						$size: {
+							$filter: {
+								input: '$orders',
+								as: 'order',
+								cond: {
+									$eq: ['$$order.status', 'pending'],
+								},
+							},
+						},
+					},
 
-                phone: user.phone || "",
+					processingOrders: {
+						$size: {
+							$filter: {
+								input: '$orders',
+								as: 'order',
+								cond: {
+									$eq: ['$$order.status', 'processing'],
+								},
+							},
+						},
+					},
 
-                email: user.email || "",
+					shippedOrders: {
+						$size: {
+							$filter: {
+								input: '$orders',
+								as: 'order',
+								cond: {
+									$eq: ['$$order.status', 'shipped'],
+								},
+							},
+						},
+					},
 
-                role: user.role,
+					paidOrders: {
+						$size: {
+							$filter: {
+								input: '$orders',
+								as: 'order',
+								cond: {
+									$eq: ['$$order.payment.status', 'paid'],
+								},
+							},
+						},
+					},
 
-                totalOrders: stats?.totalOrders || 0,
+					unpaidOrders: {
+						$size: {
+							$filter: {
+								input: '$orders',
+								as: 'order',
+								cond: {
+									$eq: ['$$order.payment.status', 'unpaid'],
+								},
+							},
+						},
+					},
 
-                totalSpent: stats?.totalSpent || 0,
+					firstOrderDate: {
+						$min: '$orders.createdAt',
+					},
 
-                lastOrder: stats?.lastOrder || null,
+					lastOrder: {
+						$max: '$orders.createdAt',
+					},
 
-                createdAt: user.createdAt,
+					customerSince: '$createdAt',
+				},
+			},
 
-                // আপনার User schema-তে status নেই
-                // তাই order/customer activity থেকে status দেখানো হচ্ছে
-                status:
-                    stats?.totalOrders > 0
-                        ? "active"
-                        : "new",
-            };
-        });
+			// ----------------------------------------------
+			// Customer status
+			// ----------------------------------------------
 
-        return NextResponse.json({
-            success: true,
+			{
+				$addFields: {
+					status: {
+						$cond: [
+							{
+								$gt: ['$totalOrders', 0],
+							},
+							'active',
+							'new',
+						],
+					},
 
-            customers,
+					averageOrderValue: {
+						$cond: [
+							{
+								$gt: ['$totalOrders', 0],
+							},
+							{
+								$divide: ['$totalSpent', '$totalOrders'],
+							},
+							0,
+						],
+					},
+				},
+			},
 
-            pagination: {
-                page,
-                limit,
-                totalCustomers,
+			// ----------------------------------------------
+			// Remove sensitive/unnecessary fields
+			// ----------------------------------------------
 
-                totalPages: Math.ceil(
-                    totalCustomers / limit
-                ),
-            },
-        });
-    } catch (error) {
-        console.error(
-            "GET /api/customers error:",
-            error
-        );
+			{
+				$project: {
+					password: 0,
+					orders: 0,
+				},
+			},
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to fetch customers",
-                error: error.message,
-            },
-            {
-                status: 500,
-            }
-        );
-    }
+			// ----------------------------------------------
+			// Sort
+			// ----------------------------------------------
+
+			{
+				$sort: {
+					createdAt: -1,
+				},
+			},
+
+			// ----------------------------------------------
+			// Pagination
+			// ----------------------------------------------
+
+			{
+				$skip: (page - 1) * limit,
+			},
+
+			{
+				$limit: limit,
+			},
+		]);
+
+		// ==================================================
+		// SUMMARY
+		// ==================================================
+
+		const summaryResult = await Order.aggregate([
+			{
+				$match: {
+					userId: {
+						$exists: true,
+						$ne: null,
+					},
+				},
+			},
+
+			{
+				$group: {
+					_id: null,
+
+					totalOrders: {
+						$sum: 1,
+					},
+
+					totalSpent: {
+						$sum: {
+							$ifNull: ['$total', 0],
+						},
+					},
+
+					deliveredOrders: {
+						$sum: {
+							$cond: [
+								{
+									$eq: ['$status', 'delivered'],
+								},
+								1,
+								0,
+							],
+						},
+					},
+
+					cancelledOrders: {
+						$sum: {
+							$cond: [
+								{
+									$eq: ['$status', 'cancelled'],
+								},
+								1,
+								0,
+							],
+						},
+					},
+
+					returnOrders: {
+						$sum: {
+							$cond: [
+								{
+									$eq: ['$status', 'return'],
+								},
+								1,
+								0,
+							],
+						},
+					},
+
+					pendingOrders: {
+						$sum: {
+							$cond: [
+								{
+									$eq: ['$status', 'pending'],
+								},
+								1,
+								0,
+							],
+						},
+					},
+
+					processingOrders: {
+						$sum: {
+							$cond: [
+								{
+									$eq: ['$status', 'processing'],
+								},
+								1,
+								0,
+							],
+						},
+					},
+
+					shippedOrders: {
+						$sum: {
+							$cond: [
+								{
+									$eq: ['$status', 'shipped'],
+								},
+								1,
+								0,
+							],
+						},
+					},
+				},
+			},
+		]);
+
+		const summary = summaryResult[0] || {
+			totalOrders: 0,
+			totalSpent: 0,
+			deliveredOrders: 0,
+			cancelledOrders: 0,
+			returnOrders: 0,
+			pendingOrders: 0,
+			processingOrders: 0,
+			shippedOrders: 0,
+		};
+
+		// ==================================================
+		// RESPONSE
+		// ==================================================
+
+		return NextResponse.json({
+			success: true,
+
+			customers,
+
+			pagination: {
+				page,
+				limit,
+				totalCustomers,
+				totalPages,
+
+				hasNextPage: page < totalPages,
+
+				hasPrevPage: page > 1,
+			},
+
+			summary,
+		});
+	} catch (error) {
+		console.error('GET /api/customers ERROR:', error);
+
+		return NextResponse.json(
+			{
+				success: false,
+				message: 'Failed to fetch customers',
+				error: error.message,
+			},
+			{
+				status: 500,
+			}
+		);
+	}
 }

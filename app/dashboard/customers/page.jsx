@@ -325,7 +325,7 @@ export default function CustomersPage() {
 
                                             {/* Orders */}
 
-                                            <td className="px-5 py-4 text-center">
+                                            <td className="px-5 py-4 text-center text-black">
 
                                                 <span className="font-semibold">
                                                     {
@@ -337,7 +337,7 @@ export default function CustomersPage() {
 
                                             {/* Spent */}
 
-                                            <td className="px-5 py-4 text-right font-semibold">
+                                            <td className="px-5 py-4 text-right text-black font-semibold">
 
                                                 ৳
                                                 {Number(
