@@ -63,8 +63,8 @@ const menuItems = [
 		icon: ShoppingCart,
 	},
 	{
-		name: 'users',
-		href: '/dashboard/users',
+		name: 'customers',
+		href: '/dashboard/customers',
 		icon: Users,
 	},
 	{

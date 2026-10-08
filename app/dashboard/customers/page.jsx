@@ -40,6 +40,9 @@ export default function CustomersPage() {
 
     const customers = data?.customers || [];
 
+    console.log(data);
+    
+
     const pagination = data?.pagination || {
         page: 1,
         totalPages: 1,

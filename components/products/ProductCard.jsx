@@ -80,13 +80,26 @@ export default function ProductCard({ product }) {
 			addToCart({
 				product: {
 					...product,
-					variantId: String(selected._id),
+
+					variantId: selected?._id ? String(selected._id) : null,
+
+					price: finalPrice,
+
 					regularPrice,
 					sellPrice: finalPrice,
-					stock: Number(selected.stock || 0),
-					sku: selected.sku || product.sku || '',
-					size: { value: selected.value, unit: selected.unit },
+
+					stock: Number(selected?.stock ?? product.stock ?? 0),
+
+					sku: selected?.sku || product.sku || '',
+
+					size: selected
+						? {
+								value: selected.value,
+								unit: selected.unit,
+							}
+						: product.size || null,
 				},
+
 				quantity: 1,
 			})
 		);
