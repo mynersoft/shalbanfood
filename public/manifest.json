@@ -1,11 +1,15 @@
+
 {
-  "name": "TomartBD",
-  "short_name": "TBD",
-  "description": "TomartBD E-commerce Platform",
+  "name": "Shalban Food - শালবন ফুড",
+  "short_name": "Shalban Food",
+  "description": "খাঁটি মধু, গাওয়া ঘি ও মানসম্মত প্রাকৃতিক খাদ্যপণ্যের বিশ্বস্ত অনলাইন শপ।",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#0d9488",
+  "theme_color": "#166534",
+  "lang": "bn",
   "icons": [
     {
       "src": "/icons/icon-192.png",
