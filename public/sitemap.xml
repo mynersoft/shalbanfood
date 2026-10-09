@@ -1,46 +1,39 @@
+
 <?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-<urlset
-    xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-    <!-- Homepage -->
     <url>
-        <loc>https://shalbanfood.vercel.app/</loc>
+        <loc>https://www.shalbanfood.shop/</loc>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
     </url>
 
-    <!-- Shop -->
     <url>
-        <loc>https://shalbanfood.vercel.app/shop</loc>
+        <loc>https://www.shalbanfood.shop/shop</loc>
         <changefreq>daily</changefreq>
         <priority>0.9</priority>
     </url>
 
-    <!-- About Us -->
     <url>
-        <loc>https://shalbanfood.vercel.app/about-us</loc>
+        <loc>https://www.shalbanfood.shop/about-us</loc>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
 
-    <!-- Contact Us -->
     <url>
-        <loc>https://shalbanfood.vercel.app/contact-us</loc>
+        <loc>https://www.shalbanfood.shop/contact-us</loc>
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
     </url>
 
-    <!-- Privacy Policy -->
     <url>
-        <loc>https://shalbanfood.vercel.app/privacy-policy</loc>
+        <loc>https://www.shalbanfood.shop/privacy-policy</loc>
         <changefreq>yearly</changefreq>
         <priority>0.4</priority>
     </url>
 
-    <!-- Terms & Conditions -->
     <url>
-        <loc>https://shalbanfood.vercel.app/terms-conditions</loc>
+        <loc>https://www.shalbanfood.shop/terms-conditions</loc>
         <changefreq>yearly</changefreq>
         <priority>0.4</priority>
     </url>
