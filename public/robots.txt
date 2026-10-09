@@ -10,4 +10,4 @@ Disallow: /register/
 Disallow: /account/
 
 # Sitemap
-Sitemap: https://shalbanfood.vercel.app/sitemap.xml
+Sitemap: https://shalbanfood.shop/sitemap.xml
