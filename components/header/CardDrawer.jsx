@@ -1,207 +1,280 @@
+
 'use client';
 
-import { Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
+import Image from 'next/image';
+import { ShoppingCart, Trash2, X, ArrowRight } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import {
+    selectCartTotalItems,
+    removeFromCart,
+} from '@/redux/store/slices/cartSlice';
 
-import { removeFromCart, updateQuantity } from '@/redux/store/slices/cartSlice';
+const formatSize = (item) => {
+    if (item.variantLabel) return item.variantLabel;
 
+    const unitLabels = {
+        gram: 'গ্রাম',
+        kg: 'কেজি',
+        milliliter: 'মিলিলিটার',
+        litre: 'লিটার',
+        piece: 'পিস',
+    };
 
-const CardDrawer = ({ items = [], isCartOpen, cartRef, setIsCartOpen }) => {
-	const dispatch = useDispatch();
+    if (item.size?.value != null) {
+        return `${item.size.value} ${
+            unitLabels[item.size.unit] || item.size.unit || ''
+        }`;
+    }
 
-	const router = useRouter();
-
-	const [mounted, setMounted] = useState(false);
-
-	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	if (!mounted) return null;
-
-	const totalPrice = items.reduce(
-		(sum, item) => sum + item.salePrice * item.quantity,
-		0
-	);
-
-
-
-	const handleQuantityChange = (productId, qty) => {
-		if (qty < 1) return;
-		dispatch(updateQuantity({ productId, quantity: qty }));
-	};
-
-	const handleCheckout = () => {
-		setIsCartOpen(false);
-		router.push('/checkout');
-	};
-
-	return (
-		<div
-			className={`fixed inset-0 z-100 transition-opacity duration-300 ${
-				isCartOpen
-					? 'opacity-100 pointer-events-auto'
-					: 'opacity-0 pointer-events-none'
-			}`}
-			aria-hidden={!isCartOpen}>
-			{/* Overlay */}
-			<div
-				className="absolute inset-0 bg-black/40"
-				onClick={() => setIsCartOpen(false)}
-			/>
-
-			{/* Drawer */}
-			<aside
-				ref={cartRef}
-				className={`absolute top-0 right-0 h-full w-full md:w-[420px] bg-white shadow-xl transform transition-transform duration-300 ${
-					isCartOpen ? 'translate-x-0' : 'translate-x-full'
-				}`}>
-				<div className="flex flex-col h-full">
-					{/* ================= Header ================= */}
-					<div className="flex items-center justify-between p-4 border-b">
-						<h2 className="text-xl font-bold">Your Cart</h2>
-						<button
-							onClick={() => setIsCartOpen(false)}
-							className="p-2 rounded-full hover:bg-gray-100"
-							aria-label="Close cart">
-							<X size={22} />
-						</button>
-					</div>
-
-					{/* ================= Items ================= */}
-					<div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3">
-						{items.length > 0 ? (
-							items.map((item) => (
-								<div key={item._id} className="flex gap-3 p-3">
-									<Image
-										src={item.image || '/placeholder.png'}
-										alt={item.name}
-										width={60}
-										height={60}
-										className="rounded-lg object-cover h-20"
-									/>
-
-									<div className="flex-1">
-										<h3 className="font-medium font-sm line-clamp-2">
-											{item.name}
-										</h3>
-
-										<p className="text-base font-bold text-gray-600">
-											৳ {item.salePrice}
-										</p>
-
-										{item.discount && (
-											<p className="text-sm text-gray-400 line-through">
-												৳{item.regularPrice}
-											</p>
-										)}
-
-										{/* Quantity */}
-										<div className="flex items-center justify-between mt-1">
-											<div className="flex items-center border rounded border-gray-300">
-												<button
-													onClick={() =>
-														handleQuantityChange(
-															item._id,
-															item.quantity - 1
-														)
-													}
-													disabled={
-														item.quantity <= 1
-													}
-													className="px-2 py-0.5  hover:bg-gray-100">
-													<Minus size={16} />
-												</button>
-
-												<span className="w-8 py-0.5  text-center font-medium">
-													{item.quantity}
-												</span>
-
-												<button
-													onClick={() =>
-														handleQuantityChange(
-															item._id,
-															item.quantity + 1
-														)
-													}
-													className="px-2 py-0.5 hover:bg-gray-100">
-													<Plus size={16} />
-												</button>
-											</div>
-
-											<button
-												onClick={() =>
-													dispatch(
-														removeFromCart(item._id)
-													)
-												}
-												className="p-2 text-gray-500 hover:text-red-600">
-												<Trash2 size={18} />
-											</button>
-										</div>
-									</div>
-								</div>
-							))
-						) : (
-							<div className="text-center py-16">
-								<ShoppingCart
-									size={64}
-									className="mx-auto text-gray-300 mb-4"
-								/>
-								<h3 className="text-xl font-semibold mb-2">
-									Your cart is empty
-								</h3>
-
-								<button
-									onClick={() => setIsCartOpen(false)}
-									className="px-6 py-3 bg-green-600 text-white rounded-lg">
-									Continue Shopping
-								</button>
-							</div>
-						)}
-					</div>
-
-					{/* ================= Footer ================= */}
-					{items.length > 0 && (
-						<div className="border-t border-gray-200 p-4 bg-gray-50 space-y-3">
-							<div className="flex justify-between">
-								<span className="text-gray-600">Subtotal</span>
-								<span className="font-semibold">
-									৳{totalPrice}
-								</span>
-							</div>
-
-							
-
-							{/* <div className="flex justify-between text-lg font-bold border-t pt-2 border-gray-200">
-								<span>Total</span>
-								<span>৳{grandTotal}</span>
-							</div> */}
-
-							<div className="grid grid-cols-2 gap-3 pt-2">
-								<Link
-									href="/cart"
-									onClick={() => setIsCartOpen(false)}
-									className="text-center  bg-gray-200 text-black py-3 rounded-lg hover:bg-green-600 hover:text-white">
-									View Cart
-								</Link>
-
-								<button
-									onClick={handleCheckout}
-									className="bg-green-600 text-white py-3 rounded-lg hover:bg-[#003366]">
-									Checkout
-								</button>
-							</div>
-						</div>
-					)}
-				</div>
-			</aside>
-		</div>
-	);
+    return '';
 };
 
-export default CardDrawer;
+const getCartKey = (item) =>
+    `${item._id || item.slug}:${item.variantId || item.variantKey || 'default'}`;
+
+export default function CartDrawer({ open, onClose }) {
+    const dispatch = useDispatch();
+
+    const { items = [] } = useSelector(
+        (state) => state.cart || {}
+    );
+
+    const cartQty = useSelector(selectCartTotalItems);
+
+    const subtotal = items.reduce((total, item) => {
+        const price = Number(
+            item.price ?? item.sellPrice ?? item.regularPrice ?? 0
+        );
+        const quantity = Number(item.quantity) || 0;
+
+        return total +
+            (Number.isFinite(price) ? price : 0) * quantity;
+    }, 0);
+
+    const handleRemove = (item) => {
+        dispatch(
+            removeFromCart({
+                productId: String(item._id || item.slug || ''),
+                variantId: item.variantId
+                    ? String(item.variantId)
+                    : null,
+                variantKey: item.variantKey || 'default',
+            })
+        );
+    };
+
+    return (
+        <>
+            {open && (
+                <button
+                    type="button"
+                    aria-label="Close cart overlay"
+                    onClick={onClose}
+                    className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-[1px]"
+                />
+            )}
+
+            <aside
+                aria-label="Shopping cart"
+                aria-hidden={!open}
+                className={`fixed right-0 top-0 z-[80] flex h-dvh
+                    w-[400px] max-w-[94vw] flex-col bg-white shadow-2xl
+                    transition-transform duration-300
+                    ${open ? 'translate-x-0' : 'translate-x-full'}`}
+            >
+                {/* Header */}
+                <div className="flex h-[72px] shrink-0 items-center
+                    justify-between border-b px-5">
+                    <div>
+                        <h2 className="font-bold text-gray-900">
+                            Your Cart
+                        </h2>
+                        <p className="mt-1 text-xs text-gray-500">
+                            {cartQty} item{cartQty !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Close cart"
+                        className="flex h-10 w-10 items-center
+                            justify-center rounded-full hover:bg-gray-100"
+                    >
+                        <X size={21} />
+                    </button>
+                </div>
+
+                {/* Items */}
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+                    {items.length === 0 ? (
+                        <div className="flex h-full flex-col
+                            items-center justify-center text-center">
+                            <ShoppingCart
+                                size={42}
+                                className="text-gray-300"
+                            />
+
+                            <h3 className="mt-4 font-semibold text-gray-900">
+                                Your cart is empty
+                            </h3>
+
+                            <p className="mt-1 text-sm text-gray-500">
+                                Add some products to your cart.
+                            </p>
+
+                            <Link
+                                href="/shop"
+                                onClick={onClose}
+                                className="mt-5 inline-flex items-center
+                                    gap-2 rounded-xl bg-[#1f5d3b]
+                                    px-5 py-3 text-sm font-semibold text-white"
+                            >
+                                Start Shopping
+                                <ArrowRight size={16} />
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {items.map((item) => {
+                                const key = getCartKey(item);
+
+                                const price = Number(
+                                    item.price ??
+                                    item.sellPrice ??
+                                    item.regularPrice ??
+                                    0
+                                );
+
+                                const safePrice =
+                                    Number.isFinite(price) ? price : 0;
+
+                                const imageSrc =
+                                    item.image || item.featureImg || '';
+
+                                return (
+                                    <div
+                                        key={key}
+                                        className="flex gap-3 border-b
+                                            border-gray-100 pb-4"
+                                    >
+                                        {/* Image */}
+                                        <Link
+                                            href={`/product/${encodeURIComponent(item.slug || '')}`}
+                                            onClick={onClose}
+                                            className="flex h-[76px] w-[76px]
+                                                shrink-0 items-center
+                                                justify-center overflow-hidden
+                                                rounded-xl bg-gray-50"
+                                        >
+                                            {imageSrc ? (
+                                                <Image
+                                                    src={imageSrc}
+                                                    alt={item.name || 'Product'}
+                                                    width={76}
+                                                    height={76}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <ShoppingCart
+                                                    size={24}
+                                                    className="text-gray-300"
+                                                />
+                                            )}
+                                        </Link>
+
+                                        {/* Product details */}
+                                        <div className="min-w-0 flex-1">
+                                            <Link
+                                                href={`/product/${encodeURIComponent(item.slug || '')}`}
+                                                onClick={onClose}
+                                                className="line-clamp-2 text-sm
+                                                    font-medium text-gray-900
+                                                    hover:text-[#1f5d3b]"
+                                            >
+                                                {item.name}
+                                            </Link>
+
+                                            {formatSize(item) && (
+                                                <p className="mt-1 text-xs
+                                                    font-medium text-gray-500">
+                                                    ওজন: {formatSize(item)}
+                                                </p>
+                                            )}
+
+                                            <p className="mt-1 text-sm
+                                                font-bold text-[#1f5d3b]">
+                                                ৳{safePrice.toLocaleString('en-BD')}
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                Quantity: {item.quantity}
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                মোট: ৳{(
+                                                    safePrice *
+                                                    (Number(item.quantity) || 0)
+                                                ).toLocaleString('en-BD')}
+                                            </p>
+                                        </div>
+
+                                        {/* Remove only this variant */}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemove(item)}
+                                            aria-label={`${item.name} ${formatSize(item)} remove করুন`}
+                                            className="self-start rounded-lg
+                                                p-2 text-gray-400
+                                                hover:bg-red-50 hover:text-red-500"
+                                        >
+                                            <Trash2 size={17} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                {items.length > 0 && (
+                    <div className="shrink-0 border-t bg-white p-5">
+                        <div className="mb-4 flex items-center justify-between">
+                            <span className="text-sm text-gray-500">
+                                Subtotal
+                            </span>
+
+                            <span className="text-lg font-bold text-gray-900">
+                                ৳{subtotal.toLocaleString('en-BD')}
+                            </span>
+                        </div>
+
+                        <Link
+                            href="/cart"
+                            onClick={onClose}
+                            className="mb-3 flex w-full items-center
+                                justify-center rounded-xl border
+                                border-gray-200 px-5 py-3 text-sm font-semibold
+                                hover:bg-gray-50"
+                        >
+                            View Cart
+                        </Link>
+
+                        <Link
+                            href="/checkout"
+                            onClick={onClose}
+                            className="flex w-full items-center justify-center
+                                rounded-xl bg-[#1f5d3b] px-5 py-3
+                                text-sm font-semibold text-white
+                                hover:bg-[#174a2f]"
+                        >
+                            Checkout
+                        </Link>
+                    </div>
+                )}
+            </aside>
+        </>
+    );
+}
