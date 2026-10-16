@@ -148,48 +148,52 @@ export default function ProductCard({ product }) {
         setSelectedId(getVariantKey(variant, index));
     };
 
-    const handleAddToCart = () => {
-        if (!selected || selectedOutOfStock) {
-            toast.error('এই ওজনের পণ্যটি বর্তমানে স্টকে নেই।');
-            return;
-        }
 
-        const selectedVariantId = selected?._id != null
+
+
+    const handleAddToCart = () => {
+    if (!selected || selectedStock <= 0) {
+        toast.error('এই ওজনের পণ্যটি বর্তমানে স্টকে নেই।');
+        return;
+    }
+
+    const variantKey =
+        selected?._id != null
+            ? String(selected._id)
+            : `variant-${activeIndex}`;
+
+    const variantId =
+        selected?._id != null
             ? String(selected._id)
             : null;
 
-        dispatch(
-            addToCart({
-                product: {
-                    ...product,
-
-                    // নির্বাচিত variant-এর তথ্য।
-                    variantId: selectedVariantId,
-                    variantKey: getVariantKey(selected, activeIndex),
-
-                    price: finalPrice,
-                    regularPrice,
-                    sellPrice: finalPrice,
-                    stock: selectedStock,
-
-                    sku: selected.sku || product?.sku || '',
-
-                    size: {
-                        value: selected.value,
-                        unit: selected.unit,
-                    },
-
-                    // কার্টের জন্য স্পষ্ট ওজনের লেবেল।
-                    variantLabel: formatSize(selected),
+    dispatch(
+        addToCart({
+            product: {
+                ...product,
+                variantId,
+                variantKey,
+                price: finalPrice,
+                regularPrice,
+                sellPrice: finalPrice,
+                stock: selectedStock,
+                sku: selected.sku || product?.sku || '',
+                size: {
+                    value: selected.value,
+                    unit: selected.unit,
                 },
-                quantity: 1,
-            })
-        );
+                variantLabel: formatSize(selected),
+            },
+            quantity: 1,
+        })
+    );
 
-        toast.success(
-            `${product.name} (${formatSize(selected)}) কার্টে যোগ হয়েছে`
-        );
-    };
+    toast.success(
+        `${product.name} (${formatSize(selected)}) কার্টে যোগ হয়েছে`
+    );
+};
+        
+   
 
     return (
         <article
