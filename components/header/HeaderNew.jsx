@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 import { selectCartTotalItems } from '@/redux/store/slices/cartSlice';
-import CartDrawer from '@/components/CartDrawer';
+import CartDrawer from './CartDrawer';
 
 const menuItems = [
     { label: 'Home', href: '/' },
