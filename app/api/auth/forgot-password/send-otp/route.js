@@ -65,6 +65,7 @@ export async function POST(request) {
     let user = null
     let identifier
 
+    
     if (isEmail(value)) {
       identifier = normalizeEmail(value)
       user = await User.findOne({ email: identifier })

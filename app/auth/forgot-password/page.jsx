@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   KeyRound,
+
   Mail,
   Phone,
   ShieldCheck,
@@ -221,7 +222,7 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    router.push('/login')
+    router.push('/auth/login')
   }
 
   const steps = [
