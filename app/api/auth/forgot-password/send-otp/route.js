@@ -8,14 +8,41 @@ import { sendRecoveryEmail } from '@/lib/sendRecoveryEmail'
 
 export const runtime = 'nodejs'
 
-const hash = (value) =>
+const sha256 = (value) =>
   createHash('sha256').update(value).digest('hex')
 
 const normalizeEmail = (value) =>
   String(value || '').trim().toLowerCase()
 
-const normalizePhone = (value) =>
-  String(value || '').replace(/\D/g, '')
+function normalizePhone(value) {
+  let phone = String(value || '').replace(/\D/g, '')
+
+  if (phone.startsWith('00880')) phone = phone.slice(2)
+  if (phone.startsWith('880') && phone.length === 13) {
+    phone = `0${phone.slice(3)}`
+  }
+
+  return phone
+}
+
+function phoneCandidates(phone) {
+  const canonical = normalizePhone(phone)
+
+  if (!canonical) return []
+
+  const candidates = [canonical]
+
+  if (canonical.startsWith('0')) {
+    candidates.push(`88${canonical}`)
+    candidates.push(`+88${canonical}`)
+  }
+
+  if (canonical.startsWith('880')) {
+    candidates.push(`+${canonical}`)
+  }
+
+  return [...new Set(candidates)]
+}
 
 const isEmail = (value) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -28,22 +55,20 @@ export async function POST(request) {
     const value = String(body.value || '').trim()
     const suppliedEmail = normalizeEmail(body.email)
 
-    if (!value) {
+    if (!value || value.length > 254) {
       return NextResponse.json(
-        { message: 'Email or phone number is required' },
+        { message: 'Enter a valid email or phone number' },
         { status: 400 }
       )
     }
 
-    let user
+    let user = null
     let identifier
 
     if (isEmail(value)) {
-      // Email দিয়ে account খোঁজা
       identifier = normalizeEmail(value)
       user = await User.findOne({ email: identifier })
     } else {
-      // Phone দিয়ে account খোঁজা
       const phone = normalizePhone(value)
 
       if (phone.length < 10 || phone.length > 15) {
@@ -53,38 +78,45 @@ export async function POST(request) {
         )
       }
 
-      // প্রথম ধাপে ফোন নম্বর দিলে ইমেইল চাইবে
+      // ফোন দিলে আগে registered email চাইবে
       if (!suppliedEmail) {
         return NextResponse.json({
           requiresEmail: true,
-          message: 'Enter the email address linked to your account',
+          message: 'Enter the email linked to your account.',
         })
       }
 
-      // এখানে User Model-এর phone field ব্যবহার করা হয়েছে।
-      // Database-এ phone একই normalized format-এ রাখা উত্তম।
+      if (!isEmail(suppliedEmail)) {
+        return NextResponse.json(
+          { message: 'Enter a valid email address' },
+          { status: 400 }
+        )
+      }
+
       user = await User.findOne({
-        phone,
+        phone: { $in: phoneCandidates(value) },
         email: suppliedEmail,
       })
 
       identifier = `phone:${phone}`
     }
 
-    // Account enumeration কমাতে generic response
-    if (!user || !user.email) {
+    // Account আছে কি নেই তা response দিয়ে প্রকাশ না করা
+    if (!user?.email) {
       return NextResponse.json({
         success: true,
         message:
-          'If the account details match, a verification code will be sent to the registered email.',
+          'If the details match your account, a verification code will be sent to its registered email.',
       })
     }
 
+    const now = new Date()
+
     const existing = await PasswordRecovery.findOne({ identifier })
 
-    if (existing?.resendAfter && existing.resendAfter > new Date()) {
+    if (existing?.resendAfter > now) {
       return NextResponse.json(
-        { message: 'Please wait before requesting another code' },
+        { message: 'Please wait before requesting another OTP.' },
         { status: 429 }
       )
     }
@@ -98,7 +130,7 @@ export async function POST(request) {
       {
         $set: {
           userId: user._id,
-          otpHash: hash(otp),
+          otpHash: sha256(otp),
           expiresAt,
           attempts: 0,
           resendAfter,
@@ -106,31 +138,32 @@ export async function POST(request) {
           resetTokenExpiresAt: null,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, new: true }
     )
 
     try {
       await sendRecoveryEmail(user.email, otp)
     } catch (error) {
+      // ইমেইল ব্যর্থ হলে OTP আর ব্যবহার করা যাবে না
       await PasswordRecovery.deleteOne({ identifier })
 
-      console.error('Recovery email failed:', error.message)
+      console.error('Recovery email error:', error.message)
 
       return NextResponse.json(
-        { message: 'Unable to send email. Please try again later.' },
-        { status: 500 }
+        { message: 'Email delivery failed. Please try again later.' },
+        { status: 502 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      message: 'If the account details match, a verification code has been sent.',
+      message: 'If the details match your account, a code has been sent.',
     })
   } catch (error) {
-    console.error('Send recovery OTP error:', error)
+    console.error('Send OTP error:', error)
 
     return NextResponse.json(
-      { message: 'Something went wrong. Please try again later.' },
+      { message: 'Unable to process your request right now.' },
       { status: 500 }
     )
   }
