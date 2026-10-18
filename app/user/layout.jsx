@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -14,6 +15,8 @@ const Layout = ({ children }) => {
 
     useEffect(() => {
         const handleResize = () => {
+            // Desktop: sidebar open by default
+            // Mobile: sidebar closed by default
             dispatch(setSidebar(window.innerWidth >= 768));
         };
 
@@ -26,11 +29,40 @@ const Layout = ({ children }) => {
         };
     }, [dispatch]);
 
+    const closeMobileSidebar = () => {
+        dispatch(setSidebar(false));
+    };
+
     return (
         <AuthGuard>
             <div className="min-h-screen bg-slate-50">
-                <UserSidebar />
+                {/* Mobile Overlay */}
+                {sidebarOpen && (
+                    <button
+                        type="button"
+                        aria-label="Close sidebar"
+                        onClick={closeMobileSidebar}
+                        className="fixed inset-0 z-40 bg-black/50 md:hidden"
+                    />
+                )}
 
+                {/* Sidebar */}
+                <div
+                    className={`
+                        fixed inset-y-0 left-0 z-50
+                        transition-transform duration-300 ease-in-out
+                        ${
+                            sidebarOpen
+                                ? 'translate-x-0'
+                                : '-translate-x-full'
+                        }
+                        md:translate-x-0
+                    `}
+                >
+                    <UserSidebar />
+                </div>
+
+                {/* Main Content */}
                 <main
                     className={`
                         min-h-screen min-w-0
