@@ -1,209 +1,409 @@
+
 'use client';
 
-import { useMemo, useState } from 'react';
-
-import { Minus, Plus, ShoppingCart } from 'lucide-react';
-
+import { useEffect, useMemo, useState } from 'react';
+import { Minus, Plus, ShoppingCart, Package } from 'lucide-react';
+import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 
-/* =========================================================
-   CART HOOK-UP
-   Connect this to your real cart (Redux slice, localStorage,
-   API call...). Right now it only receives the item.
-========================================================= */
+import { addToCart } from '@/redux/store/slices/cartSlice';
 
-const addItemToCart = (item) => {
-	// TODO: dispatch(addToCart(item)) or save to your cart store
-	console.log('Add to cart:', item);
+const UNIT_LABELS = {
+    gram: 'গ্রাম',
+    kg: 'কেজি',
+    milliliter: 'মিলিলিটার',
+    litre: 'লিটার',
+    piece: 'পিস',
 };
 
+const getPrice = (value) => {
+    const price = Number(value);
+    return Number.isFinite(price) && price >= 0 ? price : 0;
+};
+
+const getStock = (value) => {
+    const stock = Number(value);
+    return Number.isFinite(stock) && stock > 0 ? stock : 0;
+};
+
+const getVariantKey = (variant, index) => {
+    return variant?._id != null
+        ? String(variant._id)
+        : `variant-${index}`;
+};
+
+const formatSize = (variant) => {
+    if (!variant) return '';
+
+    const value = variant.value ?? '';
+    const unit = UNIT_LABELS[variant.unit] || variant.unit || '';
+
+    return `${value} ${unit}`.trim();
+};
+
+const formatMoney = (value) =>
+    getPrice(value).toLocaleString('en-BD');
+
 export default function ProductPurchase({
-	productId,
-	name,
-	slug,
-	image,
-	variants,
+    productId,
+    name,
+    slug,
+    image,
+    variants = [],
 }) {
-	/* Default: first in-stock variant, otherwise the first one */
+    const dispatch = useDispatch();
 
-	const [selectedId, setSelectedId] = useState(() => {
-		const firstAvailable = variants.find((v) => v.stock > 0);
+    const safeVariants = useMemo(
+        () => (Array.isArray(variants) ? variants : []),
+        [variants]
+    );
 
-		return (firstAvailable || variants[0])?._id;
-	});
+    const firstAvailableIndex = useMemo(
+        () => safeVariants.findIndex(
+            (variant) => getStock(variant.stock) > 0
+        ),
+        [safeVariants]
+    );
 
-	const [quantity, setQuantity] = useState(1);
+    const initialIndex =
+        firstAvailableIndex >= 0
+            ? firstAvailableIndex
+            : safeVariants.length > 0
+                ? 0
+                : -1;
 
-	const selected = useMemo(
-		() => variants.find((v) => v._id === selectedId) || variants[0],
-		[variants, selectedId]
-	);
+    const [selectedId, setSelectedId] = useState(() =>
+        initialIndex >= 0
+            ? getVariantKey(safeVariants[initialIndex], initialIndex)
+            : ''
+    );
 
-	if (!selected) {
-		return null;
-	}
+    const [quantity, setQuantity] = useState(1);
 
-	const inStock = selected.stock > 0;
+    // Product বা variants পরিবর্তন হলে selection reset হবে।
+    useEffect(() => {
+        const availableIndex = safeVariants.findIndex(
+            (variant) => getStock(variant.stock) > 0
+        );
 
-	const maxQuantity = Math.max(1, Math.min(selected.stock, 20));
+        const index =
+            availableIndex >= 0
+                ? availableIndex
+                : safeVariants.length > 0
+                    ? 0
+                    : -1;
 
-	const hasDiscount = selected.regularPrice > selected.sellPrice;
+        setSelectedId(
+            index >= 0
+                ? getVariantKey(safeVariants[index], index)
+                : ''
+        );
 
-	const discountPercent = hasDiscount
-		? Math.round(
-				((selected.regularPrice - selected.sellPrice) /
-					selected.regularPrice) *
-					100
-			)
-		: 0;
+        setQuantity(1);
+    }, [productId, safeVariants]);
 
-	const handleSelectVariant = (variant) => {
-		setSelectedId(variant._id);
+    const selectedIndex = safeVariants.findIndex(
+        (variant, index) =>
+            getVariantKey(variant, index) === selectedId
+    );
 
-		setQuantity(1);
-	};
+    const activeIndex =
+        selectedIndex >= 0
+            ? selectedIndex
+            : firstAvailableIndex >= 0
+                ? firstAvailableIndex
+                : safeVariants.length > 0
+                    ? 0
+                    : -1;
 
-	const handleAddToCart = () => {
-		if (!inStock) return;
+    const selected =
+        activeIndex >= 0 ? safeVariants[activeIndex] : null;
 
-		addItemToCart({
-			productId,
-			variantId: selected._id,
-			name,
-			slug,
-			image,
-			size: selected.label,
-			sku: selected.sku,
-			price: selected.sellPrice,
-			quantity,
-		});
+    const regularPrice = getPrice(selected?.regularPrice);
+    const sellPrice = getPrice(selected?.sellPrice);
 
-		toast.success(`${name} (${selected.label}) added to cart`);
-	};
+    // ProductCard-এর মতো sellPrice না থাকলে regularPrice fallback।
+    const finalPrice =
+        sellPrice > 0 ? sellPrice : regularPrice;
 
-	return (
-		<div>
-			{/* PRICE */}
+    const hasDiscount =
+        regularPrice > 0 &&
+        finalPrice > 0 &&
+        finalPrice < regularPrice;
 
-			<div className="mt-5 flex flex-wrap items-baseline gap-3">
-				<span className="text-3xl font-bold text-green-600">
-					৳{selected.sellPrice}
-				</span>
+    const discountPercent = hasDiscount
+        ? Math.round(
+            ((regularPrice - finalPrice) / regularPrice) * 100
+        )
+        : 0;
 
-				{hasDiscount && (
-					<>
-						<span className="text-lg text-gray-400 line-through">
-							৳{selected.regularPrice}
-						</span>
+    const selectedStock = getStock(selected?.stock);
+    const inStock = Boolean(selected) && selectedStock > 0;
 
-						<span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">
-							{discountPercent}% OFF
-						</span>
-					</>
-				)}
-			</div>
+    // UI-তে quantity সর্বোচ্চ ২০ এবং available stock-এর মধ্যে থাকবে।
+    const maxQuantity = Math.min(selectedStock, 20);
 
-			{/* VARIANTS */}
+    const outOfStock = !inStock;
 
-			<div className="mt-6">
-				<h2 className="mb-3 text-sm font-semibold text-gray-900">
-					পরিমাণ বেছে নিন
-				</h2>
+    const allOutOfStock =
+        safeVariants.length === 0 ||
+        safeVariants.every(
+            (variant) => getStock(variant.stock) <= 0
+        );
 
-				<div className="flex flex-wrap gap-2" role="group">
-					{variants.map((variant) => {
-						const isSelected = variant._id === selected._id;
+    const handleSelectVariant = (variant, index) => {
+        // Stock নেই এমন variant-ও দেখা যাবে, তবে cart-এ যোগ হবে না।
+        setSelectedId(getVariantKey(variant, index));
+        setQuantity(1);
+    };
 
-						const soldOut = variant.stock <= 0;
+    const handleAddToCart = () => {
+        if (!selected || selectedStock <= 0) {
+            toast.error('এই ওজনের পণ্যটি বর্তমানে স্টকে নেই।');
+            return;
+        }
 
-						return (
-							<button
-								key={variant._id}
-								type="button"
-								aria-pressed={isSelected}
-								onClick={() => handleSelectVariant(variant)}
-								className={`rounded-lg border px-4 py-3 text-left transition ${
-									isSelected
-										? 'border-green-600 bg-green-50 ring-1 ring-green-600'
-										: 'border-gray-200 hover:border-green-400'
-								} ${soldOut ? 'opacity-60' : ''}`}>
-								<span className="block font-semibold text-gray-900">
-									{variant.label}
-								</span>
+        if (finalPrice <= 0) {
+            toast.error('এই পণ্যের মূল্য সঠিকভাবে সেট করা নেই।');
+            return;
+        }
 
-								<span className="mt-1 block text-sm font-medium text-green-600">
-									৳{variant.sellPrice}
-								</span>
+        const safeQuantity = Math.max(
+            1,
+            Math.min(
+                Math.floor(Number(quantity) || 1),
+                maxQuantity
+            )
+        );
 
-								<span
-									className={`mt-1 block text-xs ${
-										soldOut
-											? 'text-red-500'
-											: 'text-gray-500'
-									}`}>
-									{soldOut ? 'Out of Stock' : 'In Stock'}
-								</span>
-							</button>
-						);
-					})}
-				</div>
+        const variantId =
+            selected._id != null
+                ? String(selected._id)
+                : null;
 
-				{inStock && selected.stock <= 5 && (
-					<p className="mt-3 text-sm font-medium text-orange-600">
-						মাত্র {selected.stock}টি বাকি আছে
-					</p>
-				)}
-			</div>
+        const variantKey = getVariantKey(selected, activeIndex);
 
-			{/* QUANTITY */}
+        // ProductCard-এর payload structure অনুসরণ করা হয়েছে।
+        dispatch(
+            addToCart({
+                product: {
+                    _id: String(productId),
+                    name,
+                    slug,
+                    image: image || '',
+                    variantId,
+                    variantKey,
+                    price: finalPrice,
+                    regularPrice,
+                    sellPrice: finalPrice,
+                    stock: selectedStock,
+                    sku: selected.sku || '',
+                    size: {
+                        value: selected.value,
+                        unit: selected.unit,
+                    },
+                    variantLabel: formatSize(selected),
+                },
+                quantity: safeQuantity,
+            })
+        );
 
-			{inStock && (
-				<div className="mt-6 flex items-center gap-4">
-					<span className="text-sm font-semibold text-gray-900">
-						Quantity
-					</span>
+        toast.success(
+            `${name} (${formatSize(selected)}) কার্টে যোগ হয়েছে`
+        );
+    };
 
-					<div className="flex items-center rounded-lg border border-gray-200">
-						<button
-							type="button"
-							aria-label="Decrease quantity"
-							onClick={() =>
-								setQuantity((q) => Math.max(1, q - 1))
-							}
-							disabled={quantity <= 1}
-							className="p-3 text-gray-600 hover:bg-gray-50 disabled:opacity-30">
-							<Minus size={16} />
-						</button>
+    if (safeVariants.length === 0) {
+        return (
+            <div className="mt-6 rounded-xl border border-gray-200 p-4">
+                <div className="flex items-center gap-2 text-gray-500">
+                    <Package size={20} />
+                    <span className="text-sm">
+                        এই পণ্যের কোনো variant বা মূল্য পাওয়া যায়নি।
+                    </span>
+                </div>
+            </div>
+        );
+    }
 
-						<span className="min-w-10 text-center text-sm font-semibold">
-							{quantity}
-						</span>
+    return (
+        <div>
+            {/* PRICE */}
+            <div className="mt-5 flex flex-wrap items-baseline gap-3">
+                <span className="text-3xl font-bold text-green-600">
+                    ৳{formatMoney(finalPrice)}
+                </span>
 
-						<button
-							type="button"
-							aria-label="Increase quantity"
-							onClick={() =>
-								setQuantity((q) => Math.min(maxQuantity, q + 1))
-							}
-							disabled={quantity >= maxQuantity}
-							className="p-3 text-gray-600 hover:bg-gray-50 disabled:opacity-30">
-							<Plus size={16} />
-						</button>
-					</div>
-				</div>
-			)}
+                {hasDiscount && (
+                    <>
+                        <span className="text-lg text-gray-400 line-through">
+                            ৳{formatMoney(regularPrice)}
+                        </span>
 
-			{/* CTA */}
+                        <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">
+                            {discountPercent}% ছাড়
+                        </span>
+                    </>
+                )}
+            </div>
 
-			<button
-				type="button"
-				onClick={handleAddToCart}
-				disabled={!inStock}
-				className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-4 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300">
-				<ShoppingCart size={20} />
+            {/* VARIANT SELECTION */}
+            <div className="mt-6">
+                <h2 className="mb-3 text-sm font-semibold text-gray-900">
+                    ওজন নির্বাচন করুন
+                </h2>
 
-				{inStock ? 'Add to Cart' : 'Out of Stock'}
-			</button>
-		</div>
-	);
+                <div className="flex flex-wrap gap-2" role="group">
+                    {safeVariants.map((variant, index) => {
+                        const variantKey = getVariantKey(variant, index);
+                        const isSelected =
+                            variantKey ===
+                            (selected
+                                ? getVariantKey(selected, activeIndex)
+                                : '');
+
+                        const stock = getStock(variant.stock);
+                        const soldOut = stock <= 0;
+
+                        const variantRegularPrice =
+                            getPrice(variant.regularPrice);
+
+                        const variantSellPrice =
+                            getPrice(variant.sellPrice);
+
+                        const variantPrice =
+                            variantSellPrice > 0
+                                ? variantSellPrice
+                                : variantRegularPrice;
+
+                        return (
+                            <button
+                                key={variantKey}
+                                type="button"
+                                aria-pressed={isSelected}
+                                onClick={() =>
+                                    handleSelectVariant(variant, index)
+                                }
+                                className={`rounded-lg border px-4 py-3 text-left transition ${
+                                    isSelected
+                                        ? 'border-green-600 bg-green-50 ring-1 ring-green-600'
+                                        : 'border-gray-200 hover:border-green-400'
+                                } ${
+                                    soldOut
+                                        ? 'opacity-60'
+                                        : ''
+                                }`}
+                            >
+                                <span className="block font-semibold text-gray-900">
+                                    {formatSize(variant)}
+                                </span>
+
+                                <span className="mt-1 block text-sm font-medium text-green-600">
+                                    ৳{formatMoney(variantPrice)}
+                                </span>
+
+                                <span
+                                    className={`mt-1 block text-xs ${
+                                        soldOut
+                                            ? 'text-red-500'
+                                            : 'text-gray-500'
+                                    }`}
+                                >
+                                    {soldOut
+                                        ? 'স্টক শেষ'
+                                        : 'স্টকে আছে'}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {inStock && selectedStock <= 5 && (
+                    <p className="mt-3 text-sm font-medium text-orange-600">
+                        মাত্র {selectedStock}টি বাকি আছে
+                    </p>
+                )}
+            </div>
+
+            {/* STOCK STATUS */}
+            <div className="mt-4">
+                {outOfStock ? (
+                    <span className="text-sm font-medium text-red-500">
+                        {allOutOfStock
+                            ? 'এই পণ্যটি বর্তমানে স্টকে নেই'
+                            : 'নির্বাচিত ওজনটি স্টকে নেই'}
+                    </span>
+                ) : (
+                    <span className="text-sm font-medium text-green-600">
+                        ✓ স্টকে আছে
+                    </span>
+                )}
+            </div>
+
+            {/* QUANTITY */}
+            {inStock && (
+                <div className="mt-5 flex items-center gap-4">
+                    <span className="text-sm font-semibold text-gray-900">
+                        পরিমাণ
+                    </span>
+
+                    <div className="flex items-center rounded-lg border border-gray-200">
+                        <button
+                            type="button"
+                            aria-label="পরিমাণ কমান"
+                            onClick={() =>
+                                setQuantity((q) => Math.max(1, q - 1))
+                            }
+                            disabled={quantity <= 1}
+                            className="p-3 text-gray-600 hover:bg-gray-50 disabled:opacity-30"
+                        >
+                            <Minus size={16} />
+                        </button>
+
+                        <span className="min-w-10 text-center text-sm font-semibold">
+                            {quantity}
+                        </span>
+
+                        <button
+                            type="button"
+                            aria-label="পরিমাণ বাড়ান"
+                            onClick={() =>
+                                setQuantity((q) =>
+                                    Math.min(maxQuantity, q + 1)
+                                )
+                            }
+                            disabled={quantity >= maxQuantity}
+                            className="p-3 text-gray-600 hover:bg-gray-50 disabled:opacity-30"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* TOTAL PRICE */}
+            {inStock && quantity > 1 && (
+                <p className="mt-4 text-sm text-gray-600">
+                    মোট মূল্য:{' '}
+                    <strong className="text-gray-900">
+                        ৳{formatMoney(finalPrice * quantity)}
+                    </strong>
+                </p>
+            )}
+
+            {/* ADD TO CART */}
+            <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={outOfStock}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-4 font-semibold text-white transition hover:bg-green-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+            >
+                <ShoppingCart size={20} strokeWidth={2} />
+
+                {outOfStock
+                    ? 'স্টক শেষ'
+                    : 'কার্টে যোগ করুন'}
+            </button>
+        </div>
+    );
 }
