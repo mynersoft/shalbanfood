@@ -1,10 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { setSidebar } from '@/redux/store/slices/uiSlice';
 import UserHeader from '@/components/user/UserHeader';
@@ -12,53 +9,47 @@ import UserSidebar from '@/components/user/UserSidebar';
 import AuthGuard from '@/components/auth/AuthGuard';
 
 const Layout = ({ children }) => {
-	const dispatch = useDispatch();
+    const dispatch = useDispatch();
+    const { sidebarOpen } = useSelector((state) => state.ui);
 
-	const { sidebarOpen } = useSelector((state) => state.ui);
+    useEffect(() => {
+        const handleResize = () => {
+            dispatch(setSidebar(window.innerWidth >= 768));
+        };
 
-	/* ================= Sidebar ================= */
-	useEffect(() => {
-		const handleResize = () => {
-			if (window.innerWidth < 768) {
-				dispatch(setSidebar(false));
-			} else {
-				dispatch(setSidebar(true));
-			}
-		};
+        handleResize();
 
-		handleResize();
+        window.addEventListener('resize', handleResize);
 
-		window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [dispatch]);
 
-		return () => {
-			window.removeEventListener('resize', handleResize);
-		};
-	}, [dispatch]);
+    return (
+        <AuthGuard>
+            <div className="min-h-screen bg-slate-50">
+                <UserSidebar />
 
-	/* ================= Not Logged In ================= */
+                <main
+                    className={`
+                        min-h-screen min-w-0
+                        transition-[margin] duration-300
+                        ml-0
+                        ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'}
+                    `}
+                >
+                    <div className="mx-auto w-full max-w-[1600px] p-3 sm:p-5 lg:p-6">
+                        <UserHeader />
 
-	return (
-		<AuthGuard>
-			<div className="flex min-h-screen bg-slate-50">
-				{/* Sidebar */}
-
-				<UserSidebar />
-
-				{/* Main */}
-
-				<main
-					className={`
-					flex-1 transition-all duration-300
-					${sidebarOpen ? 'ml-64' : 'ml-20'}
-				`}>
-					<div className="p-6">
-						<UserHeader />
-						{children}
-					</div>
-				</main>
-			</div>
-		</AuthGuard>
-	);
+                        <div className="mt-4 sm:mt-6">
+                            {children}
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </AuthGuard>
+    );
 };
 
 export default Layout;
