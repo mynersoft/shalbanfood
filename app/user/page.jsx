@@ -792,11 +792,11 @@ export default function OrderHistory() {
 
                                             <div className="min-w-0">
                                                 <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-                                                    Order number
+                                                    Invoice No
                                                 </p>
 
                                                 <h3 className="break-all text-sm font-bold text-slate-900 sm:text-base">
-                                                    #{orderId}
+                                                    {order.invoiceNo}
                                                 </h3>
                                             </div>
 

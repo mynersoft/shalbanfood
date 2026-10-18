@@ -1,259 +1,255 @@
-import { NextResponse } from "next/server";
-import {connectDB} from "@/lib/dbConnect";
-import ComboOffer from "@/models/ComboOffer";
+import { NextResponse } from 'next/server';
 
-/* =========================
-   GET ALL OFFERS
-========================= */
+import { connectDB } from '@/lib/dbConnect';
+import ComboOffer from '@/models/ComboOffer';
 
-export async function GET(request) {
-    try {
-        await connectDB();
 
-        const { searchParams } = new URL(request.url);
-
-        const admin = searchParams.get("admin");
-        const featured = searchParams.get("featured");
-
-        const filter = {};
-
-        /* Public API */
-        if (admin !== "true") {
-            const now = new Date();
-
-            filter.isActive = true;
-            filter.startDate = { $lte: now };
-            filter.endDate = { $gte: now };
-            filter.stock = { $gt: 0 };
-        }
-
-        if (featured === "true") {
-            filter.isFeatured = true;
-        }
-
-        const offers = await ComboOffer.find(filter)
-            .sort({
-                priority: -1,
-                createdAt: -1,
-            })
-            .lean();
-
-        return NextResponse.json(
-            {
-                success: true,
-                count: offers.length,
-                offers,
-            },
-            { status: 200 }
-        );
-    } catch (error) {
-        console.error("GET OFFERS ERROR:", error);
-
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to fetch offers",
-            },
-            { status: 500 }
-        );
-    }
+async function requireAdmin() {
+	// Integrate your project's NextAuth/session-based admin check.
+	// Return the authenticated admin when authorized.
+	// Otherwise throw an error or return an unauthorized response.
+	throw new Error('Server-side admin authorization is not configured');
 }
 
-/* =========================
-   CREATE OFFER
-========================= */
+function errorResponse(message, status = 400) {
+	return NextResponse.json({ success: false, message }, { status });
+}
 
+function validateOffer(body) {
+	const {
+		name,
+		slug,
+		items,
+		regularPrice,
+		offerPrice,
+		featureImg,
+		startDate,
+		endDate,
+		stock,
+		priority,
+	} = body;
+
+	if (typeof name !== 'string' || !name.trim()) {
+		return 'Offer name is required';
+	}
+
+	if (typeof slug !== 'string' || !slug.trim()) {
+		return 'Slug is required';
+	}
+
+	if (
+		!Array.isArray(items) ||
+		items.length < 2 ||
+		items.some(
+			(item) =>
+				!item ||
+				typeof item.name !== 'string' ||
+				!item.name.trim() ||
+				typeof item.quantity !== 'string' ||
+				!item.quantity.trim()
+		)
+	) {
+		return 'At least 2 complete combo items are required';
+	}
+
+	if (
+		regularPrice === '' ||
+		regularPrice === null ||
+		regularPrice === undefined ||
+		!Number.isFinite(Number(regularPrice)) ||
+		Number(regularPrice) <= 0
+	) {
+		return 'Regular price must be greater than zero';
+	}
+
+	if (
+		offerPrice === '' ||
+		offerPrice === null ||
+		offerPrice === undefined ||
+		!Number.isFinite(Number(offerPrice)) ||
+		Number(offerPrice) < 0
+	) {
+		return 'Enter a valid offer price';
+	}
+
+	if (Number(offerPrice) > Number(regularPrice)) {
+		return 'Offer price cannot exceed regular price';
+	}
+
+	if (typeof featureImg !== 'string' || !featureImg.trim()) {
+		return 'Feature image is required';
+	}
+
+	if (!startDate || !endDate) {
+		return 'Start date and end date are required';
+	}
+
+	const start = new Date(startDate);
+	const end = new Date(endDate);
+
+	if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+		return 'Invalid offer dates';
+	}
+
+	if (end <= start) {
+		return 'End date must be after start date';
+	}
+
+	if (
+		stock !== undefined &&
+		(!Number.isInteger(Number(stock)) || Number(stock) < 0)
+	) {
+		return 'Stock must be a non-negative whole number';
+	}
+
+	if (priority !== undefined && !Number.isInteger(Number(priority))) {
+		return 'Priority must be a whole number';
+	}
+
+	return null;
+}
+
+function normalizeOffer(body) {
+	return {
+		name: body.name.trim(),
+		slug: body.slug.trim().toLowerCase(),
+		shortDescription: body.shortDescription || '',
+		description: body.description || '',
+
+		items: body.items.map((item) => ({
+			name: item.name.trim(),
+			quantity: item.quantity.trim(),
+		})),
+
+		regularPrice: Number(body.regularPrice),
+		offerPrice: Number(body.offerPrice),
+
+		featureImg: body.featureImg.trim(),
+		images: Array.isArray(body.images)
+			? body.images.filter((image) => typeof image === 'string')
+			: [],
+
+		stock: Number(body.stock ?? 0),
+
+		startDate: new Date(body.startDate),
+		endDate: new Date(body.endDate),
+
+		isActive: body.isActive ?? true,
+		isFeatured: body.isFeatured ?? false,
+		priority: Number(body.priority ?? 0),
+
+		seoTitle: body.seoTitle || '',
+		seoDescription: body.seoDescription || '',
+
+		keywords: Array.isArray(body.keywords)
+			? body.keywords
+					.filter((keyword) => typeof keyword === 'string')
+					.map((keyword) => keyword.trim())
+					.filter(Boolean)
+			: [],
+	};
+}
+
+// GET /api/offers
+// GET /api/offers?featured=true
+// GET /api/offers?admin=true (admin only)
+export async function GET(request) {
+	try {
+		await connectDB();
+
+		const { searchParams } = new URL(request.url);
+		
+		const featured = searchParams.get('featured') === 'true';
+
+
+		const filter = {};
+
+
+		if (featured) {
+			filter.isFeatured = true;
+		}
+
+		const offers = await ComboOffer.find(filter)
+			.sort({ priority: -1, createdAt: -1 })
+			.lean();
+
+		return NextResponse.json({
+			success: true,
+			count: offers.length,
+			offers,
+		});
+	} catch (error) {
+		console.error('GET OFFERS ERROR:', error);
+
+		if (
+			error.message ===
+			'Server-side admin authorization is not configured'
+		) {
+			return errorResponse('Admin authorization must be configured', 500);
+		}
+
+		return errorResponse('Failed to fetch offers', 500);
+	}
+}
+
+// POST /api/offers
 export async function POST(request) {
-    try {
-        await connectDB();
+	try {
+		
+		await connectDB();
 
-        const body = await request.json();
+		let body;
 
-        const {
-            name,
-            slug,
-            shortDescription,
-            description,
-            items,
-            regularPrice,
-            offerPrice,
-            featureImg,
-            images,
-            stock,
-            startDate,
-            endDate,
-            isActive,
-            isFeatured,
-            priority,
-            seoTitle,
-            seoDescription,
-            keywords,
-        } = body;
+		try {
+			body = await request.json();
+		} catch {
+			return errorResponse('Invalid JSON request body');
+		}
 
-        if (!name) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Offer name is required",
-                },
-                { status: 400 }
-            );
-        }
+		const validationError = validateOffer(body);
 
-        if (!slug) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Slug is required",
-                },
-                { status: 400 }
-            );
-        }
+		if (validationError) {
+			return errorResponse(validationError);
+		}
 
-        if (!items || !Array.isArray(items) || items.length < 2) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "At least 2 combo items are required",
-                },
-                { status: 400 }
-            );
-        }
+		const payload = normalizeOffer(body);
 
-        if (
-            regularPrice === undefined ||
-            offerPrice === undefined
-        ) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Prices are required",
-                },
-                { status: 400 }
-            );
-        }
+		const existing = await ComboOffer.findOne({
+			slug: payload.slug,
+		});
 
-        if (Number(offerPrice) > Number(regularPrice)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "Offer price cannot be greater than regular price",
-                },
-                { status: 400 }
-            );
-        }
+		if (existing) {
+			return errorResponse('This slug already exists', 409);
+		}
 
-        if (!featureImg) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Feature image is required",
-                },
-                { status: 400 }
-            );
-        }
+		const offer = await ComboOffer.create(payload);
 
-        if (!startDate || !endDate) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "Start date and end date are required",
-                },
-                { status: 400 }
-            );
-        }
+		return NextResponse.json(
+			{
+				success: true,
+				message: 'Combo offer created successfully',
+				offer,
+			},
+			{ status: 201 }
+		);
+	} catch (error) {
+		console.error('CREATE OFFER ERROR:', error.message);
 
-        if (
-            new Date(endDate) <=
-            new Date(startDate)
-        ) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "End date must be greater than start date",
-                },
-                { status: 400 }
-            );
-        }
+		if (
+			error.message ===
+			'Server-side admin authorization is not configured'
+		) {
+			return errorResponse('Admin authorization must be configured', 500);
+		}
 
-        const existing = await ComboOffer.findOne({
-            slug: slug.toLowerCase().trim(),
-        });
+		if (error.code === 11000) {
+			return errorResponse('This slug already exists', 409);
+		}
 
-        if (existing) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "This slug already exists",
-                },
-                { status: 409 }
-            );
-        }
+		if (error.name === 'ValidationError') {
+			return errorResponse(error.message);
+		}
 
-        const offer = await ComboOffer.create({
-            name,
-            slug: slug.toLowerCase().trim(),
-            shortDescription,
-            description,
-            items,
-
-            regularPrice: Number(regularPrice),
-            offerPrice: Number(offerPrice),
-
-            featureImg,
-            images: Array.isArray(images)
-                ? images
-                : [],
-
-            stock: Number(stock || 0),
-            sold: 0,
-
-            startDate: new Date(startDate),
-            endDate: new Date(endDate),
-
-            isActive:
-                isActive !== undefined
-                    ? Boolean(isActive)
-                    : true,
-
-            isFeatured:
-                isFeatured !== undefined
-                    ? Boolean(isFeatured)
-                    : false,
-
-            priority: Number(priority || 0),
-
-            seoTitle,
-            seoDescription,
-
-            keywords: Array.isArray(keywords)
-                ? keywords
-                : [],
-        });
-
-        return NextResponse.json(
-            {
-                success: true,
-                message: "Combo offer created successfully",
-                offer,
-            },
-            { status: 201 }
-        );
-    } catch (error) {
-        console.error("CREATE OFFER ERROR:", error);
-
-        return NextResponse.json(
-            {
-                success: false,
-                message:
-                    error.message ||
-                    "Failed to create offer",
-            },
-            { status: 500 }
-        );
-    }
+		return errorResponse('Failed to create offer', 500);
+	}
 }

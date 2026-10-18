@@ -1,42 +1,42 @@
-import Link from "next/link";
-import { ArrowLeft, Gift } from "lucide-react";
+import Link from 'next/link';
+import { ArrowLeft, Gift } from 'lucide-react';
 
-import {connectDB} from "@/lib/dbConnect";
-import ComboOffer from "@/models/ComboOffer";
-import OfferCard from "@/components/Combo/OfferCard";
+import { connectDB } from '@/lib/dbConnect';
+import ComboOffer from '@/models/ComboOffer';
+import OfferCard from '@/app/dashboard/components/Combo/OfferCard';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
-    title: "Combo Offers | Shalban Food",
-    description:
-        "Shalban Food-এর বিশেষ combo offers দেখুন এবং অনলাইনে অর্ডার করুন।",
+	title: 'Combo Offers | Shalban Food',
+	description:
+		'Shalban Food-এর বিশেষ combo offers দেখুন এবং অনলাইনে অর্ডার করুন।',
 };
 
 async function getOffers() {
-    await connectDB();
+	await connectDB();
 
-    const now = new Date();
+	const now = new Date();
 
-    const offers = await ComboOffer.find({
-        isActive: true,
-        startDate: { $lte: now },
-        endDate: { $gte: now },
-        stock: { $gt: 0 },
-    })
-        .sort({
-            priority: -1,
-            createdAt: -1,
-        })
-        .lean();
+	const offers = await ComboOffer.find({
+		isActive: true,
+		startDate: { $lte: now },
+		endDate: { $gte: now },
+		stock: { $gt: 0 },
+	})
+		.sort({
+			priority: -1,
+			createdAt: -1,
+		})
+		.lean();
 
-    return JSON.parse(JSON.stringify(offers));
+	return JSON.parse(JSON.stringify(offers));
 }
 
 export default async function OffersPage() {
-    const offers = await getOffers();
+	const offers = await getOffers();
 
-    return (
+	return (
 		<main className="min-h-screen bg-gray-50">
 			<section className="border-b bg-white">
 				<div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">

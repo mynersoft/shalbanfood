@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
 
 import { addToCart } from '@/redux/store/slices/cartSlice';
-import OfferCountdown from '@/components/Combo/OfferCountdown';
+import OfferCountdown from '@/app/dashboard/components/Combo/OfferCountdown';
 
 export default function OfferDetailsClient({ offer }) {
 	const dispatch = useDispatch();

@@ -1,11 +1,33 @@
 import mongoose from 'mongoose';
 
+const AddressSchema = new mongoose.Schema(
+	{
+		area: {
+			type: String,
+			trim: true,
+			default: '',
+		},
+		thana: {
+			type: String,
+			trim: true,
+			default: '',
+		},
+		city: {
+			type: String,
+			trim: true,
+			default: '',
+		},
+	},
+	{ _id: false }
+);
+
 const UserSchema = new mongoose.Schema(
 	{
 		name: {
 			type: String,
 			required: true,
 			trim: true,
+			maxlength: 100,
 		},
 
 		email: {
@@ -28,16 +50,24 @@ const UserSchema = new mongoose.Schema(
 		password: {
 			type: String,
 			required: true,
+			select: false,
+		},
+
+	
+		address: {
+			type: AddressSchema,
+			default: () => ({}),
 		},
 
 		role: {
 			type: String,
-			enum: ['user', 'admin'],
+			enum: ['user', 'admin', 'seller'],
 			default: 'user',
 		},
 	},
 	{
 		timestamps: true,
+		minimize: false,
 	}
 );
 

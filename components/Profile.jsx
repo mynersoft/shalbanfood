@@ -1,448 +1,344 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useMutation } from '@tanstack/react-query';
-import { updateUser } from '@/redux/store/slices/authSlice';
+import { useSession } from 'next-auth/react';
 import { toast, Toaster } from 'react-hot-toast';
 import {
-  Loader2,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Image,
-  Store,
-  Building,
-  CreditCard,
-  CheckCircle,
+	User,
+	Mail,
+	Phone,
+	MapPin,
+	Loader2,
+	CheckCircle,
+	Save,
+	ShieldCheck,
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+
+import { updateUser } from '@/redux/store/slices/authSlice';
+
+const EMPTY_FORM = {
+	name: '',
+	email: '',
+	phone: '',
+	address: {
+		area: '',
+		thana: '',
+		city: '',
+	},
+};
 
 export default function Profile() {
-  const dispatch = useDispatch();
-  const { data: session, status } = useSession();
-  console.log(session);
+	const dispatch = useDispatch();
+	const { data: session, status } = useSession();
 
-	const { user } = useSelector((state) => state.user);
-	console.log(user);
-	
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    avatar: '',
-    address: {
-      area: '',
-      thana: '',
-      city: '',
-    },
-    shopName: '',
-    shopAddress: '',
-    bankName: '',
-    bankBranch: '',
-    bankAccount: '',
-  });
+	const user = session?.user;
 
-  const [avatarPreview, setAvatarPreview] = useState('');
+	const [formData, setFormData] = useState(EMPTY_FORM);
 
-  // Initialize form data when user data is available
-  useEffect(() => {
-    if (!user) return;
+	// Fill form when session user becomes available
+	useEffect(() => {
+		if (!user) return;
 
-    setFormData({
-      name: user.name ?? '',
-      email: user.email ?? '',
-      phone: user.phone ?? '',
-      avatar: user.avatar ?? '',
-      address: {
-        area: user.address?.area ?? '',
-        thana: user.address?.thana ?? '',
-        city: user.address.city ?? '',
-      },
-      shopName: user.shopName ?? '',
-      shopAddress: user.shopAddress ?? '',
-      bankName: user.bankName ?? '',
-      bankBranch: user.bankBranch ?? '',
-      bankAccount: user.bankAccount ?? '',
-    });
+		setFormData({
+			name: user.name ?? '',
+			email: user.email ?? '',
+			phone: user.phone ?? '',
+			address: {
+				area: user.address?.area ?? '',
+				thana: user.address?.thana ?? '',
+				city: user.address?.city ?? '',
+			},
+		});
+	}, [user, session]);
 
-    setAvatarPreview(user.avatar || '');
-  }, [user]);
+	// Update profile API
+	const updateProfile = useMutation({
+		mutationFn: async (data) => {
+			const response = await fetch('/api/users/update-profile', {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(data),
+			});
 
-  // Handle avatar URL changes
-  useEffect(() => {
-    if (formData.avatar) setAvatarPreview(formData.avatar);
-  }, [formData.avatar]);
+			const result = await response.json();
 
-  /* ---------------- UPDATE MUTATION ---------------- */
-  const updateProfile = useMutation({
-    mutationFn: async (data) => {
-      const res = await fetch('/api/users/update-profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Update failed');
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      dispatch(updateUser(data.user));
-      toast.success('Profile updated successfully!', {
-        duration: 3000,
-        icon: <CheckCircle className="w-5 h-5 text-green-500" />,
-        style: {
-          background: '#10B981',
-          color: '#fff',
-          padding: '16px',
-          borderRadius: '8px',
-        },
-      });
-    },
-    onError: (err) => {
-      toast.error(err.message || 'Failed to update profile', {
-        duration: 4000,
-        style: {
-          background: '#EF4444',
-          color: '#fff',
-          padding: '16px',
-          borderRadius: '8px',
-        },
-      });
-    },
-  });
+			if (!response.ok || !result.success) {
+				throw new Error(result.message || 'প্রোফাইল আপডেট করা যায়নি।');
+			}
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+			return result;
+		},
 
-  const handleAddressChange = (field, value) => {
-    setFormData({
-      ...formData,
-      address: { ...formData.address, [field]: value },
-    });
-  };
+		onSuccess: (result) => {
+			const updatedUser = result.user;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    updateProfile.mutate(formData);
-  };
+			// Update Redux user data
+			dispatch(updateUser(updatedUser));
 
-  return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 md:p-8">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          success: {
-            iconTheme: { primary: '#10B981', secondary: '#fff' },
-          },
-          error: {
-            iconTheme: { primary: '#EF4444', secondary: '#fff' },
-          },
-        }}
-      />
+			// Keep the form synchronized with saved database data
+			setFormData({
+				name: updatedUser.name ?? '',
+				email: updatedUser.email ?? '',
+				phone: updatedUser.phone ?? '',
+				address: {
+					area: updatedUser.address?.area ?? '',
+					thana: updatedUser.address?.thana ?? '',
+					city: updatedUser.address?.city ?? '',
+				},
+			});
 
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-xl md:text-4xl font-bold text-gray-900">
-            Profile
-          </h1>
-        </div>
+			toast.success(result.message || 'প্রোফাইল আপডেট হয়েছে।');
+		},
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Avatar & Status */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center">
-              <div className="relative mb-4">
-                <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200">
-                  {avatarPreview ? (
-                    <img
-                      src={avatarPreview}
-                      alt="Avatar"
-                      className="w-full h-full object-cover"
-                      onError={() => setAvatarPreview('')}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100">
-                      <User className="w-16 h-16 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-                {avatarPreview && (
-                  <button
-                    type="button"
-                    onClick={() => setAvatarPreview('')}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
+		onError: (error) => {
+			toast.error(error.message || 'আবার চেষ্টা করুন।');
+		},
+	});
 
-              <div className="w-full space-y-3">
-                <div className="relative">
-                  <Image className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    name="avatar"
-                    value={formData.avatar}
-                    onChange={handleChange}
-                    placeholder="Paste image URL"
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  />
-                </div>
-                <p className="text-sm text-gray-500 text-center">
-                  Enter a valid image URL for your profile picture
-                </p>
-              </div>
+	const handleChange = (event) => {
+		const { name, value } = event.target;
 
-              {updateProfile.isPending && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4">
-                  <div className="flex items-center space-x-3">
-                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                    <span className="text-blue-700 font-medium">
-                      Updating profile...
-                    </span>
-                  </div>
-                </div>
-              )}
+		setFormData((previous) => ({
+			...previous,
+			[name]: value,
+		}));
+	};
 
-              {updateProfile.isSuccess && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 mt-4">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                    <span className="text-green-700 font-medium">
-                      Profile updated successfully!
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+	const handleAddressChange = (field, value) => {
+		setFormData((previous) => ({
+			...previous,
+			address: {
+				...previous.address,
+				[field]: value,
+			},
+		}));
+	};
 
-          {/* Right Column - Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Personal Info */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6 pb-3 border-b border-gray-200">
-                  Personal Information
-                </h3>
+	const handleSubmit = (event) => {
+		event.preventDefault();
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <label className="flex items-center text-sm font-medium text-gray-700">
-                      <User className="w-4 h-4 mr-2" /> Full Name
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      required
-                    />
-                  </div>
+		if (!user) {
+			toast.error('প্রথমে লগইন করুন।');
+			return;
+		}
 
-                  <div className="space-y-2">
-                    <label className="flex items-center text-sm font-medium text-gray-700">
-                      <Mail className="w-4 h-4 mr-2" /> Email Address
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      required
-                    />
-                  </div>
+		updateProfile.mutate(formData);
+	};
 
-                  <div className="space-y-2">
-                    <label className="flex items-center text-sm font-medium text-gray-700">
-                      <Phone className="w-4 h-4 mr-2" /> Phone Number
-                    </label>
-                    <input
-                      type="text"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      required
-                    />
-                  </div>
+	if (status === 'loading') {
+		return (
+			<div className="flex min-h-64 items-center justify-center">
+				<Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+			</div>
+		);
+	}
 
-                  {/* Single Address Fields */}
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="flex items-center text-sm font-medium text-gray-700">
-                      <MapPin className="w-4 h-4 mr-2" /> Address Area
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.address.area}
-                      onChange={(e) =>
-                        handleAddressChange('area', e.target.value)
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    />
-                  </div>
+	if (!user) {
+		return (
+			<div className="mx-auto mt-10 max-w-lg rounded-xl bg-white p-8 text-center shadow">
+				<ShieldCheck className="mx-auto mb-3 h-10 w-10 text-gray-400" />
+				<h2 className="text-xl font-semibold text-gray-800">
+					লগইন প্রয়োজন
+				</h2>
+				<p className="mt-2 text-gray-600">
+					প্রোফাইল দেখতে ও আপডেট করতে লগইন করুন।
+				</p>
+			</div>
+		);
+	}
 
-                  <div className="space-y-2">
-                    <label className="flex items-center text-sm font-medium text-gray-700">
-                      Thana
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.address.thana}
-                      onChange={(e) =>
-                        handleAddressChange('thana', e.target.value)
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    />
-                  </div>
+	return (
+		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
+			<Toaster position="top-right" />
 
-                  <div className="space-y-2">
-                    <label className="flex items-center text-sm font-medium text-gray-700">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.address.city}
-                      onChange={(e) =>
-                        handleAddressChange('city', e.target.value)
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
+			<div className="mx-auto max-w-4xl">
+				<div className="mb-8">
+					<h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+						My Profile
+					</h1>
+					<p className="mt-2 text-sm text-gray-500">
+						আপনার ব্যক্তিগত তথ্য ও ঠিকানা আপডেট করুন।
+					</p>
+				</div>
 
-              {/* Seller Info */}
-              {user?.role === 'seller' && (
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <div className="flex items-center mb-6 pb-3 border-b border-gray-200">
-                    <Store className="w-6 h-6 mr-3 text-blue-600" />
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      Business Information
-                    </h3>
-                  </div>
+				<form onSubmit={handleSubmit} className="space-y-6">
+					{/* Account summary */}
+					<section className="rounded-2xl bg-white p-6 shadow-sm">
+						<div className="flex items-center gap-4">
+							<div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+								<User className="h-8 w-8 text-blue-600" />
+							</div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">
-                        Shop Name
-                      </label>
-                      <input
-                        type="text"
-                        name="shopName"
-                        value={formData.shopName}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        placeholder="Your shop name"
-                      />
-                    </div>
+							<div className="min-w-0">
+								<h2 className="truncate text-xl font-semibold text-gray-900">
+									{user.name || 'User'}
+								</h2>
+								<p className="break-all text-sm text-gray-500">
+									{user.email || user.phone || 'Account'}
+								</p>
+								<span className="mt-2 inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-medium capitalize text-blue-700">
+									{user.role || 'user'}
+								</span>
+							</div>
+						</div>
+					</section>
 
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="text-sm font-medium text-gray-700">
-                        Shop Address
-                      </label>
-                      <input
-                        type="text"
-                        name="shopAddress"
-                        value={formData.shopAddress}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        placeholder="Complete shop address"
-                      />
-                    </div>
+					{/* Personal information */}
+					<section className="rounded-2xl bg-white p-6 shadow-sm">
+						<h2 className="mb-6 border-b border-gray-100 pb-4 text-lg font-semibold text-gray-900">
+							Personal Information
+						</h2>
 
-                    {/* Bank Info */}
-                    <div className="md:col-span-2 mt-2 mb-4">
-                      <div className="flex items-center">
-                        <Building className="w-5 h-5 mr-2 text-green-600" />
-                        <h4 className="text-lg font-medium text-gray-800">
-                          Bank Details
-                        </h4>
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1">
-                        For payment processing
-                      </p>
-                    </div>
+						<div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+							<div>
+								<label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+									<User className="h-4 w-4" />
+									Full Name
+								</label>
+								<input
+									type="text"
+									name="name"
+									value={formData.name}
+									onChange={handleChange}
+									maxLength={100}
+									required
+									autoComplete="name"
+									className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+									placeholder="আপনার পূর্ণ নাম"
+								/>
+							</div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">
-                        Bank Name
-                      </label>
-                      <input
-                        type="text"
-                        name="bankName"
-                        value={formData.bankName}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        placeholder="e.g., Chase Bank"
-                      />
-                    </div>
+							<div>
+								<label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+									<Mail className="h-4 w-4" />
+									Email Address
+								</label>
+								<input
+									type="email"
+									name="email"
+									value={formData.email}
+									onChange={handleChange}
+									autoComplete="email"
+									className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+									placeholder="example@email.com"
+								/>
+							</div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">
-                        Bank Branch
-                      </label>
-                      <input
-                        type="text"
-                        name="bankBranch"
-                        value={formData.bankBranch}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        placeholder="Branch location"
-                      />
-                    </div>
+							<div className="md:col-span-2">
+								<label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+									<Phone className="h-4 w-4" />
+									Phone Number
+								</label>
+								<input
+									type="tel"
+									name="phone"
+									value={formData.phone}
+									onChange={handleChange}
+									maxLength={20}
+									autoComplete="tel"
+									className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+									placeholder="01XXXXXXXXX"
+								/>
+							</div>
+						</div>
+					</section>
 
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="flex items-center text-sm font-medium text-gray-700">
-                        <CreditCard className="w-4 h-4 mr-2" /> Account Number
-                      </label>
-                      <input
-                        type="text"
-                        name="bankAccount"
-                        value={formData.bankAccount}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        placeholder="Enter your account number"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+					{/* Address */}
+					<section className="rounded-2xl bg-white p-6 shadow-sm">
+						<h2 className="mb-6 flex items-center gap-2 border-b border-gray-100 pb-4 text-lg font-semibold text-gray-900">
+							<MapPin className="h-5 w-5 text-blue-600" />
+							Delivery Address
+						</h2>
 
-              {/* Submit Button */}
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={updateProfile.isPending}
-                  className="px-8 py-3.5 bg-linear-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 focus:ring-4 focus:ring-blue-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
-                >
-                  {updateProfile.isPending ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Updating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-5 h-5" />
-                      <span>Save Changes</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+						<div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+							<div className="md:col-span-2">
+								<label className="mb-2 block text-sm font-medium text-gray-700">
+									এলাকা / গ্রাম / রোড
+								</label>
+								<input
+									type="text"
+									value={formData.address.area}
+									onChange={(event) =>
+										handleAddressChange(
+											'area',
+											event.target.value
+										)
+									}
+									maxLength={150}
+									className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+									placeholder="আপনার এলাকা"
+								/>
+							</div>
+
+							<div>
+								<label className="mb-2 block text-sm font-medium text-gray-700">
+									থানা / উপজেলা
+								</label>
+								<input
+									type="text"
+									value={formData.address.thana}
+									onChange={(event) =>
+										handleAddressChange(
+											'thana',
+											event.target.value
+										)
+									}
+									maxLength={150}
+									className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+									placeholder="থানা বা উপজেলা"
+								/>
+							</div>
+
+							<div>
+								<label className="mb-2 block text-sm font-medium text-gray-700">
+									শহর / জেলা
+								</label>
+								<input
+									type="text"
+									value={formData.address.city}
+									onChange={(event) =>
+										handleAddressChange(
+											'city',
+											event.target.value
+										)
+									}
+									maxLength={150}
+									className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+									placeholder="শহর বা জেলা"
+								/>
+							</div>
+						</div>
+					</section>
+
+					{/* Save button */}
+					<div className="flex justify-end">
+						<button
+							type="submit"
+							disabled={updateProfile.isPending}
+							className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-7 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+							{updateProfile.isPending ? (
+								<>
+									<Loader2 className="h-5 w-5 animate-spin" />
+									Saving...
+								</>
+							) : (
+								<>
+									{updateProfile.isSuccess ? (
+										<CheckCircle className="h-5 w-5" />
+									) : (
+										<Save className="h-5 w-5" />
+									)}
+									Save Changes
+								</>
+							)}
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	);
 }

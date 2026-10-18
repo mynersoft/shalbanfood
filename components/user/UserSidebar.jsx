@@ -6,7 +6,10 @@ import {
   Package,
   Settings,
   ShoppingCart,
-  X,
+	X,
+  
+
+
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect } from 'react';
@@ -50,7 +53,7 @@ export default function UserSidebar() {
 				<div className="p-4 flex items-center justify-between">
 					{sidebarOpen ? (
 						<span className="text-xl font-bold tracking-tight text-emerald-400">
-							TOMART<span className="text-orange-400">BD</span>
+							Shalban<span className="text-orange-400">Food</span>
 						</span>
 					) : (
 						<ShoppingCart className="w-8 h-8 text-emerald-400 mx-auto" />
