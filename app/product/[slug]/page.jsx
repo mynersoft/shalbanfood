@@ -444,12 +444,12 @@ export default async function ProductPage({ params }) {
 						{/* Interactive: price, size, quantity, cart */}
 
 						<ProductPurchase
-							productId={String(product._id)}
-							name={product.name}
-							slug={product.slug}
-							image={product.image || ''}
-							variants={variants}
-						/>
+    productId={String(product._id)}
+    name={product.name}
+    slug={product.slug}
+    image={product.image || ''}
+    variants={variants}
+/>
 
 						{/* TRUST */}
 
