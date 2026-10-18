@@ -57,6 +57,11 @@ const menuItems = [
 		href: '/dashboard/due',
 		icon: ShoppingCart,
 	},
+{
+		name: 'Blog',
+		href: '/dashboard/blog',
+		icon: ShoppingCart,
+	},
 	{
 		name: 'Shipping cost',
 		href: '/dashboard/shipping-cost',
