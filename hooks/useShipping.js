@@ -1,25 +1,18 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
-import { useDispatch } from 'react-redux';
-import { setShipping } from '@/redux/store/slices/shippingSlice';
-import toast from 'react-hot-toast';
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
-export function useShipping() {
-  const dispatch = useDispatch();
+export const useShippingCost = () => {
   return useQuery({
-    queryKey: ['shipping'],
+    queryKey: ["shipping-cost"],
     queryFn: async () => {
-      const res = await axios.get('/api/shipping');      
-      dispatch(setShipping(res.data));
-      return res.data;
+      const { data } = await axios.get(
+        "/api/shipping"
+      );
+
+      return data;
     },
-    onError: (error) => {
-      toast.error(`Failed to fetch Shipping: ${error.message}`);
-    },
-    onSuccess: () => {
-      toast.success('Shipping fetched successfully');
-    },
+    staleTime: 5 * 60 * 1000,
   });
-}
+};
