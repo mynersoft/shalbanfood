@@ -63,7 +63,7 @@ export default function MaintenanceToast() {
                     </div>
                 ),
                 {
-                    duration: 10000,
+                    duration: 5000,
                     position: 'top-center',
                     style: {
                         padding: '16px',
