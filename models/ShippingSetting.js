@@ -9,7 +9,7 @@ const ShippingSettingSchema = new mongoose.Schema(
     },
     outsideDhaka: {
       type: Number,
-      default: 120,
+      default: 130,
       min: 0,
     },
     freeDeliveryEnabled: {
