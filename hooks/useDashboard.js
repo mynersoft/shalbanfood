@@ -1,27 +1,33 @@
 
-"use client";
-
-import { useQuery } from "@tanstack/react-query";
-
 async function fetchDashboardOverview() {
-  const response = await fetch("/api/dashboard/overview", {
+  const res = await fetch("/api/dashboard/overview", {
+    method: "GET",
     cache: "no-store",
+    headers: {
+      Accept: "application/json",
+    },
   });
 
-  const data = await response.json();
+  const contentType = res.headers.get("content-type") || "";
 
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || "Dashboard load failed");
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+
+    console.error("Dashboard API returned non-JSON:", {
+      status: res.status,
+      response: text.slice(0, 200),
+    });
+
+    throw new Error(
+      `Dashboard API returned HTML/non-JSON (HTTP ${res.status}). Check API route and deployment.`
+    );
+  }
+
+  const data = await res.json();
+
+  if (!res.ok || data.success === false) {
+    throw new Error(data.message || "Dashboard data load failed");
   }
 
   return data;
-}
-
-export function useDashboardOverview() {
-  return useQuery({
-    queryKey: ["dashboard-overview"],
-    queryFn: fetchDashboardOverview,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
-  });
 }
