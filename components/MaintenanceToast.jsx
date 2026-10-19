@@ -43,6 +43,25 @@ export default function MaintenanceToast() {
                             কোনো সমস্যা হলে WhatsApp-এ যোগাযোগ করুন।
                         </p>
 
+<button
+    type="button"
+    onClick={() => toast.dismiss(t.id)}
+    style={{
+        display: 'inline-block',
+        marginLeft: '8px',
+        background: '#e5e7eb',
+        color: '#374151',
+        padding: '10px 16px',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        fontWeight: '600',
+    }}
+>
+    Cancel
+</button>
+
+
                         <a
                             href="https://wa.me/8801603816721"
                             target="_blank"
