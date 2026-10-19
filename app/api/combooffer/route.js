@@ -160,8 +160,7 @@ export async function GET(request) {
 		const { searchParams } = new URL(request.url);
 		
 		const featured = searchParams.get('featured') === 'true';
-
-
+		
 		const filter = {};
 
 

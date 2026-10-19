@@ -30,7 +30,6 @@ import { calculateShippingFee } from '@/lib/calculateShippingFee';
 ========================================================= */
 
 const PHONE_REGEX = /^(?:\+?88)?01[3-9]\d{8}$/;
-
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const UNIT_LABELS = {
@@ -41,7 +40,12 @@ const UNIT_LABELS = {
 	piece: 'পিস',
 };
 
-/* Size text, e.g. "500 গ্রাম" (empty if the item has no size) */
+const EMPTY_SHIPPING_SETTINGS = {
+	districtRates: [],
+	defaultCharge: 0,
+	freeDeliveryEnabled: false,
+	freeDeliveryMinimum: 0,
+};
 
 const getSizeLabel = (item) => {
 	const value = item?.size?.value;
@@ -52,13 +56,15 @@ const getSizeLabel = (item) => {
 	return `${value} ${UNIT_LABELS[unit] || unit}`;
 };
 
-/* Unit price comes from the selected variant's sellPrice */
-
 const getUnitPrice = (item) => Math.max(Number(item?.sellPrice) || 0, 0);
 
 const getQuantity = (item) => Math.max(1, Number(item?.quantity) || 1);
 
 const getProductId = (item) => item?.productId || item?._id || item?.id || '';
+
+/* =========================================================
+   CHECKOUT CLIENT
+========================================================= */
 
 export default function CheckoutClient() {
 	const router = useRouter();
@@ -66,22 +72,82 @@ export default function CheckoutClient() {
 	const { status } = useSession();
 	const { user } = useLoginUser();
 
-	/* =========================================================
-	   REDUX
-	========================================================= */
-
 	const cart = useSelector((state) => state.cart.items);
 	const { applyVoucher } = useSelector((state) => state.voucher);
-
-	/* =========================================================
-	   ORDER
-	========================================================= */
 
 	const mutation = useAddOrder();
 
 	const [processing, setProcessing] = useState(false);
-
 	const [orderPlaced, setOrderPlaced] = useState(false);
+
+
+
+	const [shippingSettings, setShippingSettings] = useState(
+		EMPTY_SHIPPING_SETTINGS
+	);
+
+	const [shippingSettingsLoading, setShippingSettingsLoading] =
+		useState(true);
+
+useEffect(() => {
+	let cancelled = false;
+
+	const fetchShippingSettings = async () => {
+		try {
+			const response = await fetch('/api/shipping', {
+				method: 'GET',
+				cache: 'no-store',
+			});
+
+			if (!response.ok) {
+				throw new Error('Shipping API failed');
+			}
+
+			const result = await response.json();
+
+			if (!result?.success || !result?.settings) {
+				throw new Error('Shipping settings unavailable');
+			}
+
+			const settings = result.settings;
+
+			if (!cancelled) {
+				setShippingSettings({
+					districtRates: Array.isArray(settings.districtRates)
+						? settings.districtRates
+						: [],
+
+					defaultCharge: Number(settings.defaultCharge) || 0,
+
+					freeDeliveryEnabled: settings.freeDeliveryEnabled === true,
+
+					freeDeliveryMinimum:
+						Number(settings.freeDeliveryMinimum) || 0,
+				});
+			}
+		} catch (error) {
+			console.error('Shipping settings error:', error);
+
+			if (!cancelled) {
+				setShippingSettings(EMPTY_SHIPPING_SETTINGS);
+			}
+		} finally {
+			if (!cancelled) {
+				setShippingSettingsLoading(false);
+			}
+		}
+	};
+
+	fetchShippingSettings();
+
+	return () => {
+		cancelled = true;
+	};
+}, []);
+
+	/* =========================================================
+	   ORDER FORM
+========================================================= */
 
 	const [orderData, setOrderData] = useState({
 		customer: {
@@ -105,28 +171,28 @@ export default function CheckoutClient() {
 
 	/* =========================================================
 	   LOGIN CHECK
-	========================================================= */
+========================================================= */
 
 	useEffect(() => {
-		if (status === 'unauthenticated') {
-			toast.error('Checkout করতে প্রথমে Login করুন', {
-				id: 'checkout-login-required',
-				duration: 2500,
-			});
+		if (status !== 'unauthenticated') return;
 
-			const timer = setTimeout(() => {
-				router.replace(
-					`/auth/login?callbackUrl=${encodeURIComponent('/checkout')}`
-				);
-			}, 1200);
+		toast.error('Checkout করতে প্রথমে Login করুন', {
+			id: 'checkout-login-required',
+			duration: 2500,
+		});
 
-			return () => clearTimeout(timer);
-		}
+		const timer = setTimeout(() => {
+			router.replace(
+				`/auth/login?callbackUrl=${encodeURIComponent('/checkout')}`
+			);
+		}, 1200);
+
+		return () => clearTimeout(timer);
 	}, [status, router]);
 
 	/* =========================================================
 	   AUTO FILL LOGGED-IN USER
-	========================================================= */
+========================================================= */
 
 	useEffect(() => {
 		if (!user) return;
@@ -136,17 +202,13 @@ export default function CheckoutClient() {
 
 			customer: {
 				name: prev.customer.name || user.name || user.username || '',
-
 				email: prev.customer.email || user.email || '',
-
 				phone: prev.customer.phone || user.phone || '',
 			},
 
 			address: {
 				area: prev.address.area || user.address?.area || '',
-
 				city: prev.address.city || user.address?.city || '',
-
 				thana: prev.address.thana || user.address?.thana || '',
 			},
 		}));
@@ -154,31 +216,38 @@ export default function CheckoutClient() {
 
 	/* =========================================================
 	   TOTALS
-	   (display only: the server must recalculate everything)
-	========================================================= */
+	   Display only. The backend must recalculate the final amount.
+========================================================= */
 
-	const subtotal = useMemo(
-		() =>
-			cart.reduce(
-				(sum, item) => sum + getUnitPrice(item) * getQuantity(item),
-				0
-			),
-		[cart]
-	);
+	const subtotal = useMemo(() => {
+		return cart.reduce(
+			(sum, item) => sum + getUnitPrice(item) * getQuantity(item),
+			0
+		);
+	}, [cart]);
 
-	const discount = Number(applyVoucher?.discount || 0);
+	const discount = Math.max(Number(applyVoucher?.discount) || 0, 0);
 
 	const voucherCode = applyVoucher?.code || applyVoucher?.voucherCode || '';
 
-	const deliveryCharge = Number(
-		calculateShippingFee({ subtotal, dis: orderData.address.city }) || 0
-	);
+	/*
+	 * orderData.address.city stores the selected district.
+	 * Recalculation happens automatically when the district changes.
+	 */
+
+	const deliveryCharge = useMemo(() => {
+		return calculateShippingFee({
+			subtotal,
+			district: orderData.address.city,
+			settings: shippingSettings,
+		});
+	}, [subtotal, orderData.address.city, shippingSettings]);
 
 	const grandTotal = Math.max(subtotal - discount, 0) + deliveryCharge;
 
 	/* =========================================================
 	   FORM CHANGE
-	========================================================= */
+========================================================= */
 
 	const handleChange = (e) => {
 		const { name, value } = e.target;
@@ -188,7 +257,6 @@ export default function CheckoutClient() {
 
 			setOrderData((prev) => ({
 				...prev,
-
 				[parent]: {
 					...prev[parent],
 					[child]: value,
@@ -206,29 +274,24 @@ export default function CheckoutClient() {
 
 	/* =========================================================
 	   PLACE ORDER
-	========================================================= */
+========================================================= */
 
 	const placeOrder = (payload) => {
 		mutation.mutate(payload, {
-			onSuccess: (response) => {
+			onSuccess: () => {
 				setOrderPlaced(true);
 
-				try {
-					toast.success('অর্ডার সফল হয়েছে!');
-				} catch (error) {
-					console.error(error);
-				} finally {
-					setProcessing(false);
-				}
+				toast.success('অর্ডার সফল হয়েছে!');
+				setProcessing(false);
 			},
 
 			onError: (error) => {
-				console.error(error);
+				console.error('Place order error:', error);
 
 				toast.error(
 					error?.response?.data?.message ||
 						error?.message ||
-						'Order failed. Please try again.'
+						'অর্ডার করা যায়নি। আবার চেষ্টা করুন।'
 				);
 
 				setProcessing(false);
@@ -238,12 +301,10 @@ export default function CheckoutClient() {
 
 	/* =========================================================
 	   CONFIRM ORDER
-	========================================================= */
+========================================================= */
 
 	const handleConfirmOrder = () => {
 		if (processing || orderPlaced) return;
-
-		/* Extra security check */
 
 		if (status !== 'authenticated' || !user) {
 			toast.error('অর্ডার করতে প্রথমে Login করুন', {
@@ -258,26 +319,22 @@ export default function CheckoutClient() {
 		}
 
 		const name = orderData.customer.name.trim();
-
 		const email = orderData.customer.email.trim();
-
 		const phone = orderData.customer.phone.trim().replace(/[\s-]/g, '');
 
 		const area = orderData.address.area.trim();
-
 		const city = orderData.address.city.trim();
-
 		const thana = orderData.address.thana.trim();
 
 		/* Required validation */
 
 		if (!name) {
-			toast.error('Please enter your name');
+			toast.error('আপনার নাম লিখুন');
 			return;
 		}
 
 		if (!phone) {
-			toast.error('Please enter your phone number');
+			toast.error('আপনার মোবাইল নম্বর লিখুন');
 			return;
 		}
 
@@ -287,28 +344,31 @@ export default function CheckoutClient() {
 		}
 
 		if (email && !EMAIL_REGEX.test(email)) {
-			toast.error('Please enter a valid email address');
+			toast.error('সঠিক ইমেইল ঠিকানা লিখুন');
 			return;
 		}
 
 		if (!city) {
-			toast.error('Please select your district');
+			toast.error('আপনার জেলা নির্বাচন করুন');
 			return;
 		}
 
 		if (!area) {
-			toast.error('Please enter your delivery area');
+			toast.error('আপনার ডেলিভারি এলাকা লিখুন');
 			return;
 		}
 
 		if (!cart.length) {
-			toast.error('Your cart is empty');
+			toast.error('আপনার কার্ট খালি');
 			return;
 		}
 
-		/* =====================================================
-		   ORDER ITEMS (matches the Order model)
-		===================================================== */
+		if (shippingSettingsLoading) {
+			toast.error('ডেলিভারি চার্জ লোড হচ্ছে। একটু অপেক্ষা করুন।');
+			return;
+		}
+
+		/* Validate cart items */
 
 		const hasInvalidItem = cart.some(
 			(item) => !getProductId(item) || getUnitPrice(item) <= 0
@@ -321,28 +381,24 @@ export default function CheckoutClient() {
 			return;
 		}
 
+		/* Order items */
+
 		const orderItems = cart.map((item) => {
 			const sizeLabel = getSizeLabel(item);
-
 			const baseName = item.name || '';
 
 			return {
 				productId: String(getProductId(item)),
 
-				/* The model has no size field, so the size goes into the name */
 				name: sizeLabel ? `${baseName} - ${sizeLabel}` : baseName,
 
 				quantity: getQuantity(item),
-
 				price: getUnitPrice(item),
-
 				image: item.image || item.images?.[0] || '',
 			};
 		});
 
-		/* =====================================================
-		   PAYLOAD
-		===================================================== */
+		/* Payload */
 
 		const payload = {
 			userId: user?.id || user?._id || undefined,
@@ -361,7 +417,6 @@ export default function CheckoutClient() {
 			},
 
 			orderItems,
-
 			voucherCode,
 
 			payment: {
@@ -371,13 +426,12 @@ export default function CheckoutClient() {
 		};
 
 		setProcessing(true);
-
 		placeOrder(payload);
 	};
 
 	/* =========================================================
 	   SESSION LOADING
-	========================================================= */
+========================================================= */
 
 	if (status === 'loading') {
 		return (
@@ -398,7 +452,7 @@ export default function CheckoutClient() {
 
 	/* =========================================================
 	   NOT LOGGED IN
-	========================================================= */
+========================================================= */
 
 	if (status === 'unauthenticated') {
 		return (
@@ -435,7 +489,7 @@ export default function CheckoutClient() {
 
 	/* =========================================================
 	   EMPTY CART
-	========================================================= */
+========================================================= */
 
 	if (cart.length === 0) {
 		return <CheckEmptyCart />;
@@ -443,7 +497,7 @@ export default function CheckoutClient() {
 
 	/* =========================================================
 	   CHECKOUT
-	========================================================= */
+========================================================= */
 
 	return (
 		<div className="min-h-screen bg-[#fafafa]">
@@ -513,6 +567,7 @@ export default function CheckoutClient() {
 											value={orderData.customer.name}
 											onChange={handleChange}
 											placeholder="Enter your full name"
+											autoComplete="name"
 											className="w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
 										/>
 									</div>
@@ -537,6 +592,7 @@ export default function CheckoutClient() {
 											value={orderData.customer.email}
 											onChange={handleChange}
 											placeholder="you@example.com"
+											autoComplete="email"
 											className="w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
 										/>
 									</div>
@@ -561,6 +617,7 @@ export default function CheckoutClient() {
 											value={orderData.customer.phone}
 											onChange={handleChange}
 											placeholder="01XXXXXXXXX"
+											autoComplete="tel"
 											className="w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
 										/>
 									</div>
@@ -568,54 +625,36 @@ export default function CheckoutClient() {
 							</div>
 						</div>
 
-						{/* SHIPPING */}
+						{/* SHIPPING
+						    ShippingInfo receives the selected district,
+						    shared form handler and calculated delivery fee.
+						*/}
 
-						<div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
-							<div className="flex items-center gap-3 mb-6">
-								<div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
-									<Truck
-										size={19}
-										className="text-gray-700"
-									/>
-								</div>
+						<ShippingInfo
+							orderData={{
+								...orderData,
+								phone: orderData.customer.phone,
+								shippingCharge: deliveryCharge,
+							}}
+							handleChange={(e) => {
+								const { name, value } = e.target;
 
-								<div>
-									<h2 className="font-semibold text-gray-900">
-										Delivery Information
-									</h2>
+								if (name === 'phone') {
+									setOrderData((prev) => ({
+										...prev,
+										customer: {
+											...prev.customer,
+											phone: value,
+										},
+									}));
 
-									<p className="text-xs text-gray-500 mt-0.5">
-										Where should we deliver your order?
-									</p>
-								</div>
-							</div>
+									return;
+								}
 
-							<ShippingInfo
-								orderData={{
-									...orderData,
-									phone: orderData.customer.phone,
-								}}
-								handleChange={(e) => {
-									const { name, value } = e.target;
-
-									if (name === 'phone') {
-										setOrderData((prev) => ({
-											...prev,
-
-											customer: {
-												...prev.customer,
-
-												phone: value,
-											},
-										}));
-
-										return;
-									}
-
-									handleChange(e);
-								}}
-							/>
-						</div>
+								handleChange(e);
+							}}
+							shippingCharge={deliveryCharge}
+						/>
 
 						{/* PAYMENT */}
 
@@ -754,8 +793,7 @@ export default function CheckoutClient() {
 										</span>
 
 										<span className="font-medium text-green-600">
-											-৳
-											{discount.toFixed(2)}
+											-৳{discount.toFixed(2)}
 										</span>
 									</div>
 								)}
@@ -772,10 +810,23 @@ export default function CheckoutClient() {
 												: 'font-medium text-gray-900'
 										}>
 										{deliveryCharge === 0
-											? 'FREE'
+											? orderData.address.city
+												? 'FREE'
+												: 'জেলা নির্বাচন করুন'
 											: `৳${deliveryCharge.toFixed(2)}`}
 									</span>
 								</div>
+
+								{shippingSettings.freeDeliveryEnabled &&
+									subtotal >=
+										Number(
+											shippingSettings.freeDeliveryMinimum
+										) && (
+										<p className="text-xs text-green-600">
+											আপনার অর্ডারে ফ্রি ডেলিভারি
+											প্রযোজ্য।
+										</p>
+									)}
 							</div>
 
 							<div className="border-t border-gray-200 mt-5 pt-5">
@@ -805,7 +856,8 @@ export default function CheckoutClient() {
 								disabled={
 									processing ||
 									orderPlaced ||
-									cart.length === 0
+									cart.length === 0 ||
+									shippingSettingsLoading
 								}
 								className="w-full mt-6 flex items-center justify-center gap-2 bg-gray-900 text-white py-4 px-5 rounded-xl font-semibold text-base hover:bg-black active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
 								{processing ? (
@@ -820,6 +872,14 @@ export default function CheckoutClient() {
 									<>
 										<CheckCircle2 size={19} />
 										Order Placed
+									</>
+								) : shippingSettingsLoading ? (
+									<>
+										<Loader2
+											size={19}
+											className="animate-spin"
+										/>
+										Loading Delivery...
 									</>
 								) : (
 									<>

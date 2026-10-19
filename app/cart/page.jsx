@@ -1,458 +1,388 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useSelector } from 'react-redux';
 import Link from 'next/link';
+import { useSelector } from 'react-redux';
 import {
-    ArrowRight,
-    CheckCircle2,
-    ChevronRight,
-    ShieldCheck,
-    ShoppingBag,
-    Tag,
-    Truck,
+	ArrowRight,
+	CheckCircle2,
+	ChevronRight,
+	ShieldCheck,
+	ShoppingBag,
+	Truck,
+	Leaf,
+	LockKeyhole,
+	PackageCheck,
 } from 'lucide-react';
 
-import { calculateShippingFee } from '@/lib/calculateShippingFee';
-
-import CheckEmptyCart from '@/components/Cart/CheckEmptyCart';
 import CartItems from '@/components/Cart/CartItems';
 
-const FREE_SHIPPING_LIMIT = 1000;
+const toNumber = (value, fallback = 0) => {
+	if (value === null || value === undefined || value === '') {
+		return fallback;
+	}
+
+	const number = Number(value);
+
+	return Number.isFinite(number) ? number : fallback;
+};
+
+const getBasePrice = (item) => {
+	const price = toNumber(item?.price, NaN);
+
+	if (Number.isFinite(price) && price >= 0) {
+		return price;
+	}
+
+	const sellPrice = toNumber(item?.sellPrice, NaN);
+
+	if (Number.isFinite(sellPrice) && sellPrice >= 0) {
+		return sellPrice;
+	}
+
+	return Math.max(toNumber(item?.regularPrice, 0), 0);
+};
+
+const getFinalPrice = (item) => {
+	const price = getBasePrice(item);
+
+	// Cart price already contains the selected variant's final price.
+	if (item?.price !== undefined && item?.price !== null) {
+		return price;
+	}
+
+	const discount = toNumber(item?.discount?.value, 0);
+
+	if (discount <= 0) return price;
+
+	if (item?.discount?.type === 'percentage') {
+		return Math.max(price - (price * discount) / 100, 0);
+	}
+
+	if (item?.discount?.type === 'fixed') {
+		return Math.max(price - discount, 0);
+	}
+
+	return price;
+};
+
+const getOriginalPrice = (item) => {
+	const regularPrice = toNumber(item?.regularPrice, NaN);
+
+	if (Number.isFinite(regularPrice) && regularPrice >= 0) {
+		return regularPrice;
+	}
+
+	return getBasePrice(item);
+};
+
+const formatPrice = (value) =>
+	toNumber(value).toLocaleString('en-BD', {
+		maximumFractionDigits: 2,
+	});
+
+function EmptyCart() {
+	return (
+		<div className="rounded-3xl border border-gray-200 bg-white px-5 py-12 text-center shadow-sm sm:px-10 sm:py-16">
+			<div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-50">
+				<ShoppingBag size={34} className="text-[#16834b]" />
+			</div>
+
+			<h2 className="mt-6 text-2xl font-bold text-gray-900">
+				Your cart is empty
+			</h2>
+
+			<p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500">
+				You have not added any products yet. Explore our natural food
+				collection and find something you love.
+			</p>
+
+			<Link
+				href="/shop"
+				className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-[#16834b] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#116b3c]">
+				Continue Shopping
+				<ArrowRight size={17} />
+			</Link>
+		</div>
+	);
+}
+
+function TrustFeatures() {
+	const features = [
+		{
+			icon: ShieldCheck,
+			title: 'Trusted Quality',
+			description: 'Carefully selected products',
+		},
+		{
+			icon: LockKeyhole,
+			title: 'Secure Checkout',
+			description: 'Your details stay protected',
+		},
+		{
+			icon: PackageCheck,
+			title: 'Order Updates',
+			description: 'Stay informed about your order',
+		},
+	];
+
+	return (
+		<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+			{features.map(({ icon: Icon, title, description }) => (
+				<div
+					key={title}
+					className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4">
+					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-50">
+						<Icon size={20} className="text-[#16834b]" />
+					</div>
+
+					<div className="min-w-0">
+						<p className="text-xs font-bold text-gray-900">
+							{title}
+						</p>
+
+						<p className="mt-1 text-[11px] leading-4 text-gray-500">
+							{description}
+						</p>
+					</div>
+				</div>
+			))}
+		</div>
+	);
+}
 
 export default function CartPage() {
-       const { items } = useSelector((state) => state.cart || {});
-   
-  
-    const calculateFinalPrice = (item) => {
-        const sellPrice = Number(item.sellPrice);
-        const regularPrice = Number(item.regularPrice);
+	const items = useSelector((state) => state.cart?.items ?? []);
 
-        let basePrice = 0;
+	const { subtotal, totalQty, totalSavings } = useMemo(() => {
+		return items.reduce(
+			(result, item) => {
+				const quantity = Math.max(
+					1,
+					Math.floor(toNumber(item?.quantity, 1))
+				);
 
-        if (
-            Number.isFinite(sellPrice) &&
-            sellPrice >= 0
-        ) {
-            basePrice = sellPrice;
-        } else if (
-            Number.isFinite(regularPrice) &&
-            regularPrice >= 0
-        ) {
-            basePrice = regularPrice;
-        }
+				const finalPrice = getFinalPrice(item);
+				const originalPrice = getOriginalPrice(item);
 
-        if (
-            !item.discount ||
-            !item.discount.value
-        ) {
-            return basePrice;
-        }
+				result.subtotal += finalPrice * quantity;
+				result.totalQty += quantity;
+				result.totalSavings +=
+					Math.max(originalPrice - finalPrice, 0) * quantity;
 
-        const discountValue = Number(
-            item.discount.value
-        );
+				return result;
+			},
+			{
+				subtotal: 0,
+				totalQty: 0,
+				totalSavings: 0,
+			}
+		);
+	}, [items]);
 
-        if (
-            !Number.isFinite(discountValue) ||
-            discountValue < 0
-        ) {
-            return basePrice;
-        }
+	const isEmpty = items.length === 0;
 
-        if (
-            item.discount.type === 'percentage'
-        ) {
-            return Math.max(
-                basePrice -
-                    (basePrice * discountValue) /
-                        100,
-                0
-            );
-        }
+	return (
+		<main className="min-h-screen bg-[#f7f9f7] pb-28 lg:pb-12">
+			{/* Breadcrumb */}
+			<div className="border-b border-gray-200 bg-white">
+				<div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 text-xs text-gray-500 sm:px-6 lg:px-8">
+					<Link href="/" className="transition hover:text-[#16834b]">
+						Home
+					</Link>
 
-        if (item.discount.type === 'fixed') {
-            return Math.max(
-                basePrice - discountValue,
-                0
-            );
-        }
+					<ChevronRight size={14} />
 
-        return basePrice;
-    };
+					<Link
+						href="/shop"
+						className="transition hover:text-[#16834b]">
+						Shop
+					</Link>
 
+					<ChevronRight size={14} />
 
-    const {
-        subtotal,
-        totalQty,
-        shippingFee,
-        grandTotal,
-        remainingForFreeShipping,
-        shippingProgress,
-    } = useMemo(() => {
-        const subtotalValue = items.reduce(
-            (total, item) => {
-                const price =
-                    calculateFinalPrice(item);
+					<span className="font-semibold text-gray-900">
+						Shopping Cart
+					</span>
+				</div>
+			</div>
 
-                const quantity =
-                    Number(item.quantity) || 0;
+			<div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+				{/* Page heading */}
+				<div className="mb-7 flex flex-wrap items-center justify-between gap-4">
+					<div>
+						<div className="flex items-center gap-2">
+							<ShoppingBag size={25} className="text-[#16834b]" />
 
-                return (
-                    total +
-                    price * quantity
-                );
-            },
-            0
-        );
+							<h1 className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
+								Shopping Cart
+							</h1>
+						</div>
 
-        const quantityValue = items.reduce(
-            (total, item) =>
-                total +
-                (Number(item.quantity) || 0),
-            0
-        );
+						<p className="mt-2 text-sm text-gray-500">
+							Review your products before proceeding to checkout.
+						</p>
+					</div>
 
-        const shipping = Number(
-            calculateShippingFee({
-                subtotal: subtotalValue,
-                location: 'Dhaka',
-            }) || 0
-        );
+					{!isEmpty && (
+						<Link
+							href="/shop"
+							className="hidden items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-[#16834b] hover:text-[#16834b] sm:inline-flex">
+							Continue Shopping
+							<ArrowRight size={16} />
+						</Link>
+					)}
+				</div>
 
-        const remaining = Math.max(
-            FREE_SHIPPING_LIMIT -
-                subtotalValue,
-            0
-        );
+				{isEmpty ? (
+					<EmptyCart />
+				) : (
+					<>
+						{/* Cart items + order summary */}
+						<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_370px]">
+							{/* Left: Cart products */}
+							<section className="min-w-0">
+								<CartItems />
 
-        const progress = Math.min(
-            (subtotalValue /
-                FREE_SHIPPING_LIMIT) *
-                100,
-            100
-        );
+								<div className="mt-5">
+									<TrustFeatures />
+								</div>
+							</section>
 
-        return {
-            subtotal: subtotalValue,
-            totalQty: quantityValue,
-            shippingFee: shipping,
-            grandTotal:
-                subtotalValue + shipping,
-            remainingForFreeShipping:
-                remaining,
-            shippingProgress: progress,
-        };
-    }, [items]);
+							{/* Right: Order summary */}
+							<aside className="min-w-0 lg:sticky lg:top-6">
+								<div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+									<div className="border-b border-gray-100 px-5 py-5">
+										<h2 className="text-lg font-extrabold text-gray-900">
+											Order Summary
+										</h2>
 
-    /*
-    |--------------------------------------------------------------------------
-    | Empty Cart
-    |--------------------------------------------------------------------------
-    */
-    if (items.length === 0) {
-        return <CheckEmptyCart />;
-    }
+										<p className="mt-1 text-xs text-gray-500">
+											{totalQty} product unit
+											{totalQty !== 1 ? 's' : ''} in your
+											cart
+										</p>
+									</div>
 
-    return (
-        <>
-            <main className="min-h-screen bg-[#f8faf9] pb-28 lg:pb-10">
-                {/* =====================================================
-                    PAGE HEADER
-                ====================================================== */}
-                <section className="border-b border-gray-100 bg-white">
-                    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                        {/* Breadcrumb */}
-                        <div className="mb-4 flex items-center gap-1 text-xs text-gray-400">
-                            <Link
-                                href="/"
-                                className="transition hover:text-[#16834b]"
-                            >
-                                Home
-                            </Link>
+									<div className="space-y-4 px-5 py-5">
+										<div className="flex items-center justify-between gap-3 text-sm">
+											<span className="text-gray-500">
+												Subtotal
+											</span>
 
-                            <ChevronRight size={14} />
+											<span className="font-semibold text-gray-900">
+												৳{formatPrice(subtotal)}
+											</span>
+										</div>
 
-                            <span className="font-medium text-gray-700">
-                                Cart
-                            </span>
-                        </div>
+									
 
-                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-                            <div>
-                                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#16834b]">
-                                    Shalban Food
-                                </p>
+										<div className="flex items-start justify-between gap-3 text-sm">
+											<span className="flex items-center gap-2 text-gray-500">
+												<Truck
+													size={16}
+													className="shrink-0"
+												/>
+												Delivery
+											</span>
 
-                                <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-                                    Your Shopping Cart
-                                </h1>
+											<span className="text-right text-xs font-medium text-gray-500">
+												Calculated at checkout
+											</span>
+										</div>
 
-                                <p className="mt-1 text-sm text-gray-500">
-                                    Review your items before checkout.
-                                </p>
-                            </div>
+										<div className="border-t border-dashed border-gray-200 pt-4">
+											<div className="flex items-center justify-between gap-3">
+												<span className="text-sm font-bold text-gray-900">
+													Product Total
+												</span>
 
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <ShoppingBag
-                                    size={18}
-                                    className="text-[#16834b]"
-                                />
+												<span className="text-2xl font-extrabold text-[#16834b]">
+													৳{formatPrice(subtotal)}
+												</span>
+											</div>
 
-                                <span>
-                                    {totalQty} item
-                                    {totalQty !== 1
-                                        ? 's'
-                                        : ''}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+										
+										</div>
 
-                {/* =====================================================
-                    CART CONTENT
-                ====================================================== */}
-                <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-                        {/* =================================================
-                            LEFT
-                        ================================================== */}
-                        <div className="min-w-0">
-                            <CartItems />
+										<Link
+											href="/checkout"
+											className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#16834b] px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#116b3c] focus:outline-none focus:ring-2 focus:ring-[#16834b] focus:ring-offset-2">
+											Proceed to Checkout
+											<ArrowRight size={18} />
+										</Link>
 
-                            {/* Continue Shopping */}
-                            <div className="mt-5 hidden rounded-2xl border border-gray-200 bg-white p-5 sm:block">
-                                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900">
-                                            Looking for something else?
-                                        </h3>
+										<div className="flex items-center justify-center gap-2 text-[11px] text-gray-500">
+											<ShieldCheck
+												size={15}
+												className="text-[#16834b]"
+											/>
+											Review your order before confirming
+										</div>
+									</div>
 
-                                        <p className="mt-1 text-sm text-gray-500">
-                                            Explore more natural products from Shalban Food.
-                                        </p>
-                                    </div>
+									<div className="border-t border-gray-100 bg-gray-50 px-5 py-4">
+										<div className="flex items-start gap-3">
+											<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-green-100">
+												<Leaf
+													size={18}
+													className="text-[#16834b]"
+												/>
+											</div>
 
-                                    <Link
-                                        href="/shop"
-                                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:border-[#16834b] hover:bg-[#f0faf5] hover:text-[#16834b]"
-                                    >
-                                        Continue Shopping
-                                        <ArrowRight size={16} />
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
+											<div>
+												<p className="text-xs font-bold text-gray-900">
+													Shalban Food
+												</p>
 
-                        {/* =================================================
-                            RIGHT - ORDER SUMMARY
-                        ================================================== */}
-                        <aside className="lg:sticky lg:top-24">
-                            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                                {/* Header */}
-                                <div className="border-b border-gray-100 px-5 py-5 sm:px-6">
-                                    <h2 className="text-lg font-bold text-gray-900">
-                                        Order Summary
-                                    </h2>
+												<p className="mt-1 text-[11px] leading-5 text-gray-500">
+													স্বাদের সাথে আস্থার বন্ধন
+												</p>
+											</div>
+										</div>
+									</div>
+								</div>
 
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        {totalQty} item
-                                        {totalQty !== 1
-                                            ? 's'
-                                            : ''}{' '}
-                                        in your cart
-                                    </p>
-                                </div>
+								<Link
+									href="/shop"
+									className="mt-4 flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-gray-600 transition hover:text-[#16834b]">
+									<ArrowRight
+										size={16}
+										className="rotate-180"
+									/>
+									Continue Shopping
+								</Link>
+							</aside>
+						</div>
 
-                                <div className="p-5 sm:p-6">
-                                    {/* Free Shipping */}
-                                    {subtotal <
-                                    FREE_SHIPPING_LIMIT ? (
-                                        <div className="mb-6 rounded-xl border border-[#d7f0e2] bg-[#f1fbf5] p-4">
-                                            <div className="flex gap-3">
-                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#d9f4e5] text-[#16834b]">
-                                                    <Truck
-                                                        size={18}
-                                                    />
-                                                </div>
+						{/* Mobile fixed checkout bar */}
+						<div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 p-4 shadow-[0_-6px_25px_rgba(0,0,0,0.07)] backdrop-blur-md lg:hidden">
+							<div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+								<div className="min-w-0">
+									<p className="text-[11px] font-medium text-gray-500">
+										Product Total
+									</p>
 
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-sm font-semibold text-[#146c40]">
-                                                        আরও ৳
-                                                        {remainingForFreeShipping.toLocaleString(
-                                                            'en-BD'
-                                                        )}{' '}
-                                                        কিনলে Free Shipping
-                                                    </p>
+									<p className="mt-0.5 text-xl font-extrabold text-gray-900">
+										৳{formatPrice(subtotal)}
+									</p>
 
-                                                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#d9f0e2]">
-                                                        <div
-                                                            className="h-full rounded-full bg-[#16834b] transition-all duration-500"
-                                                            style={{
-                                                                width: `${shippingProgress}%`,
-                                                            }}
-                                                        />
-                                                    </div>
+									<p className="text-[10px] text-gray-500">
+										Delivery not included
+									</p>
+								</div>
 
-                                                    <p className="mt-2 text-[11px] text-[#518166]">
-                                                        Free shipping on orders over ৳
-                                                        {FREE_SHIPPING_LIMIT.toLocaleString(
-                                                            'en-BD'
-                                                        )}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="mb-6 flex items-center gap-3 rounded-xl border border-[#d7f0e2] bg-[#f1fbf5] p-4">
-                                            <CheckCircle2
-                                                size={20}
-                                                className="shrink-0 text-[#16834b]"
-                                            />
-
-                                            <p className="text-sm font-semibold text-[#146c40]">
-                                                🎉 You qualify for free shipping!
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* Price Breakdown */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-gray-500">
-                                                Subtotal
-                                            </span>
-
-                                            <span className="font-semibold text-gray-900">
-                                                ৳
-                                                {subtotal.toLocaleString(
-                                                    'en-BD'
-                                                )}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-gray-500">
-                                                Shipping
-                                            </span>
-
-                                            <span
-                                                className={
-                                                    shippingFee ===
-                                                    0
-                                                        ? 'font-semibold text-[#16834b]'
-                                                        : 'font-semibold text-gray-900'
-                                                }
-                                            >
-                                                {shippingFee ===
-                                                0
-                                                    ? 'Free'
-                                                    : `৳${shippingFee.toLocaleString(
-                                                          'en-BD'
-                                                      )}`}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Divider */}
-                                    <div className="my-5 border-t border-dashed border-gray-200" />
-
-                                    {/* Total */}
-                                    <div className="flex items-end justify-between">
-                                        <div>
-                                            <p className="text-sm font-semibold text-gray-700">
-                                                Total Amount
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-gray-400">
-                                                Including shipping
-                                            </p>
-                                        </div>
-
-                                        <span className="text-2xl font-bold text-[#16834b]">
-                                            ৳
-                                            {grandTotal.toLocaleString(
-                                                'en-BD'
-                                            )}
-                                        </span>
-                                    </div>
-
-                                    {/* Checkout */}
-                                    <Link
-                                        href="/checkout"
-                                        className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#16834b] px-5 py-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#116b3d] hover:shadow-lg active:scale-[0.98]"
-                                    >
-                                        Proceed to Checkout
-
-                                        <ArrowRight
-                                            size={18}
-                                            className="transition-transform group-hover:translate-x-1"
-                                        />
-                                    </Link>
-
-                                    {/* Trust */}
-                                    <div className="mt-5 grid grid-cols-2 gap-3 border-t border-gray-100 pt-5">
-                                        <div className="flex items-center gap-2 text-[11px] text-gray-500">
-                                            <ShieldCheck
-                                                size={16}
-                                                className="text-[#16834b]"
-                                            />
-
-                                            Secure Checkout
-                                        </div>
-
-                                        <div className="flex items-center gap-2 text-[11px] text-gray-500">
-                                            <CheckCircle2
-                                                size={16}
-                                                className="text-[#16834b]"
-                                            />
-
-                                            Quality Products
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </aside>
-                    </div>
-                </section>
-            </main>
-
-            {/* =========================================================
-                MOBILE FIXED CHECKOUT BAR
-            ========================================================== */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/95 p-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md lg:hidden">
-                <div className="mx-auto flex max-w-7xl items-center gap-3">
-                    <Link
-                        href="/shop"
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-gray-50"
-                        aria-label="Continue shopping"
-                    >
-                        <ShoppingBag size={20} />
-                    </Link>
-
-                    <div className="min-w-0 flex-1">
-                        <p className="text-[11px] text-gray-500">
-                            Total Amount
-                        </p>
-
-                        <p className="truncate text-lg font-bold text-[#16834b]">
-                            ৳
-                            {grandTotal.toLocaleString(
-                                'en-BD'
-                            )}
-                        </p>
-                    </div>
-
-                    <Link
-                        href="/checkout"
-                        className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#16834b] px-5 text-sm font-bold text-white shadow-sm transition active:scale-[0.97]"
-                    >
-                        Checkout
-                        <ArrowRight size={17} />
-                    </Link>
-                </div>
-            </div>
-        </>
-    );
+								<Link
+									href="/checkout"
+									className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#16834b] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#116b3c] sm:flex-none sm:min-w-52">
+									Checkout
+									<ArrowRight size={17} />
+								</Link>
+							</div>
+						</div>
+					</>
+				)}
+			</div>
+		</main>
+	);
 }

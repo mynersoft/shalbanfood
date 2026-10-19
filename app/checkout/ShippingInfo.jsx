@@ -1,88 +1,207 @@
-import { Building, MapPin, Phone } from 'lucide-react';
-import React, { useState } from 'react';
+'use client';
 
-const ShippingInfo = ({ orderData, handleChange }) => {
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-blue-100 rounded-lg">
-          <MapPin className="text-blue-600" size={20} />
-        </div>
-        <h2 className="text-xl font-bold text-gray-900">
-          Shipping Information
-        </h2>
-      </div>
+import { Building, MapPin, Truck } from 'lucide-react';
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <div className="flex items-center gap-2">
-              <Building size={16} />
-              Area
-            </div>
-          </label>
-          <input
-            type="text"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            placeholder="Enter your full address"
-            name="address.area"
-            value={orderData.address.area}
-            onChange={handleChange}
-          />
-        </div>
+const DISTRICTS = [
+	'Dhaka',
+	'Tangail',
+	'Rajshahi',
+	'Chattogram',
+	'Gazipur',
+	'Narayanganj',
+	'Narsingdi',
+	'Kishoreganj',
+	'Mymensingh',
+	'Jamalpur',
+	'Sherpur',
+	'Netrokona',
+	'Faridpur',
+	'Gopalganj',
+	'Madaripur',
+	'Shariatpur',
+	'Rajbari',
+	'Manikganj',
+	'Munshiganj',
+	'Cumilla',
+	'Brahmanbaria',
+	'Chandpur',
+	'Lakshmipur',
+	'Noakhali',
+	'Feni',
+	'Khagrachhari',
+	'Rangamati',
+	'Bandarban',
+	"Cox's Bazar",
+	'Sylhet',
+	'Moulvibazar',
+	'Habiganj',
+	'Sunamganj',
+	'Bogura',
+	'Joypurhat',
+	'Naogaon',
+	'Natore',
+	'Chapainawabganj',
+	'Pabna',
+	'Sirajganj',
+	'Dinajpur',
+	'Rangpur',
+	'Gaibandha',
+	'Kurigram',
+	'Lalmonirhat',
+	'Nilphamari',
+	'Panchagarh',
+	'Thakurgaon',
+	'Jashore',
+	'Khulna',
+	'Satkhira',
+	'Bagerhat',
+	'Jhenaidah',
+	'Magura',
+	'Narail',
+	'Kushtia',
+	'Chuadanga',
+	'Meherpur',
+	'Barishal',
+	'Bhola',
+	'Patuakhali',
+	'Pirojpur',
+	'Barguna',
+	'Jhalokathi',
+];
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <div className="flex items-center gap-2">
-              <MapPin size={16} />
-              Thana
-            </div>
-          </label>
-          <input
-            type="text"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            placeholder="Enter your city"
-            name="address.thana"
-            value={orderData.address.thana}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <div className="flex items-center gap-2">
-              <MapPin size={16} />
-              City
-            </div>
-          </label>
-          <input
-            type="text"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            placeholder="Enter your city"
-            name="address.city"
-            value={orderData.address.city}
-            onChange={handleChange}
-          />
-        </div>
+export default function ShippingInfo({
+	orderData,
+	handleChange,
+	shippingCharge = 0,
+}) {
+	const address = orderData?.address ?? {};
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <div className="flex items-center gap-2">
-              <Phone size={16} />
-              Phone Number
-            </div>
-          </label>
-          <input
-            type="tel"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            placeholder="01XXXXXXXXX"
-            name="phone"
-            value={orderData.phone}
-            onChange={handleChange}
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
+	return (
+		<div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+			<div className="mb-6 flex items-center gap-3">
+				<div className="rounded-lg bg-blue-100 p-2">
+					<MapPin className="text-blue-600" size={20} />
+				</div>
 
-export default ShippingInfo;
+				<div>
+					<h2 className="text-xl font-bold text-gray-900">
+						Shipping Information
+					</h2>
+
+					<p className="mt-1 text-xs text-gray-500">
+						Enter your delivery address
+					</p>
+				</div>
+			</div>
+
+			<div className="space-y-4">
+				{/* Area / Full address */}
+				<div>
+					<label
+						htmlFor="shipping-area"
+						className="mb-2 block text-sm font-medium text-gray-700">
+						<span className="flex items-center gap-2">
+							<Building size={16} />
+							Area / Full Address
+						</span>
+					</label>
+
+					<input
+						id="shipping-area"
+						type="text"
+						name="address.area"
+						value={address.area ?? ''}
+						onChange={handleChange}
+						placeholder="House, road, village or area"
+						autoComplete="street-address"
+						required
+						className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+					/>
+				</div>
+
+				{/* Thana */}
+				<div>
+					<label
+						htmlFor="shipping-thana"
+						className="mb-2 block text-sm font-medium text-gray-700">
+						<span className="flex items-center gap-2">
+							<MapPin size={16} />
+							Thana / Upazila
+						</span>
+					</label>
+
+					<input
+						id="shipping-thana"
+						type="text"
+						name="address.thana"
+						value={address.thana ?? ''}
+						onChange={handleChange}
+						placeholder="Enter your thana or upazila"
+						required
+						className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+					/>
+				</div>
+
+				{/* District */}
+				<div>
+					<label
+						htmlFor="shipping-district"
+						className="mb-2 block text-sm font-medium text-gray-700">
+						<span className="flex items-center gap-2">
+							<MapPin size={16} />
+							District
+						</span>
+					</label>
+
+					<select
+						id="shipping-district"
+						name="address.city"
+						value={address.city ?? ''}
+						onChange={handleChange}
+						required
+						className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+						<option value="">Select your district</option>
+
+						{DISTRICTS.map((district) => (
+							<option key={district} value={district}>
+								{district}
+							</option>
+						))}
+					</select>
+				</div>
+
+				{/* Dynamic delivery charge */}
+				{address.city ? (
+					<div className="flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
+						<div className="flex items-center gap-3">
+							<div className="rounded-lg bg-white p-2">
+								<Truck size={19} className="text-green-700" />
+							</div>
+
+							<div>
+								<p className="text-sm font-semibold text-gray-900">
+									Delivery Charge
+								</p>
+
+								<p className="mt-1 text-xs text-gray-600">
+									District: {address.city}
+								</p>
+							</div>
+						</div>
+
+						<p className="shrink-0 text-lg font-extrabold text-green-700">
+							৳
+							{Number(shippingCharge || 0).toLocaleString(
+								'en-BD'
+							)}
+						</p>
+					</div>
+				) : (
+					<p className="rounded-lg bg-gray-50 px-3 py-3 text-xs text-gray-500">
+						Select your district to see the delivery charge.
+					</p>
+				)}
+			</div>
+		</div>
+	);
+}
