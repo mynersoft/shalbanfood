@@ -18,7 +18,7 @@ const ShippingSettingSchema = new mongoose.Schema(
     },
     freeDeliveryMinimum: {
       type: Number,
-      default: 2000,
+      default: 2500,
       min: 0,
     },
   },
