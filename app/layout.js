@@ -11,6 +11,8 @@ import InitialLoader from '@/components/InitialLoader';
 import InitData from '@/components/InitData';
 import ConditionalMainLayout from '@/components/layout/ConditionalMainLayout';
 
+
+import MaintenanceToast from '@/components/MaintenanceToast';
 /* =============sggs============================================
    SITE CONFIGURATION
 ========================================================= */
@@ -434,6 +436,7 @@ export default function RootLayout({ children }) {
 				<Providers>
 					<ConditionalMainLayout>
 						<GlobalInitializer />
+<MaintenanceToast />
 						{children}
 					</ConditionalMainLayout>
 				</Providers>
