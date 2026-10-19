@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 export async function fetchDashboardOverview() {
-  const res = await fetch("/api/dashboard/overview", {
+  const res = await fetch("/api/dashboard", {
     method: "GET",
     cache: "no-store",
     headers: {
