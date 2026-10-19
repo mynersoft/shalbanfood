@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/dbConnect";
 import User from "@/models/User";
 import CustomerDue from "@/models/CustomerDue";
-import { checkAuthRole } from "@/lib/auth";
+import { checkAuthRole } from "@/lib/checkAuthRole";
 
 export async function GET() {
   try {
