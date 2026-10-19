@@ -1,24 +1,16 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 
-/* ================= SLICE ================= */
 const shippingSlice = createSlice({
-  name: 'shipping',
+  name: "shipping",
   initialState: {
-    shipping: {},
+    deliveryArea: "outsideDhaka",
   },
-
   reducers: {
-    removeShipping: (state, action) => {
-      state.shipping = state.shipping.filter(
-        (shipping) => shipping._id !== action.payload
-      );
-    },
-    setShipping(state, action) {
-      state.shipping = action.payload;
+    setDeliveryArea: (state, action) => {
+      state.deliveryArea = action.payload;
     },
   },
-  extraReducers: () => {},
 });
 
-export const { setShipping, removeShipping } = shippingSlice.actions;
+export const { setDeliveryArea } = shippingSlice.actions;
 export default shippingSlice.reducer;
