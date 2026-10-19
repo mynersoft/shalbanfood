@@ -1,29 +1,28 @@
+
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 
 import { connectDB } from "@/lib/dbConnect";
 import { checkAuthRole } from "@/lib/checkAuthRole";
 
-import Product from "@/models/Product";
 import Order from "@/models/Order";
+import Product from "@/models/Product";
 import User from "@/models/User";
 
 export const dynamic = "force-dynamic";
 
-const cancelledStatuses = ["cancelled", "return"];
-
 export async function GET() {
   try {
-    const auth = await checkAuthRole();
+    const { authenticated, isAdmin } = await checkAuthRole();
 
-    if (!auth.authenticated) {
+    if (!authenticated) {
       return NextResponse.json(
         { success: false, message: "অনুগ্রহ করে লগইন করুন" },
         { status: 401 }
       );
     }
 
-    if (!auth.isAdmin) {
+    if (!isAdmin) {
       return NextResponse.json(
         { success: false, message: "Admin access required" },
         { status: 403 }
@@ -32,212 +31,168 @@ export async function GET() {
 
     await connectDB();
 
-    const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const monthStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      1
-    );
-
-    const lastMonthStart = new Date(
-      now.getFullYear(),
-      now.getMonth() - 1,
-      1
-    );
-
-    const lastMonthEnd = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      1
-    );
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
     const [
-      orders,
-      products,
-      customerCount,
-      totalOrderCount,
+      totalOrders,
+      totalProducts,
+      totalUsers,
       todayOrders,
-      monthOrders,
-      lastMonthOrders,
+      allProducts,
+      recentOrders,
+      statusCounts,
     ] = await Promise.all([
-      Order.find({})
+      Order.countDocuments(),
+      Product.countDocuments(),
+      User.countDocuments({ role: "user" }),
+      Order.find({ createdAt: { $gte: startOfToday } })
+        .select("total status createdAt")
+        .lean(),
+      Product.find()
+        .select("name image variants isActive")
+        .lean(),
+      Order.find()
         .sort({ createdAt: -1 })
         .limit(100)
         .lean(),
-
-      Product.find({})
-        .select("name image isActive variants")
-        .lean(),
-
-      User.countDocuments({ role: "user" }),
-
-      Order.countDocuments({}),
-
-      Order.find({
-        createdAt: { $gte: today, $lt: tomorrow },
-      }).select("total status createdAt").lean(),
-
-      Order.find({
-        createdAt: { $gte: monthStart, $lt: tomorrow },
-      }).select("total status createdAt").lean(),
-
-      Order.find({
-        createdAt: {
-          $gte: lastMonthStart,
-          $lt: lastMonthEnd,
+      Order.aggregate([
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
         },
-      }).select("total status createdAt").lean(),
+      ]),
     ]);
 
-    const validSale = (order) =>
-      !cancelledStatuses.includes(order.status);
+    const validOrders = await Order.find({
+      status: { $nin: ["cancelled", "return"] },
+    })
+      .select("total createdAt status")
+      .lean();
 
-    const sumSales = (list) =>
-      list.reduce(
-        (sum, order) =>
-          sum + (validSale(order) ? Number(order.total || 0) : 0),
-        0
-      );
+    const totalSales = validOrders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0
+    );
 
-    let stockQuantity = 0;
-    let stockSalesValue = 0;
-    let lowStockVariantCount = 0;
-    let outOfStockVariantCount = 0;
+    const todaySales = todayOrders.reduce((sum, order) => {
+      if (["cancelled", "return"].includes(order.status)) return sum;
+      return sum + Number(order.total || 0);
+    }, 0);
 
-    const inventory = products.map((product) => {
-      const variants = (product.variants || []).map((variant) => {
-        const stock = Number(variant.stock || 0);
-        const price = Number(variant.sellPrice || 0);
-
-        stockQuantity += stock;
-        stockSalesValue += stock * price;
-
-        if (stock <= 5) lowStockVariantCount++;
-        if (stock <= 0) outOfStockVariantCount++;
-
-        return {
-          _id: String(variant._id),
-          value: variant.value,
-          unit: variant.unit,
-          stock,
-          sellPrice: price,
-          soldCount: Number(variant.soldCount || 0),
-        };
-      });
-
-      return {
-        _id: String(product._id),
-        name: product.name,
-        image: product.image || "",
-        isActive: product.isActive,
-        variants,
-        stock: variants.reduce((s, v) => s + v.stock, 0),
-        soldCount: variants.reduce((s, v) => s + v.soldCount, 0),
-        stockSalesValue: variants.reduce(
-          (s, v) => s + v.stock * v.sellPrice,
+    const stockQuantity = allProducts.reduce(
+      (sum, product) =>
+        sum +
+        (product.variants || []).reduce(
+          (variantSum, variant) =>
+            variantSum + Number(variant.stock || 0),
           0
         ),
-      };
-    });
+      0
+    );
 
-    const lowStockProducts = inventory
-      .filter((p) => p.variants.some((v) => v.stock <= 5))
-      .sort((a, b) => a.stock - b.stock)
+    const stockSalesValue = allProducts.reduce(
+      (sum, product) =>
+        sum +
+        (product.variants || []).reduce(
+          (variantSum, variant) =>
+            variantSum +
+            Number(variant.stock || 0) *
+              Number(variant.sellPrice || 0),
+          0
+        ),
+      0
+    );
+
+    const lowStockProducts = allProducts
+      .map((product) => ({
+        ...product,
+        stock: (product.variants || []).reduce(
+          (sum, variant) => sum + Number(variant.stock || 0),
+          0
+        ),
+      }))
+      .filter((product) => product.stock <= 5)
       .slice(0, 10);
 
-    const bestSellingProducts = [...inventory]
+    const bestSellingProducts = allProducts
+      .map((product) => ({
+        ...product,
+        soldCount: (product.variants || []).reduce(
+          (sum, variant) => sum + Number(variant.soldCount || 0),
+          0
+        ),
+      }))
       .sort((a, b) => b.soldCount - a.soldCount)
-      .slice(0, 3);
+      .slice(0, 5);
 
     const salesByDay = [];
 
     for (let i = 6; i >= 0; i--) {
-      const start = new Date(today);
-      start.setDate(start.getDate() - i);
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - i);
 
-      const end = new Date(start);
-      end.setDate(end.getDate() + 1);
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
 
-      const amount = orders
-        .filter((order) => {
-          const created = new Date(order.createdAt);
-          return (
-            created >= start &&
-            created < end &&
-            validSale(order)
-          );
-        })
+      const amount = validOrders
+        .filter(
+          (order) =>
+            new Date(order.createdAt) >= date &&
+            new Date(order.createdAt) < nextDate
+        )
         .reduce((sum, order) => sum + Number(order.total || 0), 0);
 
       salesByDay.push({
-        label: start.toLocaleDateString("en-US", {
+        label: date.toLocaleDateString("en-US", {
           weekday: "short",
         }),
         amount,
       });
     }
 
-    const statusCounts = {
-      pending: 0,
-      processing: 0,
-      shipped: 0,
-      delivered: 0,
-      cancelled: 0,
-      return: 0,
-    };
-
-    orders.forEach((order) => {
-      if (order.status in statusCounts) {
-        statusCounts[order.status]++;
-      }
-    });
-
-    const serializeOrder = (order) => ({
-      ...order,
-      _id: String(order._id),
-      userId: order.userId ? String(order.userId) : null,
-      createdAt: order.createdAt
-        ? new Date(order.createdAt).toISOString()
-        : null,
-    });
-
-    return NextResponse.json({
-      success: true,
-      summary: {
-        totalOrders: totalOrderCount,
-        customers: customerCount,
-        products: products.length,
-        todaySales: sumSales(todayOrders),
-        monthSales: sumSales(monthOrders),
-        lastMonthSales: sumSales(lastMonthOrders),
-        todayOrders: todayOrders.length,
-        monthOrders: monthOrders.length,
-        stockQuantity,
-        stockSalesValue,
-        lowStockProducts: lowStockVariantCount,
-        outOfStockProducts: outOfStockVariantCount,
-      },
-      statusCounts,
-      salesByDay,
-      orders: orders.map(serializeOrder),
-      products: inventory,
-      lowStockProducts,
-      bestSellingProducts,
-    });
-  } catch (error) {
-    console.error("Dashboard overview error:", error);
+    const counts = Object.fromEntries(
+      statusCounts.map(({ _id, count }) => [_id, count])
+    );
 
     return NextResponse.json(
       {
-        success: false,
-        message: "Dashboard data লোড করা যায়নি",
+        success: true,
+        summary: {
+          totalSales,
+          todaySales,
+          totalOrders,
+          totalProducts,
+          customers: totalUsers,
+          stockQuantity,
+          stockSalesValue,
+          lowStockProducts: lowStockProducts.length,
+          outOfStockProducts: lowStockProducts.filter(
+            (product) => product.stock === 0
+          ).length,
+        },
+        statusCounts: counts,
+        orders: recentOrders,
+        products: allProducts,
+        users: [],
+        lowStockProducts,
+        bestSellingProducts,
+        salesByDay,
       },
+      {
+        headers: {
+          "Cache-Control": "private, no-store",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Dashboard overview API error:", error);
+
+    return NextResponse.json(
+      { success: false, message: "Dashboard data load failed" },
       { status: 500 }
     );
   }
