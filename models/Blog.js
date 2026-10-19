@@ -1,97 +1,115 @@
-import mongoose from 'mongoose';
+
+import mongoose from "mongoose";
 
 const BlogSchema = new mongoose.Schema(
-	{
-		title: {
-			type: String,
-			required: true,
-			trim: true,
-		},
+    {
+        title: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 180,
+        },
 
-		slug: {
-			type: String,
-			required: true,
-			unique: true,
-			trim: true,
-			lowercase: true,
-		},
+        slug: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true,
+            lowercase: true,
+            index: true,
+        },
 
-		excerpt: {
-			type: String,
-			default: '',
-			trim: true,
-		},
+        excerpt: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 320,
+        },
 
-		content: {
-			type: String,
-			required: true,
-			default: '',
-		},
+        content: {
+            type: String,
+            required: true,
+            default: "",
+        },
 
-		featuredImage: {
-			type: String,
-			default: '',
-		},
+        featuredImage: {
+            type: String,
+            default: "",
+            trim: true,
+        },
 
-		featuredImagePublicId: {
-			type: String,
-			default: '',
-		},
+        featuredImagePublicId: {
+            type: String,
+            default: "",
+        },
 
-		category: {
-			type: String,
-			default: 'Food & Nutrition',
-			trim: true,
-		},
+        featuredImageAlt: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 200,
+        },
 
-		tags: {
-			type: [String],
-			default: [],
-		},
+        category: {
+            type: String,
+            default: "Food & Nutrition",
+            trim: true,
+        },
 
-		author: {
-			type: String,
-			default: 'Shalban Food',
-			trim: true,
-		},
+        tags: {
+            type: [String],
+            default: [],
+        },
 
-		seoTitle: {
-			type: String,
-			default: '',
-			trim: true,
-		},
+        author: {
+            type: String,
+            default: "Shalban Food",
+            trim: true,
+        },
 
-		seoDescription: {
-			type: String,
-			default: '',
-			trim: true,
-		},
+        seoTitle: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 70,
+        },
 
-		keywords: {
-			type: [String],
-			default: [],
-		},
+        seoDescription: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 170,
+        },
 
-		canonicalUrl: {
-			type: String,
-			default: '',
-			trim: true,
-		},
+        keywords: {
+            type: [String],
+            default: [],
+        },
 
-		status: {
-			type: String,
-			enum: ['draft', 'published'],
-			default: 'draft',
-		},
+        canonicalUrl: {
+            type: String,
+            default: "",
+            trim: true,
+        },
 
-		publishedAt: {
-			type: Date,
-			default: null,
-		},
-	},
-	{
-		timestamps: true,
-	}
+        status: {
+            type: String,
+            enum: ["draft", "published"],
+            default: "draft",
+            index: true,
+        },
+
+        publishedAt: {
+            type: Date,
+            default: null,
+        },
+    },
+    {
+        timestamps: true,
+    }
 );
 
-export default mongoose.models.Blog || mongoose.model('Blog', BlogSchema);
+BlogSchema.index({ status: 1, publishedAt: -1 });
+
+export default mongoose.models.Blog ||
+    mongoose.model("Blog", BlogSchema);
