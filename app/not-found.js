@@ -30,8 +30,7 @@ export default function NotFound() {
         </h1>
 
         <p className="mx-auto mb-8 max-w-md text-base leading-7 text-gray-600">
-          দুঃখিত! আপনি যে পেজটি খুঁজছেন সেটি সরানো হয়েছে,
-          ঠিকানা পরিবর্তন হয়েছে অথবা পেজটি আর পাওয়া যাচ্ছে না।
+          
           আমাদের খাঁটি মধু ও গাওয়া ঘি দেখতে শপে ফিরে যান।
         </p>
 
