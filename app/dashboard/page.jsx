@@ -11,13 +11,13 @@ import {
 
 import { useDashboardOverview } from "@/hooks/useDashboard";
 
-import StatCards from "./dashboard/StatCards";
-import MiniStats from "./dashboard/MiniStats";
-import SalesChart from "./dashboard/SalesChart";
-import OrderStatus from "./dashboard/OrderStatus";
-import RecentOrders from "./dashboard/RecentOrders";
-import InventoryPanels from "./dashboard/InventoryPanels";
-import SummaryCards from "./dashboard/SummaryCards";
+import StatCards from "./components/dashboard/StatCards";
+import MiniStats from "./components/dashboard/MiniStats";
+import SalesChart from "./components/dashboard/SalesChart";
+import OrderStatus from "./components/dashboard/OrderStatus";
+import RecentOrders from "./components/dashboard/RecentOrders";
+import InventoryPanels from "./components/dashboard/InventoryPanels";
+import SummaryCards from "./components/dashboard/SummaryCards";
 
 export default function DashboardPage() {
   const {
