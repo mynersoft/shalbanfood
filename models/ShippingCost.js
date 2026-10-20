@@ -16,15 +16,11 @@ const DistrictRateSchema = new mongoose.Schema(
 	{ _id: false }
 );
 
-const ShippingSettingSchema = new mongoose.Schema(
+const ShippingCostSchema = new mongoose.Schema(
 	{
 		districtRates: {
 			type: [DistrictRateSchema],
-			default: () => [
-				{ district: 'ঢাকা', charge: 70 },
-				{ district: 'টাঙ্গাইল', charge: 100 },
-				{ district: 'রাজশাহী', charge: 120 },
-			],
+			default: null,
 		},
 
 		defaultCharge: {
@@ -47,5 +43,5 @@ const ShippingSettingSchema = new mongoose.Schema(
 	{ timestamps: true }
 );
 
-export default mongoose.models.ShippingSetting ||
-	mongoose.model('ShippingSetting', ShippingSettingSchema);
+export default mongoose.models.ShippingCost ||
+	mongoose.model('ShippingCost', ShippingCostSchema);

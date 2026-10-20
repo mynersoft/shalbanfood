@@ -89,61 +89,8 @@ export default function CheckoutClient() {
 	const [shippingSettingsLoading, setShippingSettingsLoading] =
 		useState(true);
 
-useEffect(() => {
-	let cancelled = false;
+	
 
-	const fetchShippingSettings = async () => {
-		try {
-			const response = await fetch('/api/shipping', {
-				method: 'GET',
-				cache: 'no-store',
-			});
-
-			if (!response.ok) {
-				throw new Error('Shipping API failed');
-			}
-
-			const result = await response.json();
-
-			if (!result?.success || !result?.settings) {
-				throw new Error('Shipping settings unavailable');
-			}
-
-			const settings = result.settings;
-
-			if (!cancelled) {
-				setShippingSettings({
-					districtRates: Array.isArray(settings.districtRates)
-						? settings.districtRates
-						: [],
-
-					defaultCharge: Number(settings.defaultCharge) || 0,
-
-					freeDeliveryEnabled: settings.freeDeliveryEnabled === true,
-
-					freeDeliveryMinimum:
-						Number(settings.freeDeliveryMinimum) || 0,
-				});
-			}
-		} catch (error) {
-			console.error('Shipping settings error:', error);
-
-			if (!cancelled) {
-				setShippingSettings(EMPTY_SHIPPING_SETTINGS);
-			}
-		} finally {
-			if (!cancelled) {
-				setShippingSettingsLoading(false);
-			}
-		}
-	};
-
-	fetchShippingSettings();
-
-	return () => {
-		cancelled = true;
-	};
-}, []);
 
 	/* =========================================================
 	   ORDER FORM
@@ -428,6 +375,75 @@ useEffect(() => {
 		setProcessing(true);
 		placeOrder(payload);
 	};
+
+
+
+
+
+
+
+
+useEffect(() => {
+	let cancelled = false;
+
+	const fetchShippingSettings = async () => {
+		setShippingSettingsLoading(true);
+
+		try {
+			const response = await fetch('/api/shipping/get', {
+				method: 'GET',
+				cache: 'no-store',
+			});
+
+			if (!response.ok) {
+				throw new Error('Shipping API failed');
+			}
+
+			const result = await response.json();
+
+			if (!result?.success || !result?.settings) {
+				throw new Error('Shipping settings unavailable');
+			}
+
+			const settings = result.settings;
+
+			if (!cancelled) {
+				setShippingSettings({
+					districtRates: Array.isArray(settings.districtRates)
+						? settings.districtRates
+						: [],
+
+					defaultCharge: Number(settings.defaultCharge) || 0,
+
+					freeDeliveryEnabled: settings.freeDeliveryEnabled === true,
+
+					freeDeliveryMinimum:
+						Number(settings.freeDeliveryMinimum) || 0,
+				});
+			}
+		} catch (error) {
+			console.error('Shipping settings error:', error);
+
+			if (!cancelled) {
+				setShippingSettings(EMPTY_SHIPPING_SETTINGS);
+			}
+		} finally {
+			if (!cancelled) {
+				setShippingSettingsLoading(false);
+			}
+		}
+	};
+
+	fetchShippingSettings();
+
+	return () => {
+		cancelled = true;
+	};
+}, [orderData?.address?.city]);
+
+
+
+
 
 	/* =========================================================
 	   SESSION LOADING

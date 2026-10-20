@@ -1,268 +1,195 @@
-
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-
-import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/dbConnect';
-import ShippingSetting from '@/models/ShippingSetting';
+import ShippingCost from '@/models/ShippingCost';
+import { checkAuthRole } from '@/lib/checkAuthRole';
 
-export const dynamic = 'force-dynamic';
+async function authorize() {
+	const { authenticated, isAdmin } = await checkAuthRole();
 
-const DEFAULT_SETTINGS = {
-    districtRates: [
-        { district: 'Dhaka', charge: 70 },
-        { district: 'Tangail', charge: 100 },
-        { district: 'রাজশাহী', charge: 120 },
-    ],
-    defaultCharge: 140,
-    freeDeliveryEnabled: false,
-    freeDeliveryMinimum: 2500,
-};
+	if (!authenticated) {
+		return NextResponse.json(
+			{ success: false, message: 'Unauthorized' },
+			{ status: 401 }
+		);
+	}
 
-function normalizeDistrict(value = '') {
-    return String(value)
-        .trim()
-        .toLocaleLowerCase('bn-BD')
-        .replace(/\s+/g, '');
+	if (!isAdmin) {
+		return NextResponse.json(
+			{ success: false, message: 'Forbidden' },
+			{ status: 403 }
+		);
+	}
+
+	return null;
 }
 
-function isValidAmount(value) {
-    return (
-        typeof value === 'number' &&
-        Number.isFinite(value) &&
-        Number.isInteger(value) &&
-        value >= 0 &&
-        value <= 1000000
-    );
+
+function validateSettings(body) {
+	if (
+		!Array.isArray(body.districtRates) ||
+		!Number.isInteger(Number(body.defaultCharge)) ||
+		Number(body.defaultCharge) < 0 ||
+		!Number.isInteger(Number(body.freeDeliveryMinimum)) ||
+		Number(body.freeDeliveryMinimum) < 0 ||
+		typeof body.freeDeliveryEnabled !== 'boolean'
+	) {
+		return false;
+	}
+
+	const districts = new Set();
+
+	for (const rate of body.districtRates) {
+		const district = String(rate.district || '').trim();
+		const key = district.toLocaleLowerCase('bn-BD').replace(/\s+/g, '');
+		const charge = Number(rate.charge);
+
+		if (
+			!district ||
+			!Number.isInteger(charge) ||
+			charge < 0 ||
+			charge > 1000000 ||
+			districts.has(key)
+		) {
+			return false;
+		}
+
+		districts.add(key);
+	}
+
+	return true;
 }
 
-async function requireAdmin() {
-    const session = await getServerSession(authOptions);
 
-    if (!session?.user) {
-        return {
-            authorized: false,
-            response: NextResponse.json(
-                { success: false, message: 'লগইন করুন' },
-                { status: 401 }
-            ),
-        };
-    }
 
-    if (session.user.role !== 'admin') {
-        return {
-            authorized: false,
-            response: NextResponse.json(
-                { success: false, message: 'Admin access required' },
-                { status: 403 }
-            ),
-        };
-    }
 
-    return { authorized: true };
-}
 
-// GET: Read shipping settings
+
 export async function GET() {
-    try {
-        const auth = await requireAdmin();
+	try {
+		const denied = await authorize();
+		if (denied) return denied;
 
-        if (!auth.authorized) {
-            return auth.response;
-        }
+		await connectDB();
 
-        await connectDB();
+		const data = await ShippingCost.findOne().lean();
 
-        let settings = await ShippingSetting.findOne().lean();
-
-        if (!settings) {
-            settings = await ShippingSetting.create(DEFAULT_SETTINGS);
-            settings = settings.toObject();
-        }
-
-        return NextResponse.json({
-            success: true,
-            settings: {
-                ...settings,
-                districtRates:
-                    settings.districtRates?.length
-                        ? settings.districtRates
-                        : DEFAULT_SETTINGS.districtRates,
-            },
-        });
-    } catch (error) {
-        console.error('Shipping settings GET error:', error);
-
-        return NextResponse.json(
-            {
-                success: false,
-                message: 'Shipping settings লোড করা যায়নি',
-            },
-            { status: 500 }
-        );
-    }
+		return NextResponse.json({
+			success: true,
+			data,
+		});
+	} catch {
+		return NextResponse.json(
+			{ success: false, message: 'Failed to load shipping settings' },
+			{ status: 500 }
+		);
+	}
 }
 
-// PATCH: Update shipping settings
+export async function POST(request) {
+	try {
+		const denied = await authorize();
+		if (denied) return denied;
+
+		await connectDB();
+
+		const body = await request.json();
+
+		if (!validateSettings(body)) {
+			return NextResponse.json(
+				{ success: false, message: 'Invalid shipping settings' },
+				{ status: 400 }
+			);
+		}
+
+		const existing = await ShippingCost.findOne();
+
+		if (existing) {
+			return NextResponse.json(
+				{ success: false, message: 'Shipping settings already exist' },
+				{ status: 409 }
+			);
+		}
+
+		const settings = await ShippingCost.create({
+			districtRates: body.districtRates,
+			defaultCharge: Number(body.defaultCharge),
+			freeDeliveryEnabled: body.freeDeliveryEnabled,
+			freeDeliveryMinimum: Number(body.freeDeliveryMinimum),
+		});
+
+		return NextResponse.json({ success: true, settings }, { status: 201 });
+	} catch {
+		return NextResponse.json(
+			{ success: false, message: 'Failed to create shipping settings' },
+			{ status: 500 }
+		);
+	}
+}
+
 export async function PATCH(request) {
-    try {
-        const auth = await requireAdmin();
+	try {
+		const denied = await authorize();
+		if (denied) return denied;
 
-        if (!auth.authorized) {
-            return auth.response;
-        }
+		await connectDB();
 
-        const body = await request.json();
+		const body = await request.json();
 
-        const {
-            districtRates,
-            defaultCharge,
-            freeDeliveryEnabled,
-            freeDeliveryMinimum,
-        } = body;
+		if (!validateSettings(body)) {
+			return NextResponse.json(
+				{ success: false, message: 'Invalid shipping settings' },
+				{ status: 400 }
+			);
+		}
 
-        if (!Array.isArray(districtRates)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: 'districtRates অবশ্যই একটি array হতে হবে',
-                },
-                { status: 400 }
-            );
-        }
+		const settings = await ShippingCost.findOneAndUpdate(
+			{},
+			{
+				$set: {
+					districtRates: body.districtRates,
+					defaultCharge: Number(body.defaultCharge),
+					freeDeliveryEnabled: body.freeDeliveryEnabled,
+					freeDeliveryMinimum: Number(body.freeDeliveryMinimum),
+				},
+			},
+			{
+				new: true,
+				upsert: true,
+				runValidators: true,
+				setDefaultsOnInsert: true,
+			}
+		);
 
-        if (districtRates.length > 64) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: 'সর্বোচ্চ ৬৪টি জেলার চার্জ যোগ করা যাবে',
-                },
-                { status: 400 }
-            );
-        }
+		return NextResponse.json({
+			success: true,
+			settings,
+			message: 'Shipping settings updated',
+		});
+	} catch {
+		return NextResponse.json(
+			{ success: false, message: 'Failed to update shipping settings' },
+			{ status: 500 }
+		);
+	}
+}
 
-        if (!isValidAmount(defaultCharge)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: 'সঠিক default delivery charge দিন',
-                },
-                { status: 400 }
-            );
-        }
+export async function DELETE() {
+	try {
+		const denied = await authorize();
+		if (denied) return denied;
 
-        if (typeof freeDeliveryEnabled !== 'boolean') {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: 'freeDeliveryEnabled true অথবা false হতে হবে',
-                },
-                { status: 400 }
-            );
-        }
+		await connectDB();
 
-        if (!isValidAmount(freeDeliveryMinimum)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: 'সঠিক free delivery minimum amount দিন',
-                },
-                { status: 400 }
-            );
-        }
+		await ShippingCost.deleteMany({});
 
-        const seenDistricts = new Set();
-        const sanitizedRates = [];
-
-        for (const rate of districtRates) {
-            if (
-                !rate ||
-                typeof rate.district !== 'string' ||
-                !rate.district.trim()
-            ) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: 'প্রতিটি রেটের জন্য জেলা নির্বাচন করুন',
-                    },
-                    { status: 400 }
-                );
-            }
-
-            if (!isValidAmount(rate.charge)) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: `${rate.district}: সঠিক delivery charge দিন`,
-                    },
-                    { status: 400 }
-                );
-            }
-
-            const district = rate.district.trim();
-            const key = normalizeDistrict(district);
-
-            if (seenDistricts.has(key)) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: `${district} জেলার চার্জ একাধিকবার দেওয়া হয়েছে`,
-                    },
-                    { status: 400 }
-                );
-            }
-
-            seenDistricts.add(key);
-
-            sanitizedRates.push({
-                district,
-                charge: rate.charge,
-            });
-        }
-
-        await connectDB();
-
-        // Keep a single settings document for shipping configuration.
-        let settings = await ShippingSetting.findOne();
-
-        if (!settings) {
-            settings = new ShippingSetting({
-                ...DEFAULT_SETTINGS,
-                districtRates: sanitizedRates,
-                defaultCharge,
-                freeDeliveryEnabled,
-                freeDeliveryMinimum,
-            });
-        } else {
-            settings.districtRates = sanitizedRates;
-            settings.defaultCharge = defaultCharge;
-            settings.freeDeliveryEnabled = freeDeliveryEnabled;
-            settings.freeDeliveryMinimum = freeDeliveryMinimum;
-        }
-
-        await settings.save();
-
-        return NextResponse.json({
-            success: true,
-            message: 'Shipping settings সফলভাবে আপডেট হয়েছে',
-            settings: {
-                _id: settings._id,
-                districtRates: settings.districtRates,
-                defaultCharge: settings.defaultCharge,
-                freeDeliveryEnabled: settings.freeDeliveryEnabled,
-                freeDeliveryMinimum: settings.freeDeliveryMinimum,
-                updatedAt: settings.updatedAt,
-            },
-        });
-    } catch (error) {
-        console.error('Shipping settings PATCH error:', error);
-
-        return NextResponse.json(
-            {
-                success: false,
-                message: 'Shipping settings আপডেট করা যায়নি',
-            },
-            { status: 500 }
-        );
-    }
+		return NextResponse.json({
+			success: true,
+			message: 'Shipping settings deleted',
+		});
+	} catch {
+		return NextResponse.json(
+			{ success: false, message: 'Failed to delete shipping settings' },
+			{ status: 500 }
+		);
+	}
 }
