@@ -16,34 +16,40 @@ import {
 } from 'lucide-react';
 
 const ORDER_STEPS = [
-    {
-        status: 'confirmed',
-        label: 'অর্ডার কনফার্মড',
-        description: 'আপনার অর্ডারটি নিশ্চিত করা হয়েছে।',
-        icon: PackageCheck,
-    },
-    {
-        status: 'processing',
-        label: 'Processing',
-        description: 'আপনার পণ্য প্রস্তুত ও প্যাকেজিং করা হচ্ছে।',
-        icon: Package,
-    },
-    {
-        status: 'shipped',
-        label: 'Shipped',
-        description: 'আপনার অর্ডার কুরিয়ারে পাঠানো হয়েছে।',
-        icon: Truck,
-    },
-    {
-        status: 'delivered',
-        label: 'Delivered',
-        description: 'আপনার অর্ডার সফলভাবে পৌঁছে গেছে।',
-        icon: CheckCircle2,
-    },
+	{
+		status: 'pending',
+		label: 'অর্ডার পেন্ডিং ',
+		description: 'আপনার অর্ডারটি পেন্ডিং এ আছে।',
+		icon: PackageCheck,
+	},
+	{
+		status: 'confirmed',
+		label: 'অর্ডার কনফার্মড',
+		description: 'আপনার অর্ডারটি নিশ্চিত করা হয়েছে।',
+		icon: PackageCheck,
+	},
+	{
+		status: 'processing',
+		label: 'Processing',
+		description: 'আপনার পণ্য প্রস্তুত ও প্যাকেজিং করা হচ্ছে।',
+		icon: Package,
+	},
+	{
+		status: 'shipped',
+		label: 'Shipped',
+		description: 'আপনার অর্ডার কুরিয়ারে পাঠানো হয়েছে।',
+		icon: Truck,
+	},
+	{
+		status: 'delivered',
+		label: 'Delivered',
+		description: 'আপনার অর্ডার সফলভাবে পৌঁছে গেছে।',
+		icon: CheckCircle2,
+	},
 ];
 
 const STATUS_MAP = {
-    pending: 'confirmed',
+    pending: 'pending',
     confirm: 'confirmed',
     confirmed: 'confirmed',
     processing: 'processing',

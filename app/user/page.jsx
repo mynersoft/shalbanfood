@@ -25,6 +25,7 @@ import {
 import OrderDetailsModal from '@/components/Order/OrderDetailsModal';
 import useLoginUser from '@/hooks/useAuth';
 import { useUserOrders } from '@/hooks/useOrder';
+import ViewInvoice from '@/components/user/ViewInvoice';
 
 // --------------------------------------------------
 // Helpers
@@ -95,6 +96,7 @@ const formatDate = (date) => {
         year: 'numeric',
     });
 };
+
 
 const normalizeStatus = (status) => {
     const value = String(status || 'pending').toLowerCase().trim();
@@ -322,6 +324,8 @@ export default function OrderHistory() {
         isFetching,
     } = useUserOrders(userId);
 
+   
+
     const orders = useMemo(() => {
         const list = Array.isArray(data?.orders)
             ? data.orders
@@ -519,34 +523,33 @@ export default function OrderHistory() {
     // --------------------------------------------------
 
     return (
-        <div className="mx-auto w-full max-w-7xl min-w-0 space-y-5 py-3 sm:space-y-6 sm:py-5">
+		<div className="mx-auto w-full max-w-7xl min-w-0 space-y-5 py-3 sm:space-y-6 sm:py-5">
+			{/* Page heading */}
 
-            {/* Page heading */}
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<div className="min-w-0">
+					<div className="flex items-center gap-2">
+						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+							<ReceiptText size={21} />
+						</div>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                            <ReceiptText size={21} />
-                        </div>
+						<div>
+							<h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+								My Orders
+							</h1>
 
-                        <div>
-                            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                                My Orders
-                            </h1>
+							<p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+								View and manage your order history.
+							</p>
+						</div>
+					</div>
+				</div>
 
-                            <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
-                                View and manage your order history.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <button
-                    type="button"
-                    onClick={() => refetch?.()}
-                    disabled={!refetch || isFetching}
-                    className="
+				<button
+					type="button"
+					onClick={() => refetch?.()}
+					disabled={!refetch || isFetching}
+					className="
                         inline-flex min-h-10 w-full items-center
                         justify-center gap-2 rounded-xl
                         border border-slate-200 bg-white
@@ -554,86 +557,82 @@ export default function OrderHistory() {
                         text-slate-700 shadow-sm transition
                         hover:bg-slate-50 disabled:opacity-60
                         sm:w-auto
-                    "
-                >
-                    <RefreshCw
-                        size={15}
-                        className={isFetching ? 'animate-spin' : ''}
-                    />
-                    Refresh orders
-                </button>
-            </div>
+                    ">
+					<RefreshCw
+						size={15}
+						className={isFetching ? 'animate-spin' : ''}
+					/>
+					Refresh orders
+				</button>
+			</div>
 
-            {/* Summary cards */}
+			{/* Summary cards */}
 
-            <section
-                aria-label="Order summary"
-                className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4"
-            >
-                <StatCard
-                    title="Total Orders"
-                    value={stats.total}
-                    subtitle="All placed orders"
-                    icon={ShoppingBag}
-                    iconClass="bg-blue-50 text-blue-600"
-                />
+			<section
+				aria-label="Order summary"
+				className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+				<StatCard
+					title="Total Orders"
+					value={stats.total}
+					subtitle="All placed orders"
+					icon={ShoppingBag}
+					iconClass="bg-blue-50 text-blue-600"
+				/>
 
-                <StatCard
-                    title="Delivered"
-                    value={stats.delivered}
-                    subtitle="Successfully delivered"
-                    icon={CheckCircle2}
-                    iconClass="bg-emerald-50 text-emerald-600"
-                    delay={0.05}
-                />
+				<StatCard
+					title="Delivered"
+					value={stats.delivered}
+					subtitle="Successfully delivered"
+					icon={CheckCircle2}
+					iconClass="bg-emerald-50 text-emerald-600"
+					delay={0.05}
+				/>
 
-                <StatCard
-                    title="In Progress"
-                    value={stats.inProgress}
-                    subtitle="Processing or shipped"
-                    icon={Truck}
-                    iconClass="bg-violet-50 text-violet-600"
-                    delay={0.1}
-                />
+				<StatCard
+					title="In Progress"
+					value={stats.inProgress}
+					subtitle="Processing or shipped"
+					icon={Truck}
+					iconClass="bg-violet-50 text-violet-600"
+					delay={0.1}
+				/>
 
-                <StatCard
-                    title="Order Value"
-                    value={formatCurrency(stats.totalValue)}
-                    subtitle="Excluding cancelled orders"
-                    icon={Wallet}
-                    iconClass="bg-amber-50 text-amber-600"
-                    delay={0.15}
-                />
-            </section>
+				<StatCard
+					title="Order Value"
+					value={formatCurrency(stats.totalValue)}
+					subtitle="Excluding cancelled orders"
+					icon={Wallet}
+					iconClass="bg-amber-50 text-amber-600"
+					delay={0.15}
+				/>
+			</section>
 
-            {/* Search and filters */}
+			{/* Search and filters */}
 
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="space-y-4 p-4 sm:p-5">
+			<section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+				<div className="space-y-4 p-4 sm:p-5">
+					<div>
+						<label
+							htmlFor="order-search"
+							className="mb-2 block text-sm font-semibold text-slate-800">
+							Find an order
+						</label>
 
-                    <div>
-                        <label
-                            htmlFor="order-search"
-                            className="mb-2 block text-sm font-semibold text-slate-800"
-                        >
-                            Find an order
-                        </label>
+						<div className="relative">
+							<Search
+								size={19}
+								className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+							/>
 
-                        <div className="relative">
-                            <Search
-                                size={19}
-                                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                            />
-
-                            <input
-                                id="order-search"
-                                type="search"
-                                value={searchQuery}
-                                onChange={(event) =>
-                                    setSearchQuery(event.target.value)
-                                }
-                                placeholder="Search by order ID or product name..."
-                                className="
+							<input
+								id="order-search"
+								type="search"
+								value={searchQuery}
+								onChange={(event) =>
+									setSearchQuery(event.target.value)
+								}
+								placeholder="Search by order ID or product name..."
+								className="
                                     min-h-12 w-full rounded-xl
                                     border border-slate-200
                                     bg-slate-50 py-3 pl-11 pr-4
@@ -645,40 +644,38 @@ export default function OrderHistory() {
                                     focus:ring-4
                                     focus:ring-emerald-500/10
                                 "
-                            />
-                        </div>
-                    </div>
+							/>
+						</div>
+					</div>
 
-                    <div>
-                        <div className="mb-3 flex items-center gap-2">
-                            <Filter size={16} className="text-slate-500" />
+					<div>
+						<div className="mb-3 flex items-center gap-2">
+							<Filter size={16} className="text-slate-500" />
 
-                            <h2 className="text-sm font-semibold text-slate-800">
-                                Filter by status
-                            </h2>
-                        </div>
+							<h2 className="text-sm font-semibold text-slate-800">
+								Filter by status
+							</h2>
+						</div>
 
-                        <div
-                            className="
+						<div
+							className="
                                 -mx-1 flex gap-2 overflow-x-auto
                                 px-1 pb-2
                             "
-                            role="group"
-                            aria-label="Filter orders by status"
-                        >
-                            {FILTERS.map((filter) => {
-                                const active =
-                                    selectedFilter === filter.id;
+							role="group"
+							aria-label="Filter orders by status">
+							{FILTERS.map((filter) => {
+								const active = selectedFilter === filter.id;
 
-                                return (
-                                    <button
-                                        key={filter.id}
-                                        type="button"
-                                        onClick={() =>
-                                            setSelectedFilter(filter.id)
-                                        }
-                                        aria-pressed={active}
-                                        className={`
+								return (
+									<button
+										key={filter.id}
+										type="button"
+										onClick={() =>
+											setSelectedFilter(filter.id)
+										}
+										aria-pressed={active}
+										className={`
                                             inline-flex min-h-10 shrink-0
                                             items-center gap-2
                                             rounded-xl border px-3.5 py-2
@@ -689,161 +686,157 @@ export default function OrderHistory() {
                                             focus:ring-emerald-500
                                             focus:ring-offset-2
                                             ${
-                                                active
-                                                    ? 'border-emerald-700 bg-emerald-700 text-white shadow-sm'
-                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                                            }
-                                        `}
-                                    >
-                                        {filter.label}
+												active
+													? 'border-emerald-700 bg-emerald-700 text-white shadow-sm'
+													: 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+											}
+                                        `}>
+										{filter.label}
 
-                                        <span
-                                            className={`
+										<span
+											className={`
                                                 rounded-md px-1.5 py-0.5
                                                 text-[11px] tabular-nums
                                                 ${
-                                                    active
-                                                        ? 'bg-white/20 text-white'
-                                                        : 'bg-slate-100 text-slate-600'
-                                                }
-                                            `}
-                                        >
-                                            {filterCounts[filter.id] ?? 0}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
+													active
+														? 'bg-white/20 text-white'
+														: 'bg-slate-100 text-slate-600'
+												}
+                                            `}>
+											{filterCounts[filter.id] ?? 0}
+										</span>
+									</button>
+								);
+							})}
+						</div>
+					</div>
+				</div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-5">
-                    <p className="text-xs text-slate-500 sm:text-sm">
-                        Showing{' '}
-                        <span className="font-semibold text-slate-800">
-                            {filteredOrders.length}
-                        </span>{' '}
-                        of{' '}
-                        <span className="font-semibold text-slate-800">
-                            {orders.length}
-                        </span>{' '}
-                        orders
-                    </p>
+				<div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-5">
+					<p className="text-xs text-slate-500 sm:text-sm">
+						Showing{' '}
+						<span className="font-semibold text-slate-800">
+							{filteredOrders.length}
+						</span>{' '}
+						of{' '}
+						<span className="font-semibold text-slate-800">
+							{orders.length}
+						</span>{' '}
+						orders
+					</p>
 
-                    {(searchQuery || selectedFilter !== 'all') && (
-                        <button
-                            type="button"
-                            onClick={handleResetFilters}
-                            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 sm:text-sm"
-                        >
-                            Clear filters
-                        </button>
-                    )}
-                </div>
-            </section>
+					{(searchQuery || selectedFilter !== 'all') && (
+						<button
+							type="button"
+							onClick={handleResetFilters}
+							className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 sm:text-sm">
+							Clear filters
+						</button>
+					)}
+				</div>
+			</section>
 
-            {/* Orders list */}
+			{/* Orders list */}
 
-            <section aria-label="Order history" className="space-y-4">
-                {filteredOrders.length === 0 ? (
-                    <EmptyState
-                        searchQuery={searchQuery}
-                        selectedFilter={selectedFilter}
-                        onReset={handleResetFilters}
-                    />
-                ) : (
-                    filteredOrders.map((order, index) => {
-                        const items = normalizeItems(order);
-                        const orderId = getOrderId(order);
-                        const status = normalizeStatus(order?.status);
-                        const orderTotal = getOrderTotal(order);
-                        const orderDate = getOrderDate(order);
+			<section aria-label="Order history" className="space-y-4">
+				{filteredOrders.length === 0 ? (
+					<EmptyState
+						searchQuery={searchQuery}
+						selectedFilter={selectedFilter}
+						onReset={handleResetFilters}
+					/>
+				) : (
+					filteredOrders.map((order, index) => {
+						const items = normalizeItems(order);
+						const orderId = getOrderId(order);
+						const status = normalizeStatus(order?.status);
+						const orderTotal = getOrderTotal(order);
+						const orderDate = getOrderDate(order);
 
-                        const key =
-                            order?._id ||
-                            order?.id ||
-                            order?.orderId ||
-                            `${orderId}-${index}`;
+						const key =
+							order?._id ||
+							order?.id ||
+							order?.orderId ||
+							`${orderId}-${index}`;
 
-                        return (
-                            <motion.article
-                                key={key}
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{
-                                    duration: 0.25,
-                                    delay: Math.min(index * 0.03, 0.15),
-                                }}
-                                className="
+						return (
+							<motion.article
+								key={key}
+								initial={{ opacity: 0, y: 8 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{
+									duration: 0.25,
+									delay: Math.min(index * 0.03, 0.15),
+								}}
+								className="
                                     overflow-hidden rounded-2xl
                                     border border-slate-200
                                     bg-white shadow-sm
                                     transition-shadow hover:shadow-md
-                                "
-                            >
-                                {/* Order header */}
+                                ">
+								{/* Order header */}
 
-                                <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-start lg:justify-between">
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                                                <ShoppingCart size={18} />
-                                            </span>
+								<div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-start lg:justify-between">
+									<div className="min-w-0 flex-1">
+										<div className="flex flex-wrap items-center gap-2">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+												<ShoppingCart size={18} />
+											</span>
 
-                                            <div className="min-w-0">
-                                                <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-                                                    Invoice No
-                                                </p>
+											<div className="min-w-0">
+												<p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+													Invoice No
+												</p>
 
-                                                <h3 className="break-all text-sm font-bold text-slate-900 sm:text-base">
-                                                    {order.invoiceNo}
-                                                </h3>
-                                            </div>
+												<h3 className="break-all text-sm font-bold text-slate-900 sm:text-base">
+													{order.invoiceNo}
+												</h3>
+											</div>
 
-                                            <div className="ml-auto lg:ml-2">
-                                                <StatusBadge status={status} />
-                                            </div>
-                                        </div>
+											<div className="ml-auto lg:ml-2">
+												<StatusBadge status={status} />
+											</div>
+										</div>
 
-                                        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500 sm:text-sm">
-                                            <span className="inline-flex items-center gap-1.5">
-                                                <CalendarDays
-                                                    size={15}
-                                                    className="shrink-0"
-                                                />
-                                                {formatDate(orderDate)}
-                                            </span>
+										<div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500 sm:text-sm">
+											<span className="inline-flex items-center gap-1.5">
+												<CalendarDays
+													size={15}
+													className="shrink-0"
+												/>
+												{formatDate(orderDate)}
+											</span>
 
-                                            <span className="inline-flex items-center gap-1.5">
-                                                <Package
-                                                    size={15}
-                                                    className="shrink-0"
-                                                />
-                                                {items.length}{' '}
-                                                {items.length === 1
-                                                    ? 'item'
-                                                    : 'items'}
-                                            </span>
-                                        </div>
-                                    </div>
+											<span className="inline-flex items-center gap-1.5">
+												<Package
+													size={15}
+													className="shrink-0"
+												/>
+												{items.length}{' '}
+												{items.length === 1
+													? 'item'
+													: 'items'}
+											</span>
+										</div>
+									</div>
 
-                                    <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 lg:min-w-52 lg:flex-col lg:items-end lg:border-0 lg:pt-0">
-                                        <div>
-                                            <p className="text-xs text-slate-500">
-                                                Order total
-                                            </p>
+									<div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 lg:min-w-52 lg:flex-col lg:items-end lg:border-0 lg:pt-0">
+										<div>
+											<p className="text-xs text-slate-500">
+												Order total
+											</p>
 
-                                            <p className="mt-1 text-lg font-bold text-slate-900 sm:text-xl">
-                                                {formatCurrency(orderTotal)}
-                                            </p>
-                                        </div>
+											<p className="mt-1 text-lg font-bold text-slate-900 sm:text-xl">
+												{formatCurrency(orderTotal)}
+											</p>
+										</div>
 
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                handleViewOrder(order)
-                                            }
-                                            className="
+										<button
+											type="button"
+											onClick={() =>
+												handleViewOrder(order)
+											}
+											className="
                                                 inline-flex min-h-10
                                                 shrink-0 items-center
                                                 justify-center gap-2
@@ -857,81 +850,88 @@ export default function OrderHistory() {
                                                 focus:ring-emerald-500
                                                 focus:ring-offset-2
                                                 sm:text-sm
-                                            "
-                                        >
-                                            <Eye size={16} />
-                                            View Details
-                                            <ChevronRight size={15} />
-                                        </button>
-                                    </div>
-                                </div>
+                                            ">
+											<Eye size={16} />
+											View Details
+											<ChevronRight size={15} />
+										</button>
+									</div>
+								</div>
 
-                                {/* Product list */}
+								{/* Product list */}
 
-                                <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4 sm:px-5">
-                                    <div className="mb-3 flex items-center justify-between gap-2">
-                                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                            Ordered items
-                                        </h4>
+								<div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4 sm:px-5">
+									<div className="mb-3 flex items-center justify-between gap-2">
+										<h4 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+											Ordered items
+										</h4>
 
-                                        {items.length > 3 && (
-                                            <span className="text-xs text-slate-500">
-                                                {items.length} products
-                                            </span>
-                                        )}
-                                    </div>
+										{items.length > 3 && (
+											<span className="text-xs text-slate-500">
+												{items.length} products
+											</span>
+										)}
+									</div>
 
-                                    {items.length === 0 ? (
-                                        <p className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-xs text-slate-500">
-                                            Product details are unavailable for this order.
-                                        </p>
-                                    ) : (
-                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                                            {items.slice(0, 3).map(
-                                                (item, itemIndex) => (
-                                                    <div
-                                                        key={
-                                                            item?._id ||
-                                                            item?.productId ||
-                                                            `${orderId}-${itemIndex}`
-                                                        }
-                                                        className="
+									{items.length === 0 ? (
+										<p className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-xs text-slate-500">
+											Product details are unavailable for
+											this order.
+										</p>
+									) : (
+										<div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+											{items
+												.slice(0, 3)
+												.map((item, itemIndex) => (
+													<div
+														key={
+															item?._id ||
+															item?.productId ||
+															`${orderId}-${itemIndex}`
+														}
+														className="
                                                             flex min-w-0
                                                             items-center gap-3
                                                             rounded-xl border
                                                             border-slate-100
                                                             bg-white p-3
-                                                        "
-                                                    >
-                                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                                                            <Package size={19} />
-                                                        </div>
+                                                        ">
+														<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+															<Package
+																size={19}
+															/>
+														</div>
 
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="break-words text-xs font-semibold leading-5 text-slate-800 sm:text-sm">
-                                                                {getItemName(item)}
-                                                            </p>
+														<div className="min-w-0 flex-1">
+															<p className="break-words text-xs font-semibold leading-5 text-slate-800 sm:text-sm">
+																{getItemName(
+																	item
+																)}
+															</p>
 
-                                                            <p className="mt-1 text-xs text-slate-500">
-                                                                Qty:{' '}
-                                                                {getItemQuantity(item)}
-                                                                {' × '}
-                                                                {formatCurrency(
-                                                                    getItemPrice(item)
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                )
-                                            )}
+															<p className="mt-1 text-xs text-slate-500">
+																Qty:{' '}
+																{getItemQuantity(
+																	item
+																)}
+																{' × '}
+																{formatCurrency(
+																	getItemPrice(
+																		item
+																	)
+																)}
+															</p>
+														</div>
+													</div>
+												))}
 
-                                            {items.length > 3 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        handleViewOrder(order)
-                                                    }
-                                                    className="
+											{items.length > 3 && (
+												<button
+													type="button"
+													onClick={() =>
+														handleViewOrder(order)
+													}
+													className="
                                                         flex min-h-16
                                                         items-center
                                                         justify-center gap-2
@@ -943,81 +943,80 @@ export default function OrderHistory() {
                                                         text-emerald-700
                                                         transition
                                                         hover:bg-emerald-50
-                                                    "
-                                                >
-                                                    +{items.length - 3} more
-                                                    items
-                                                    <ArrowUpRight size={15} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
+                                                    ">
+													+{items.length - 3} more
+													items
+													<ArrowUpRight size={15} />
+												</button>
+											)}
+										</div>
+									)}
 
-                                    {/* Tracking and delivery */}
+									{/* Tracking and delivery */}
 
-                                    {(order?.trackingNumber ||
-                                        order?.deliveryDate ||
-                                        order?.estimatedDelivery) && (
-                                        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                                            {order?.trackingNumber && (
-                                                <div className="flex min-w-0 items-start gap-2 text-xs sm:text-sm">
-                                                    <Truck
-                                                        size={16}
-                                                        className="mt-0.5 shrink-0 text-slate-500"
-                                                    />
+									{(order?.trackingNumber ||
+										order?.deliveryDate ||
+										order?.estimatedDelivery) && (
+										<div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+											{order?.trackingNumber && (
+												<div className="flex min-w-0 items-start gap-2 text-xs sm:text-sm">
+													<Truck
+														size={16}
+														className="mt-0.5 shrink-0 text-slate-500"
+													/>
 
-                                                    <div className="min-w-0">
-                                                        <p className="text-slate-500">
-                                                            Tracking number
-                                                        </p>
+													<div className="min-w-0">
+														<p className="text-slate-500">
+															Tracking number
+														</p>
 
-                                                        <p className="break-all font-semibold text-slate-800">
-                                                            {order.trackingNumber}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
+														<p className="break-all font-semibold text-slate-800">
+															{
+																order.trackingNumber
+															}
+														</p>
+													</div>
+												</div>
+											)}
 
-                                            {order?.deliveryDate && (
-                                                <p className="text-xs text-emerald-700 sm:text-sm">
-                                                    Delivered:{' '}
-                                                    <span className="font-semibold">
-                                                        {formatDate(
-                                                            order.deliveryDate
-                                                        )}
-                                                    </span>
-                                                </p>
-                                            )}
+											{order?.deliveryDate && (
+												<p className="text-xs text-emerald-700 sm:text-sm">
+													Delivered:{' '}
+													<span className="font-semibold">
+														{formatDate(
+															order.deliveryDate
+														)}
+													</span>
+												</p>
+											)}
 
-                                            {!order?.deliveryDate &&
-                                                order?.estimatedDelivery && (
-                                                    <p className="text-xs text-slate-600 sm:text-sm">
-                                                        Estimated delivery:{' '}
-                                                        <span className="font-semibold">
-                                                            {formatDate(
-                                                                order.estimatedDelivery
-                                                            )}
-                                                        </span>
-                                                    </p>
-                                                )}
-                                        </div>
-                                    )}
-                                </div>
-                            </motion.article>
-                        );
-                    })
-                )}
-            </section>
+											{!order?.deliveryDate &&
+												order?.estimatedDelivery && (
+													<p className="text-xs text-slate-600 sm:text-sm">
+														Estimated delivery:{' '}
+														<span className="font-semibold">
+															{formatDate(
+																order.estimatedDelivery
+															)}
+														</span>
+													</p>
+												)}
+										</div>
+									)}
+								</div>
+							</motion.article>
+						);
+					})
+				)}
+			</section>
 
-            {/* Order details modal */}
-
-            {isModalOpen && selectedOrder && (
-                <OrderDetailsModal
-                    order={selectedOrder}
-                    isOpen={isModalOpen}
-                    onClose={handleCloseModal}
-                />
-            )}
-        </div>
-    );
+			{/* Order details modal */}
+			{isModalOpen && selectedOrder && (
+				<ViewInvoice
+					order={selectedOrder}
+					onClose={() => setIsModalOpen(false)}
+				/>
+			)}
+		</div>
+	);
 }

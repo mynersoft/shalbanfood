@@ -28,3 +28,10 @@ body {
 		display: none !important;
 	}
 }
+
+
+@media print {
+	body > *:not(#invoice-modal) {
+		display: none !important;
+	}
+}

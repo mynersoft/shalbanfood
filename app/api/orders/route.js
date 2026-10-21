@@ -7,9 +7,9 @@ import { withErrorHandler } from '@/lib/withErrorHandler';
 import { ApiError } from '@/lib/ApiError';
 import { validateVoucher } from '@/lib/validateVoucher';
 // import { createAdminNotification } from '@/utils/createNotification';
-import { shippingCost } from '@/utils/shippingCost';
 
 import { generateInvoiceID } from '@/utils/generateInvoiceId';
+import ShippingCost from '@/models/ShippingCost';
 
 export const runtime = 'nodejs';
 
@@ -96,7 +96,6 @@ export async function GET(req) {
 |
 |--------------------------------------------------------------------------
 */
-
 export const POST = withErrorHandler(async (req) => {
 	let body;
 
@@ -168,9 +167,32 @@ export const POST = withErrorHandler(async (req) => {
 		}
 	}
 
-	const deliveryFee = Number(shippingCost) || 0;
+	const shippingCost = await ShippingCost.findOne({}).lean();
 
-	const total = Math.max(0, subtotal - discountAmount + deliveryFee);
+	const district = String(
+		shippingAddress.district || shippingAddress.city || ''
+	)
+		.trim()
+		.toLowerCase();
+
+	const districtRate = shippingCost?.districtRates?.find(
+		(rate) =>
+			String(rate.district || '')
+				.trim()
+				.toLowerCase() === district
+	);
+	let shippingFee =
+		Number(districtRate?.charge ?? shippingCost?.defaultCharge) || 0;
+
+	if (
+		shippingCost?.freeDeliveryEnabled &&
+		subtotal >= (Number(shippingCost.freeDeliveryMinimum) || 0)
+	) {
+		shippingFee = 0;
+	}
+
+	// total bill
+	const total = Math.max(0, subtotal - discountAmount + shippingFee);
 
 	let invoiceNo = null;
 
@@ -199,13 +221,9 @@ export const POST = withErrorHandler(async (req) => {
 
 	const formattedOrderItems = orderItems.map((item) => ({
 		productId: String(item.productId || item._id || ''),
-
 		name: item.name || '',
-
 		quantity: Number(item.quantity) || 1,
-
 		price: Number(item.price) || 0,
-
 		image: item.image || '',
 	}));
 
@@ -219,24 +237,16 @@ export const POST = withErrorHandler(async (req) => {
 		},
 
 		subtotal,
-
 		total,
-
-		shippingFee: deliveryFee,
-
+		shippingFee,
 		status: 'pending',
-
 		discount: discountAmount,
-
 		payment: codPayment,
 
 		shippingAddress: {
 			thana: shippingAddress.thana,
-
 			area: shippingAddress.area,
-
 			city: shippingAddress.city,
-
 			phone: customer.phone,
 		},
 
@@ -252,9 +262,7 @@ export const POST = withErrorHandler(async (req) => {
 	return NextResponse.json(
 		{
 			success: true,
-
 			message: 'Order created successfully',
-
 			order,
 		},
 		{
