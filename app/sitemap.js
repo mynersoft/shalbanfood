@@ -46,7 +46,7 @@ export default async function sitemap() {
 
     // Only published products
     const products = await Product.find({
-      status: "published",
+     
       slug: { $exists: true, $ne: "" },
     })
       .select("slug updatedAt createdAt")
