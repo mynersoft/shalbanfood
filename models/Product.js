@@ -130,13 +130,7 @@ const ProductSchema = new mongoose.Schema(
 			},
 		},
 
-		sku: {
-			type: String,
-			trim: true,
-			uppercase: true,
-			default: '',
-			index: true,
-		},
+		
 
 		seoTitle: {
 			type: String,
@@ -193,7 +187,6 @@ ProductSchema.pre('validate', function () {
 		}
 	}
 });
-
 
 ProductSchema.index({
 	category: 1,

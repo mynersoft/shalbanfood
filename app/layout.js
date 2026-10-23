@@ -18,10 +18,9 @@ import MaintenanceToast from '@/components/MaintenanceToast';
 ========================================================= */
 
 const BASE_URL =
-	process.env.NEXT_PUBLIC_SITE_URL || 'https://shalbanfood.vercel.app';
+	process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shalbanfood.shop';
 
 const SITE_NAME = 'Shalban Food';
-
 const SITE_NAME_BN = 'শালবন ফুড';
 
 const SITE_DESCRIPTION_EN =
