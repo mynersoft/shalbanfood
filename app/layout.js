@@ -1,18 +1,12 @@
 import './globals.css';
 
 import InternetStatus from '@/components/InternetStatus';
-import { GlobalInitializer } from '@/components/fetch/GlobalInitializer';
-
 import { Toaster } from 'react-hot-toast';
-
 import Providers from './providers';
-
-import InitialLoader from '@/components/InitialLoader';
-import InitData from '@/components/InitData';
 import ConditionalMainLayout from '@/components/layout/ConditionalMainLayout';
 
-
 import MaintenanceToast from '@/components/MaintenanceToast';
+
 /* =============sggs============================================
    SITE CONFIGURATION
 ========================================================= */
@@ -22,6 +16,8 @@ const BASE_URL =
 
 const SITE_NAME = 'Shalban Food';
 const SITE_NAME_BN = 'শালবন ফুড';
+
+const title = 'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food';
 
 const SITE_DESCRIPTION_EN =
 	'Shalban Food is a Bangladeshi online food store offering quality honey, ghee, dry fruits, mustard oil and natural food products with delivery across Bangladesh.';
@@ -44,11 +40,6 @@ const FACEBOOK_URL = 'https://www.facebook.com/shalbanfood';
 
 export const metadata = {
 	metadataBase: new URL(BASE_URL),
-
-	/* -------------------------------------------------------
-	   TITLE
-	------------------------------------------------------- */
-
 	title: {
 		default:
 			'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food in Bangladesh',
@@ -56,23 +47,15 @@ export const metadata = {
 		template: '%s | Shalban Food – শালবন ফুড',
 	},
 
-	/* -------------------------------------------------------
-	   DESCRIPTION
-	------------------------------------------------------- */
-
 	description: SITE_DESCRIPTION,
 
-	/* -------------------------------------------------------
-	   KEYWORDS
-	------------------------------------------------------- */
-
 	keywords: [
-		/* Brand */
 		'Shalban Food',
 		'Shalban',
 		'Shalban Food Bangladesh',
 		'Shalban Food Tangail',
 		'শালবন ফুড',
+		'শালবন ফুড মধু',
 		'শালবন',
 		'শালবন ফুড বাংলাদেশ',
 
@@ -171,12 +154,11 @@ export const metadata = {
 	],
 
 	creator: SITE_NAME,
-
 	publisher: SITE_NAME,
 
 	applicationName: 'Shalban Food | শালবন ফুড',
 
-	category: 'Food & Beverage',
+	category: 'Natural Food',
 
 	/* -------------------------------------------------------
 	   CANONICAL
@@ -225,55 +207,38 @@ export const metadata = {
 
 		siteName: 'Shalban Food | শালবন ফুড',
 
-		title: 'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food',
+		title: `${title}`,
 
 		description: SITE_DESCRIPTION,
 
 		images: [
 			{
 				url: OG_IMAGE,
-
 				width: 1200,
-
 				height: 630,
-
 				alt: 'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food Products',
-
 				type: 'image/png',
 			},
 		],
 	},
 
-	/* -------------------------------------------------------
-	   TWITTER / X
-	------------------------------------------------------- */
-
 	twitter: {
 		card: 'summary_large_image',
-
 		title: 'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food',
-
 		description: SITE_DESCRIPTION,
-
 		images: [OG_IMAGE],
 	},
-
-	/* -------------------------------------------------------
-	   ICONS
-	------------------------------------------------------- */
 
 	icons: {
 		icon: [
 			{
 				url: '/favicon.ico',
 			},
-
 			{
 				url: '/icon.png',
 				type: 'image/png',
 			},
 		],
-
 		apple: [
 			{
 				url: '/apple-icon.png',
@@ -434,8 +399,7 @@ export default function RootLayout({ children }) {
 				<InternetStatus />
 				<Providers>
 					<ConditionalMainLayout>
-						<GlobalInitializer />
-<MaintenanceToast />
+						<MaintenanceToast />
 						{children}
 					</ConditionalMainLayout>
 				</Providers>

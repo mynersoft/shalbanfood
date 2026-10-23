@@ -24,7 +24,7 @@ const cardClass =
 const defaultSettings = {
 	store: {
 		site_name: 'Shalban Food',
-		site_name_bn: 'Shalban Food',
+		site_name_bn: 'শালবন ফুড',
 		tagline: 'স্বাদের সাথে আস্থার বন্ধন।',
 		phone: '01603816721',
 		whatsapp: '01603816721',
