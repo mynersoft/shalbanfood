@@ -5,6 +5,11 @@ import { ImagePlus, Plus, Save, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
+import {
+	useCreateComboOffer,
+	useUpdateComboOffer,
+} from '@/hooks/useComboOffers';
+
 const createDefaultForm = () => ({
 	name: '',
 	slug: '',
@@ -53,17 +58,21 @@ function formatDateTimeLocal(value) {
 }
 
 const inputClass =
-	'w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600';
+	'w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500';
 
-const labelClass = 'mb-2 block text-sm font-semibold text-gray-700';
+const labelClass = 'mb-2 block text-sm font-semibold text-slate-300';
 
 export default function OfferForm({ offer = null }) {
 	const router = useRouter();
 	const isEdit = Boolean(offer);
 
+	const createMutation = useCreateComboOffer();
+	const updateMutation = useUpdateComboOffer();
+
 	const [form, setForm] = useState(createDefaultForm);
-	const [loading, setLoading] = useState(false);
 	const [uploading, setUploading] = useState(false);
+
+	const saving = createMutation.isPending || updateMutation.isPending;
 
 	useEffect(() => {
 		if (!offer) {
@@ -160,7 +169,6 @@ export default function OfferForm({ offer = null }) {
 			return;
 		}
 
-		// Basic client-side file size limit: 5 MB.
 		if (file.size > 5 * 1024 * 1024) {
 			toast.error('Image size must be 5 MB or less');
 			return;
@@ -184,7 +192,6 @@ export default function OfferForm({ offer = null }) {
 			}
 
 			updateField('featureImg', data.url);
-
 			toast.success('Image uploaded successfully');
 		} catch (error) {
 			toast.error(error.message || 'Image upload failed');
@@ -280,81 +287,71 @@ export default function OfferForm({ offer = null }) {
 	const handleSubmit = async (event) => {
 		event.preventDefault();
 
-		if (loading || uploading) return;
+		if (saving || uploading) return;
 		if (!validate()) return;
 
-		setLoading(true);
+		const payload = {
+			name: form.name.trim(),
+			slug: form.slug.trim().toLowerCase(),
+
+			shortDescription: form.shortDescription.trim(),
+			description: form.description.trim(),
+
+			items: form.items.map((item) => ({
+				name: item.name.trim(),
+				quantity: item.quantity.trim(),
+			})),
+
+			regularPrice: Number(form.regularPrice),
+			offerPrice: Number(form.offerPrice),
+
+			featureImg: form.featureImg.trim(),
+			images: form.images,
+
+			stock: Number(form.stock),
+
+			startDate: new Date(form.startDate).toISOString(),
+			endDate: new Date(form.endDate).toISOString(),
+
+			isActive: form.isActive,
+			isFeatured: form.isFeatured,
+			priority: Number(form.priority),
+
+			seoTitle: form.seoTitle.trim(),
+			seoDescription: form.seoDescription.trim(),
+
+			keywords: form.keywords
+				.split(',')
+				.map((keyword) => keyword.trim())
+				.filter(Boolean),
+		};
 
 		try {
-			const payload = {
-				name: form.name.trim(),
-				slug: form.slug.trim().toLowerCase(),
+			if (isEdit) {
+				const id = offer._id || offer.id;
 
-				shortDescription: form.shortDescription.trim(),
-				description: form.description.trim(),
+				if (!id) {
+					throw new Error('Offer ID is missing');
+				}
 
-				items: form.items.map((item) => ({
-					name: item.name.trim(),
-					quantity: item.quantity.trim(),
-				})),
+				await updateMutation.mutateAsync({
+					id,
+					payload,
+				});
 
-				regularPrice: Number(form.regularPrice),
-				offerPrice: Number(form.offerPrice),
+				toast.success('Offer updated successfully');
+			} else {
+				await createMutation.mutateAsync(payload);
 
-				featureImg: form.featureImg.trim(),
-				images: form.images,
-
-				stock: Number(form.stock),
-
-				startDate: new Date(form.startDate).toISOString(),
-
-				endDate: new Date(form.endDate).toISOString(),
-
-				isActive: form.isActive,
-				isFeatured: form.isFeatured,
-				priority: Number(form.priority),
-
-				seoTitle: form.seoTitle.trim(),
-				seoDescription: form.seoDescription.trim(),
-
-				keywords: form.keywords
-					.split(',')
-					.map((keyword) => keyword.trim())
-					.filter(Boolean),
-			};
-
-			const url = isEdit
-				? `/api/combooffer/${offer._id}`
-				: '/api/combooffer';
-
-			const response = await fetch(url, {
-				method: isEdit ? 'PUT' : 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(payload),
-			});
-
-			const data = await response.json();
-
-			if (!response.ok || !data.success) {
-				throw new Error(data.message || 'Failed to save offer');
+				toast.success('Offer created successfully');
 			}
 
-			toast.success(
-				isEdit
-					? 'Offer updated successfully'
-					: 'Offer created successfully'
-			);
-
-			router.push('/dashboard/combo');
+			router.push('/dashboard/admin/offers');
 			router.refresh();
 		} catch (error) {
 			console.error('SAVE OFFER ERROR:', error);
 
 			toast.error(error.message || 'Failed to save offer');
-		} finally {
-			setLoading(false);
 		}
 	};
 
@@ -362,15 +359,17 @@ export default function OfferForm({ offer = null }) {
 	const offerPrice = Number(form.offerPrice);
 
 	const discount =
-		regularPrice > 0 && offerPrice >= 0
+		regularPrice > 0 && offerPrice >= 0 && offerPrice <= regularPrice
 			? Math.round(((regularPrice - offerPrice) / regularPrice) * 100)
 			: 0;
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-6">
+		<form
+			onSubmit={handleSubmit}
+			className="space-y-6 rounded-2xl bg-slate-950 p-2 text-slate-100 md:p-4">
 			{/* Basic information */}
-			<section className="rounded-2xl border bg-white p-5 shadow-sm">
-				<h2 className="text-lg font-bold text-gray-900">
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
+				<h2 className="text-lg font-bold text-slate-100">
 					Basic Information
 				</h2>
 
@@ -451,13 +450,13 @@ export default function OfferForm({ offer = null }) {
 			</section>
 
 			{/* Combo items */}
-			<section className="rounded-2xl border bg-white p-5 shadow-sm">
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<div>
-						<h2 className="text-lg font-bold text-gray-900">
+						<h2 className="text-lg font-bold text-slate-100">
 							Combo Items
 						</h2>
-						<p className="text-sm text-gray-500">
+						<p className="text-sm text-slate-400">
 							Add the products and quantities in this combo.
 						</p>
 					</div>
@@ -475,7 +474,7 @@ export default function OfferForm({ offer = null }) {
 					{form.items.map((item, index) => (
 						<div
 							key={index}
-							className="grid gap-3 rounded-xl border bg-gray-50 p-3 md:grid-cols-[1fr_180px_auto]">
+							className="grid gap-3 rounded-xl border border-slate-700 bg-slate-950/70 p-3 md:grid-cols-[1fr_180px_auto]">
 							<input
 								required
 								value={item.name}
@@ -508,7 +507,7 @@ export default function OfferForm({ offer = null }) {
 								type="button"
 								onClick={() => removeItem(index)}
 								aria-label={`Remove item ${index + 1}`}
-								className="flex items-center justify-center rounded-xl border border-red-200 px-4 text-red-600 hover:bg-red-50">
+								className="flex items-center justify-center rounded-xl border border-red-800/80 bg-red-950/30 px-4 text-red-400 hover:bg-red-900/40">
 								<Trash2 size={18} />
 							</button>
 						</div>
@@ -517,8 +516,8 @@ export default function OfferForm({ offer = null }) {
 			</section>
 
 			{/* Pricing */}
-			<section className="rounded-2xl border bg-white p-5 shadow-sm">
-				<h2 className="text-lg font-bold text-gray-900">Pricing</h2>
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
+				<h2 className="text-lg font-bold text-slate-100">Pricing</h2>
 
 				<div className="mt-5 grid gap-5 md:grid-cols-3">
 					<div>
@@ -558,17 +557,17 @@ export default function OfferForm({ offer = null }) {
 					</div>
 
 					<div className="flex items-end">
-						<div className="w-full rounded-xl bg-green-50 p-4">
-							<p className="text-sm text-green-700">Discount</p>
+						<div className="w-full rounded-xl border border-emerald-800 bg-emerald-950/40 p-4">
+							<p className="text-sm text-emerald-300">Discount</p>
 
-							<p className="text-2xl font-bold text-green-700">
-								{discount > 0 ? `${discount}%` : '0%'}
+							<p className="text-2xl font-bold text-emerald-300">
+								{discount}%
 							</p>
 
 							{regularPrice > 0 &&
 								offerPrice >= 0 &&
 								offerPrice <= regularPrice && (
-									<p className="text-sm text-green-700">
+									<p className="text-sm text-emerald-300">
 										সাশ্রয়: ৳
 										{(
 											regularPrice - offerPrice
@@ -581,14 +580,14 @@ export default function OfferForm({ offer = null }) {
 			</section>
 
 			{/* Feature image */}
-			<section className="rounded-2xl border bg-white p-5 shadow-sm">
-				<h2 className="text-lg font-bold text-gray-900">
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
+				<h2 className="text-lg font-bold text-slate-100">
 					Feature Image
 				</h2>
 
 				<div className="mt-5">
 					{form.featureImg ? (
-						<div className="relative max-w-md overflow-hidden rounded-2xl border">
+						<div className="relative max-w-md overflow-hidden rounded-2xl border border-slate-700">
 							<img
 								src={form.featureImg}
 								alt={`${form.name || 'Offer'} feature`}
@@ -599,21 +598,21 @@ export default function OfferForm({ offer = null }) {
 								type="button"
 								onClick={() => updateField('featureImg', '')}
 								aria-label="Remove feature image"
-								className="absolute right-3 top-3 rounded-full bg-white p-2 text-red-600 shadow">
+								className="absolute right-3 top-3 rounded-full bg-slate-900/80 p-2 text-red-400 shadow shadow-black/50">
 								<X size={18} />
 							</button>
 						</div>
 					) : (
-						<label className="flex aspect-video max-w-md cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-green-500">
-							<ImagePlus size={40} className="text-gray-400" />
+						<label className="flex aspect-video max-w-md cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700 bg-slate-950/80 hover:border-emerald-500">
+							<ImagePlus size={40} className="text-slate-400" />
 
-							<span className="mt-3 text-sm font-semibold text-gray-700">
+							<span className="mt-3 text-sm font-semibold text-slate-200">
 								{uploading
 									? 'Uploading...'
 									: 'Choose Feature Image'}
 							</span>
 
-							<span className="mt-1 text-xs text-gray-500">
+							<span className="mt-1 text-xs text-slate-400">
 								Maximum 5 MB
 							</span>
 
@@ -621,12 +620,11 @@ export default function OfferForm({ offer = null }) {
 								type="file"
 								accept="image/*"
 								className="hidden"
-								disabled={uploading}
+								disabled={uploading || saving}
 								onChange={(event) => {
 									const file = event.target.files?.[0];
 
-									uploadImage(file);
-
+									void uploadImage(file);
 									event.target.value = '';
 								}}
 							/>
@@ -636,8 +634,8 @@ export default function OfferForm({ offer = null }) {
 			</section>
 
 			{/* Stock and schedule */}
-			<section className="rounded-2xl border bg-white p-5 shadow-sm">
-				<h2 className="text-lg font-bold text-gray-900">
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
+				<h2 className="text-lg font-bold text-slate-100">
 					Stock & Schedule
 				</h2>
 
@@ -697,7 +695,7 @@ export default function OfferForm({ offer = null }) {
 							className="h-5 w-5 accent-green-700"
 						/>
 
-						<span className="text-sm font-semibold text-gray-700">
+						<span className="text-sm font-semibold text-slate-300">
 							Active Offer
 						</span>
 					</label>
@@ -712,7 +710,7 @@ export default function OfferForm({ offer = null }) {
 							className="h-5 w-5 accent-green-700"
 						/>
 
-						<span className="text-sm font-semibold text-gray-700">
+						<span className="text-sm font-semibold text-slate-300">
 							Featured Offer
 						</span>
 					</label>
@@ -720,8 +718,8 @@ export default function OfferForm({ offer = null }) {
 			</section>
 
 			{/* SEO */}
-			<section className="rounded-2xl border bg-white p-5 shadow-sm">
-				<h2 className="text-lg font-bold text-gray-900">
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
+				<h2 className="text-lg font-bold text-slate-100">
 					SEO Settings
 				</h2>
 
@@ -739,7 +737,7 @@ export default function OfferForm({ offer = null }) {
 							className={inputClass}
 						/>
 
-						<p className="mt-1 text-xs text-gray-500">
+						<p className="mt-1 text-xs text-slate-400">
 							{form.seoTitle.length}/70 characters
 						</p>
 					</div>
@@ -761,7 +759,7 @@ export default function OfferForm({ offer = null }) {
 							className={inputClass}
 						/>
 
-						<p className="mt-1 text-xs text-gray-500">
+						<p className="mt-1 text-xs text-slate-400">
 							{form.seoDescription.length}/170 characters
 						</p>
 					</div>
@@ -778,7 +776,7 @@ export default function OfferForm({ offer = null }) {
 							className={inputClass}
 						/>
 
-						<p className="mt-1 text-xs text-gray-500">
+						<p className="mt-1 text-xs text-slate-400">
 							Separate keywords with commas.
 						</p>
 					</div>
@@ -789,14 +787,14 @@ export default function OfferForm({ offer = null }) {
 			<div className="sticky bottom-4 z-10 flex justify-end">
 				<button
 					type="submit"
-					disabled={loading || uploading}
-					className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-7 py-3 font-bold text-white shadow-lg hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60">
+					disabled={saving || uploading}
+					className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-7 py-3 font-bold text-white shadow-lg shadow-emerald-900/30 hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60">
 					<Save size={18} />
 
-					{loading
-						? 'Saving...'
-						: uploading
-							? 'Uploading...'
+					{uploading
+						? 'Uploading...'
+						: saving
+							? 'Saving...'
 							: isEdit
 								? 'Update Offer'
 								: 'Create Offer'}

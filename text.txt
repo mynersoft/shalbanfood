@@ -1,7 +1,6 @@
-in production - shipping fee not actual
+in production - shipping fee not actual -- database should data
 
 
 
 
 
-step 22

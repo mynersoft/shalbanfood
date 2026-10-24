@@ -5,11 +5,12 @@ import OfferForm from '@/app/dashboard/components/Combo/OfferForm';
 
 export const metadata = {
 	title: 'Create Combo Offer | Shalban Food',
+	description: 'Create a combo offer for Shalban Food.',
 };
 
 export default function CreateOfferPage() {
 	return (
-		<main className="min-h-screen  p-4 sm:p-6">
+		<main className="min-h-screen p-4 sm:p-6">
 			<div className="mx-auto max-w-5xl">
 				<Link
 					href="/dashboard/admin/offers"
