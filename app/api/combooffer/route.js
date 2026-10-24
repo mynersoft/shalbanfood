@@ -150,6 +150,7 @@ function normalizeOffer(body) {
 	};
 }
 
+
 // GET /api/offers
 // GET /api/offers?featured=true
 // GET /api/offers?admin=true (admin only)
@@ -158,12 +159,8 @@ export async function GET(request) {
 		await connectDB();
 
 		const { searchParams } = new URL(request.url);
-		
 		const featured = searchParams.get('featured') === 'true';
-		
 		const filter = {};
-
-
 		if (featured) {
 			filter.isFeatured = true;
 		}
@@ -190,6 +187,14 @@ export async function GET(request) {
 		return errorResponse('Failed to fetch offers', 500);
 	}
 }
+
+
+
+
+
+
+
+
 
 // POST /api/offers
 export async function POST(request) {

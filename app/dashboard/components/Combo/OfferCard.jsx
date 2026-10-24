@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ShoppingCart, Clock3, PackageCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
-
 import OfferCountdown from './OfferCountdown';
 import { addToCart } from '@/redux/store/slices/cartSlice';
 

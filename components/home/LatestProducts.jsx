@@ -9,7 +9,6 @@ const LatestProducts = () => {
 
 	return (
 		<>
-			{/* Header */}
 			<div
 				className="
 					mb-6
@@ -19,31 +18,20 @@ const LatestProducts = () => {
 					gap-4
 				">
 				<div>
-					<p
-						className="
-							text-xs
-							font-semibold
-							uppercase
-							tracking-wider
-							text-[#1f5d3b]
-						">
-						Fresh Picks
-					</p>
-
 					<h2
 						className="
 							mt-1
 							text-2xl
 							font-bold
 							tracking-tight
-							text-gray-900
+							text-gray-700
 							sm:text-3xl
 						">
-						Latest Products
+						 Featured Products
 					</h2>
 
 					<p className="mt-1 text-sm text-gray-500">
-						আমাদের নতুন ও জনপ্রিয় পণ্যগুলো দেখুন।
+						আমাদের নতুন ও জনপ্রিয় পণ্যগুলো দেখুন
 					</p>
 				</div>
 

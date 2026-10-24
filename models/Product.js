@@ -7,37 +7,31 @@ const VariantSchema = new mongoose.Schema(
 			required: true,
 			min: 0,
 		},
-
 		unit: {
 			type: String,
 			required: true,
 			enum: ['gram', 'kg', 'milliliter', 'litre', 'piece'],
 		},
-
 		regularPrice: {
 			type: Number,
 			required: true,
 			min: 0,
 		},
-
 		sellPrice: {
 			type: Number,
 			required: true,
 			min: 0,
 		},
-
 		stock: {
 			type: Number,
 			default: 0,
 			min: 0,
 		},
-
 		soldCount: {
 			type: Number,
 			default: 0,
 			min: 0,
 		},
-
 		sku: {
 			type: String,
 			trim: true,
@@ -58,7 +52,6 @@ const ProductSchema = new mongoose.Schema(
 			trim: true,
 			maxlength: 200,
 		},
-
 		slug: {
 			type: String,
 			required: true,
@@ -67,7 +60,6 @@ const ProductSchema = new mongoose.Schema(
 			lowercase: true,
 			index: true,
 		},
-
 		category: {
 			type: String,
 			required: true,
@@ -75,26 +67,22 @@ const ProductSchema = new mongoose.Schema(
 			lowercase: true,
 			index: true,
 		},
-
 		subCategory: {
 			type: String,
 			trim: true,
 			lowercase: true,
 			default: '',
 		},
-
 		brand: {
 			type: String,
 			trim: true,
 			default: '',
 		},
-
 		warranty: {
 			type: String,
 			trim: true,
 			default: '',
 		},
-
 		shortDescription: {
 			type: String,
 			trim: true,
@@ -114,9 +102,7 @@ const ProductSchema = new mongoose.Schema(
 		},
 		variants: {
 			type: [VariantSchema],
-
 			required: true,
-
 			validate: {
 				validator: function (variants) {
 					return (
@@ -125,13 +111,9 @@ const ProductSchema = new mongoose.Schema(
 						variants.length <= 4
 					);
 				},
-
 				message: 'Product must have 1 to 4 variants.',
 			},
 		},
-
-		
-
 		seoTitle: {
 			type: String,
 			trim: true,

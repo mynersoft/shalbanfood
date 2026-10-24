@@ -24,7 +24,7 @@ const menuItems = [
     { label: 'Shop', href: '/shop' },
     { label: 'Honey', href: '/honey' },
     { label: 'Ghee', href: '/ghee' },
-    { label: 'Combo Offers', href: '/combo' },
+    { label: 'Combo Offers', href: '/combo-offer' },
     { label: 'Blog', href: '/blog' },
     { label: 'About Us', href: '/about' },
     { label: 'Contact', href: '/contact' },

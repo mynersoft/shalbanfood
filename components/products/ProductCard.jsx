@@ -187,13 +187,22 @@ export default function ProductCard({ product }) {
 						</div>
 					)}
 
+					{/* // upcoming
+					<span
+						className="absolute left-2 top-2 rounded-md
+                            bg-green-700 px-2 py-[2px] text-[11px]
+                            font-bold text-white shadow-sm">
+						Best selling
+					</span> */}
+
+
 					{/* Selected variant-এর discount */}
 					{hasDiscount && (
 						<span
-							className="absolute left-2 top-2 rounded-full
-                            bg-red-500 px-2.5 py-1 text-[11px]
+							className="absolute right-2 top-2 rounded-md
+                            bg-green-600 px-2 py-[2px] text-[11px]
                             font-bold text-white shadow-sm">
-							-{discountPercent}%
+							Save {discountPercent}%
 						</span>
 					)}
 

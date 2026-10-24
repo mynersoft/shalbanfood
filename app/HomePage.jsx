@@ -1,16 +1,10 @@
 'use client';
-
-import { useSelector } from 'react-redux';
-import { useProducts } from '@/hooks/useProducts';
-import ProductCard from '@/components/products/ProductCard';
 import ShopByCategory from '@/components/home/ShopByCategory';
 import Hero from '@/components/home/Hero';
-import Link from 'next/link';
 import LatestProducts from '@/components/home/LatestProducts';
+import ShowBlogPost from '@/components/home/ShowBlogPost';
 
 export default function HomePage() {
-	
-
 	return (
 		<main className="min-h-screen bg-white">
 			<Hero />
@@ -24,20 +18,29 @@ export default function HomePage() {
                     mx-auto
                     max-w-7xl
                     px-4
-                    py-10
+                    py-4
                     sm:py-12
                     md:px-6
                     lg:px-8
                 ">
-				{/* SECTION HEADER */}
+				<LatestProducts />
+			</section>
 
-			<LatestProducts/>
-
-				{/* =================================================
-                    LOADING
-                ================================================= */}
-
-			
+			<section
+				className="
+                    mx-auto
+                    max-w-7xl
+                    px-4
+                    py-4
+                    sm:py-12
+                    md:px-6
+                    lg:px-8
+                ">
+				<ShowBlogPost
+					heading="ব্লগ পোস্ট পড়ুন"
+					description="খাঁটি মধু, গাওয়া ঘি ও প্রাকৃতিক খাবার সম্পর্কে জানুন।"
+					limit={3}
+				/>
 			</section>
 		</main>
 	);
