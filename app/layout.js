@@ -16,7 +16,6 @@ const BASE_URL =
 
 const SITE_NAME = 'Shalban Food';
 const SITE_NAME_BN = 'শালবন ফুড';
-
 const title = 'Shalban Food | শালবন ফুড – Honey, Ghee & Natural Food';
 
 const SITE_DESCRIPTION_EN =

@@ -114,8 +114,6 @@ export default function UserSidebar() {
 			<nav
 				aria-label="User navigation"
 				className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
-				
-
 				{userSidebarMenu.map((menu) => {
 					const active = isActive(menu.link);
 
@@ -161,14 +159,14 @@ export default function UserSidebar() {
 						</Link>
 					);
 				})}
+				<div className="shrink-0 border-t border-slate-100 ">
+					<div className={sidebarOpen ? '' : 'flex justify-center'}>
+						<LogoutButton className="!text-gray-600" />
+					</div>
+				</div>
 			</nav>
 
 			{/* Account / logout */}
-			<div className="shrink-0 border-t border-slate-100 p-3">
-				<div className={sidebarOpen ? '' : 'flex justify-center'}>
-					<LogoutButton />
-				</div>
-			</div>
 		</aside>
 	);
 }

@@ -6,7 +6,10 @@ import Order from '@/models/Order';
 import { withErrorHandler } from '@/lib/withErrorHandler';
 import { ApiError } from '@/lib/ApiError';
 import { validateVoucher } from '@/lib/validateVoucher';
-// import { createAdminNotification } from '@/utils/createNotification';
+
+
+import PushSubscription from '@/models/PushSubscription';
+
 
 import { generateInvoiceID } from '@/utils/generateInvoiceId';
 import ShippingCost from '@/models/ShippingCost';
@@ -227,8 +230,25 @@ export const POST = withErrorHandler(async (req) => {
 		image: item.image || '',
 	}));
 
+	
+
+	// for push notification 
+	const requestedFid = typeof body.pushFid === 'string' ? body.pushFid : null;
+
+	const matchingDevice = requestedFid
+		? await PushSubscription.findOne({
+				userId,
+				fid: requestedFid,
+				enabled: true,
+			}).select('fid')
+		: null;
+
+
+
 	const orderPayload = {
 		invoiceNo,
+pushFid: matchingDevice?.fid || null,
+
 
 		customer: {
 			name: customer.name,

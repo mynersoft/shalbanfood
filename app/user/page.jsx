@@ -1016,7 +1016,8 @@ export default function OrderHistory() {
 					order={selectedOrder}
 					onClose={() => setIsModalOpen(false)}
 				/>
-			)}
+            )}
+            
 		</div>
 	);
 }

@@ -345,9 +345,15 @@ export default function CheckoutClient() {
 			};
 		});
 
-		/* Payload */
+// for push notification 
+		const pushFid =
+			typeof window !== 'undefined'
+				? localStorage.getItem('shalban_push_fid')
+				: null;
 
+		// order data 
 		const payload = {
+			pushFid,
 			userId: user?.id || user?._id || undefined,
 
 			customer: {
@@ -373,6 +379,7 @@ export default function CheckoutClient() {
 		};
 
 		setProcessing(true);
+
 		placeOrder(payload);
 	};
 

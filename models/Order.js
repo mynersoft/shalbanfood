@@ -7,7 +7,7 @@ const orderSchema = new mongoose.Schema(
 
 		customer: {
 			name: { type: String, required: true },
-			email: { type: String,  },
+			email: { type: String },
 			phone: { type: String, required: true },
 		},
 
@@ -23,7 +23,7 @@ const orderSchema = new mongoose.Schema(
 				'shipped',
 				'delivered',
 				'cancelled',
-				'return'
+				'return',
 			],
 			default: 'pending',
 		},
@@ -54,6 +54,10 @@ const orderSchema = new mongoose.Schema(
 				image: String,
 			},
 		],
+		pushFid: {
+			type: String,
+			default: null,
+		},
 	},
 	{ timestamps: true }
 );
