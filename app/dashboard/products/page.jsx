@@ -7,6 +7,7 @@ import Image from 'next/image';
 import {
 	Plus,
 	Search,
+
 	Pencil,
 	Trash2,
 	Package,
@@ -21,9 +22,7 @@ import toast from 'react-hot-toast';
 import ProductFormModal from '@/app/dashboard/components/product/ProductFormModal';
 import CategoryForm from '@/app/dashboard/components/CategoryForm';
 import Modal from '@/components/Modal';
-
 import { useProducts, useDeleteProduct } from '@/hooks/useProducts';
-
 import { useAddCategory, useCategories } from '@/hooks/useCategory';
 
 /* ========================================

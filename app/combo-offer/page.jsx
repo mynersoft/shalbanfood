@@ -1,5 +1,6 @@
+'use client';
 import Link from 'next/link';
-import Image from 'next/image';
+
 import {
 	ArrowLeft,
 	ArrowRight,
@@ -8,61 +9,17 @@ import {
 	Sparkles,
 } from 'lucide-react';
 
-import { connectDB } from '@/lib/dbConnect';
-import ComboOffer from '@/models/ComboOffer';
+
 import OfferCard from '@/app/dashboard/components/Combo/OfferCard';
-
-export const dynamic = 'force-dynamic';
-
-export const metadata = {
-	title: 'Combo Offers | Shalban Food',
-	description:
-		'শালবন ফুডের খাঁটি মধু, গাওয়া ঘি ও প্রাকৃতিক খাবারের বিশেষ কম্বো অফার দেখুন।',
-};
+import { useComboOffers } from '@/hooks/useComboOffers';
 
 
-async function getOffers() {
-	try {
-		await connectDB();
 
-		const now = new Date();
 
-		const offers = await ComboOffer.find({
-			isActive: true,
-			// startDate: { $lte: now },
-			// endDate: { $gte: now },
-		})
-			.sort({ priority: -1, createdAt: -1 })
-			.lean();
-
-		return JSON.parse(JSON.stringify(offers));
-	} catch (error) {
-		console.error('GET COMBO OFFERS PAGE ERROR:', error);
-		return null;
-	}
-}
-
-const taka = (amount) => `৳${Number(amount || 0).toLocaleString('en-BD')}`;
-
-export default async function OffersPage() {
-	const offers = await getOffers();
-
-	console.log(offers);
-
-	const hasOffers = Array.isArray(offers) && offers.length > 0;
-
-	const totalSavings = hasOffers
-		? offers.reduce(
-				(total, offer) =>
-					total +
-					Math.max(
-						0,
-						Number(offer.regularPrice || 0) -
-							Number(offer.offerPrice || 0)
-					),
-				0
-			)
-		: 0;
+export default function OffersPage() {
+	const { data, isLoading, isError } = useComboOffers();
+	const offers = data ?? [];
+	const hasOffers = offers.length > 0;
 
 	return (
 		<main className="min-h-screen bg-[#fafbf9] text-gray-900">
@@ -152,7 +109,14 @@ export default async function OffersPage() {
 					)}
 				</div>
 
-				{offers === null ? (
+				{isLoading ? (
+					<div className="rounded-2xl border border-gray-200 bg-white px-5 py-16 text-center">
+						<Gift className="mx-auto animate-pulse text-gray-300" size={42} />
+						<h3 className="mt-4 text-lg font-bold">
+							অফার লোড করা হচ্ছে...
+						</h3>
+					</div>
+				) : isError ? (
 					<div className="rounded-2xl border border-gray-200 bg-white px-5 py-16 text-center">
 						<Gift className="mx-auto text-gray-300" size={42} />
 						<h3 className="mt-4 text-lg font-bold">

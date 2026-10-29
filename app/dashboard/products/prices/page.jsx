@@ -1,4 +1,4 @@
-import ProductPriceEditor from '@/components/admin/ProductPriceEditor';
+import ProductPriceEditor from "../../components/product/ProductPriceEditor";
 
 export const metadata = {
     title: 'Price Management | Shalban Food Admin',

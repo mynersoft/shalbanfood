@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import mongoose from 'mongoose';
 
-import { authOptions } from '@/lib/authOptions';
-import connectDB from '@/lib/db';
+import { authOptions } from '@/lib/auth';
+
 import Product from '@/models/Product';
+import { connectDB } from '@/lib/dbConnect';
 
 export async function PATCH(request, { params }) {
     try {

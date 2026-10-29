@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/dbConnect';
 import ComboOffer from '@/models/ComboOffer';
 
-
 async function requireAdmin() {
 	// Integrate your project's NextAuth/session-based admin check.
 	// Return the authenticated admin when authorized.
@@ -150,30 +149,75 @@ function normalizeOffer(body) {
 	};
 }
 
+// GET /api/combooffer
+// GET /api/combooffer?featured=true
+// GET /api/combooffer?admin=true (admin only)
 
-// GET /api/offers
-// GET /api/offers?featured=true
-// GET /api/offers?admin=true (admin only)
+// Never cache this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function getOfferStatus(offer, now) {
+	if (!offer.isActive) return 'inactive';
+	if (now < new Date(offer.startDate)) return 'upcoming';
+	if (now > new Date(offer.endDate)) return 'expired';
+	if (offer.stock <= 0) return 'out_of_stock';
+	return 'active';
+}
+
+function getDiscount(offer) {
+	if (!offer.regularPrice || offer.regularPrice <= 0) return 0;
+	return Math.round(
+		((offer.regularPrice - offer.offerPrice) / offer.regularPrice) * 100
+	);
+}
+
 export async function GET(request) {
 	try {
 		await connectDB();
 
 		const { searchParams } = new URL(request.url);
 		const featured = searchParams.get('featured') === 'true';
-		const filter = {};
+		const adminRequested = searchParams.get('admin') === 'true';
+
+		if (adminRequested) {
+			await requireAdmin();
+		}
+
+		const now = new Date();
+		const filter = adminRequested ? {} : { isActive: true };
+
 		if (featured) {
 			filter.isFeatured = true;
 		}
 
-		const offers = await ComboOffer.find(filter)
+		const rawOffers = await ComboOffer.find(filter)
 			.sort({ priority: -1, createdAt: -1 })
 			.lean();
 
-		return NextResponse.json({
-			success: true,
-			count: offers.length,
-			offers,
-		});
+		// lean() skips virtuals, so add them manually
+		const allOffers = rawOffers.map((offer) => ({
+			...offer,
+			discount: getDiscount(offer),
+			offerStatus: getOfferStatus(offer, now),
+		}));
+
+		const offers = adminRequested
+			? allOffers
+			: allOffers.filter((offer) => offer.offerStatus === 'active');
+
+		return NextResponse.json(
+			{
+				success: true,
+				count: offers.length,
+				offers,
+			},
+			{
+				headers: {
+					'Cache-Control': 'no-store, max-age=0',
+				},
+			}
+		);
 	} catch (error) {
 		console.error('GET OFFERS ERROR:', error);
 
@@ -188,18 +232,9 @@ export async function GET(request) {
 	}
 }
 
-
-
-
-
-
-
-
-
 // POST /api/offers
 export async function POST(request) {
 	try {
-		
 		await connectDB();
 
 		let body;

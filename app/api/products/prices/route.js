@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/dbConnect';
+
 import Product from '@/models/Product';
+import { connectDB } from '@/lib/dbConnect';
 
 export const dynamic = 'force-dynamic';
 

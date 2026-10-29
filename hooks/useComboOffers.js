@@ -21,18 +21,24 @@ export function useComboOffers(filters = {}) {
 		queryFn: async () => {
 			const params = {};
 
-			if (filters.featured) {
+			if (filters.featured === true) {
 				params.featured = 'true';
 			}
 
-			if (filters.admin) {
+			if (filters.admin === true) {
 				params.admin = 'true';
 			}
 
-			const { data } = await api.get(ENDPOINT, { params });
+			const { data } = await api.get(ENDPOINT, {
+				params,
+				headers: { 'Cache-Control': 'no-store' },
+			});
 
 			return data.offers ?? [];
 		},
+		staleTime: 0,
+		gcTime: 0,
+		refetchOnMount: 'always',
 	});
 }
 

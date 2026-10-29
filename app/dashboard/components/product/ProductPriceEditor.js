@@ -58,6 +58,7 @@ function Skeleton() {
     );
 }
 
+
 export default function ProductPriceEditor() {
     const [products, setProducts] = useState([]);
     const [search, setSearch] = useState('');
@@ -94,7 +95,7 @@ export default function ProductPriceEditor() {
             });
 
             const response = await fetch(
-                `/api/admin/products/prices?${query}`,
+                `/api/products/prices?${query}`,
                 {
                     cache: 'no-store',
                     signal,
@@ -182,7 +183,7 @@ export default function ProductPriceEditor() {
 
         try {
             const response = await fetch(
-                `/api/admin/products/${product._id}/prices`,
+                `/api/products/${product._id}/prices`,
                 {
                     method: 'PATCH',
                     headers: {
