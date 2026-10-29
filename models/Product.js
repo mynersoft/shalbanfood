@@ -17,6 +17,11 @@ const VariantSchema = new mongoose.Schema(
 			required: true,
 			min: 0,
 		},
+buyPrice: {
+    type: Number,
+    default: 0,
+    min: 0,
+},
 		sellPrice: {
 			type: Number,
 			required: true,
