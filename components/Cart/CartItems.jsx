@@ -30,7 +30,7 @@ const CartItems = () => {
 
 		return typeof image === 'string' && image.trim()
 			? image
-			: '/placeholder.png';
+			: '/images/placeholder.png';
 	};
 
 	const toNumber = (value, fallback = 0) => {
@@ -226,7 +226,7 @@ const CartItems = () => {
 							<div className="flex min-w-0 items-start gap-3 sm:gap-4">
 								<Link
 									href={productHref}
-									className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-[#fafafa] sm:h-[108px] sm:w-[108px]">
+									className="relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-[#fafafa] sm:h-[108px] sm:w-[108px]">
 									<Image
 										src={productImage}
 										alt={item?.name || 'Product'}
