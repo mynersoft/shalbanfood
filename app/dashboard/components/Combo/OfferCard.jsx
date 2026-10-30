@@ -104,7 +104,7 @@ export default function OfferCard({ offer }) {
 						</span>
 
 						{offer.regularPrice > offer.offerPrice && (
-							<span className="pb-1 text-sm text-gray-400 line-through">
+							<span className="pb-1 text-sm text-red-400 line-through">
 								৳{offer.regularPrice}
 							</span>
 						)}

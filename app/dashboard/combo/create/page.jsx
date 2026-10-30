@@ -13,7 +13,7 @@ export default function CreateOfferPage() {
 		<main className="min-h-screen p-4 sm:p-6">
 			<div className="mx-auto max-w-5xl">
 				<Link
-					href="/dashboard/admin/offers"
+					href="/dashboard/offers"
 					className="mb-5 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-green-700">
 					<ArrowLeft size={16} />
 					Back to Offers

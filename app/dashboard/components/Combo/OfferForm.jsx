@@ -34,9 +34,8 @@ const createDefaultForm = () => ({
 	keywords: '',
 });
 
-function slugify(text) {
-	return text
-		.toString()
+function slugify(value) {
+	return value
 		.normalize('NFKC')
 		.toLowerCase()
 		.trim()
@@ -58,7 +57,7 @@ function formatDateTimeLocal(value) {
 }
 
 const inputClass =
-	'w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500';
+	'w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500';
 
 const labelClass = 'mb-2 block text-sm font-semibold text-slate-300';
 
@@ -129,7 +128,7 @@ export default function OfferForm({ offer = null }) {
 		setForm((previous) => ({
 			...previous,
 			name: value,
-			slug: previous.slug ? previous.slug : slugify(value),
+			slug: previous.slug || slugify(value),
 		}));
 	};
 
@@ -151,7 +150,7 @@ export default function OfferForm({ offer = null }) {
 
 	const removeItem = (index) => {
 		if (form.items.length <= 2) {
-			toast.error('A combo needs at least 2 items');
+			toast.error('কমপক্ষে ২টি Item রাখতে হবে।');
 			return;
 		}
 
@@ -161,16 +160,17 @@ export default function OfferForm({ offer = null }) {
 		}));
 	};
 
+	// Feature image upload
 	const uploadImage = async (file) => {
 		if (!file) return;
 
 		if (!file.type.startsWith('image/')) {
-			toast.error('Please select an image');
+			toast.error('সঠিক Image নির্বাচন করুন।');
 			return;
 		}
 
 		if (file.size > 5 * 1024 * 1024) {
-			toast.error('Image size must be 5 MB or less');
+			toast.error('Image size সর্বোচ্চ 5 MB হতে পারবে।');
 			return;
 		}
 
@@ -194,30 +194,31 @@ export default function OfferForm({ offer = null }) {
 			updateField('featureImg', data.url);
 			toast.success('Image uploaded successfully');
 		} catch (error) {
-			toast.error(error.message || 'Image upload failed');
+			toast.error(error.message);
 		} finally {
 			setUploading(false);
 		}
 	};
 
+	// Form validation
 	const validate = () => {
 		if (!form.name.trim()) {
-			toast.error('Offer name is required');
+			toast.error('Offer name প্রয়োজন।');
 			return false;
 		}
 
 		if (!form.slug.trim()) {
-			toast.error('Slug is required');
+			toast.error('Slug প্রয়োজন।');
 			return false;
 		}
 
 		if (
 			form.items.length < 2 ||
 			form.items.some(
-				(item) => !item.name.trim() || !item.quantity.trim()
+				(item) => !item.name.trim() || !String(item.quantity).trim()
 			)
 		) {
-			toast.error('Complete all combo items');
+			toast.error('সব Combo Item পূরণ করুন।');
 			return false;
 		}
 
@@ -229,9 +230,9 @@ export default function OfferForm({ offer = null }) {
 		if (
 			form.regularPrice === '' ||
 			!Number.isFinite(regularPrice) ||
-			regularPrice <= 0
+			regularPrice < 1
 		) {
-			toast.error('Enter a valid regular price');
+			toast.error('সঠিক Regular Price দিন।');
 			return false;
 		}
 
@@ -240,32 +241,34 @@ export default function OfferForm({ offer = null }) {
 			!Number.isFinite(offerPrice) ||
 			offerPrice < 0
 		) {
-			toast.error('Enter a valid offer price');
+			toast.error('সঠিক Offer Price দিন।');
 			return false;
 		}
 
 		if (offerPrice > regularPrice) {
-			toast.error('Offer price cannot exceed regular price');
+			toast.error(
+				'Offer Price, Regular Price-এর চেয়ে বেশি হতে পারবে না।'
+			);
 			return false;
 		}
 
 		if (!Number.isInteger(stock) || stock < 0) {
-			toast.error('Stock must be a whole number');
+			toast.error('সঠিক Stock দিন।');
 			return false;
 		}
 
 		if (!Number.isInteger(priority)) {
-			toast.error('Priority must be a whole number');
+			toast.error('সঠিক Priority দিন।');
 			return false;
 		}
 
 		if (!form.featureImg.trim()) {
-			toast.error('Feature image is required');
+			toast.error('Feature Image প্রয়োজন।');
 			return false;
 		}
 
 		if (!form.startDate || !form.endDate) {
-			toast.error('Start and end dates are required');
+			toast.error('Start এবং End Date প্রয়োজন।');
 			return false;
 		}
 
@@ -277,7 +280,7 @@ export default function OfferForm({ offer = null }) {
 			Number.isNaN(end.getTime()) ||
 			end <= start
 		) {
-			toast.error('End date must be after start date');
+			toast.error('End Date অবশ্যই Start Date-এর পরে হতে হবে।');
 			return false;
 		}
 
@@ -299,7 +302,7 @@ export default function OfferForm({ offer = null }) {
 
 			items: form.items.map((item) => ({
 				name: item.name.trim(),
-				quantity: item.quantity.trim(),
+				quantity: String(item.quantity).trim(),
 			})),
 
 			regularPrice: Number(form.regularPrice),
@@ -313,8 +316,10 @@ export default function OfferForm({ offer = null }) {
 			startDate: new Date(form.startDate).toISOString(),
 			endDate: new Date(form.endDate).toISOString(),
 
-			isActive: form.isActive,
-			isFeatured: form.isFeatured,
+			// Explicit Boolean values
+			isActive: form.isActive === true,
+			isFeatured: form.isFeatured === true,
+
 			priority: Number(form.priority),
 
 			seoTitle: form.seoTitle.trim(),
@@ -331,7 +336,7 @@ export default function OfferForm({ offer = null }) {
 				const id = offer._id || offer.id;
 
 				if (!id) {
-					throw new Error('Offer ID is missing');
+					throw new Error('Offer ID পাওয়া যায়নি।');
 				}
 
 				await updateMutation.mutateAsync({
@@ -346,11 +351,10 @@ export default function OfferForm({ offer = null }) {
 				toast.success('Offer created successfully');
 			}
 
-			router.push('/dashboard/admin/offers');
+			router.push('/dashboard/combo');
 			router.refresh();
 		} catch (error) {
 			console.error('SAVE OFFER ERROR:', error);
-
 			toast.error(error.message || 'Failed to save offer');
 		}
 	};
@@ -366,23 +370,18 @@ export default function OfferForm({ offer = null }) {
 	return (
 		<form
 			onSubmit={handleSubmit}
-			className="space-y-6 rounded-2xl bg-slate-950 p-2 text-slate-100 md:p-4">
+			className="space-y-6 rounded-2xl bg-slate-950 p-3 text-slate-100 md:p-5">
 			{/* Basic information */}
-			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
-				<h2 className="text-lg font-bold text-slate-100">
-					Basic Information
-				</h2>
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
+				<h2 className="text-lg font-bold">Basic Information</h2>
 
 				<div className="mt-5 grid gap-5 md:grid-cols-2">
 					<div className="md:col-span-2">
 						<label className={labelClass}>Offer Name *</label>
-
 						<input
 							required
 							value={form.name}
-							onChange={(event) =>
-								handleNameChange(event.target.value)
-							}
+							onChange={(e) => handleNameChange(e.target.value)}
 							placeholder="কালোজিরা মধু + গাওয়া ঘি কম্বো"
 							className={inputClass}
 						/>
@@ -390,27 +389,24 @@ export default function OfferForm({ offer = null }) {
 
 					<div>
 						<label className={labelClass}>Slug *</label>
-
 						<input
 							required
 							value={form.slug}
-							onChange={(event) =>
-								updateField('slug', event.target.value)
+							onChange={(e) =>
+								updateField('slug', e.target.value)
 							}
-							placeholder="kalojira-honey-ghee-combo"
 							className={inputClass}
 						/>
 					</div>
 
 					<div>
 						<label className={labelClass}>Priority</label>
-
 						<input
 							type="number"
 							step="1"
 							value={form.priority}
-							onChange={(event) =>
-								updateField('priority', event.target.value)
+							onChange={(e) =>
+								updateField('priority', e.target.value)
 							}
 							className={inputClass}
 						/>
@@ -418,31 +414,24 @@ export default function OfferForm({ offer = null }) {
 
 					<div className="md:col-span-2">
 						<label className={labelClass}>Short Description</label>
-
 						<input
 							maxLength={300}
 							value={form.shortDescription}
-							onChange={(event) =>
-								updateField(
-									'shortDescription',
-									event.target.value
-								)
+							onChange={(e) =>
+								updateField('shortDescription', e.target.value)
 							}
-							placeholder="বিশেষ অফারে মধু ও গাওয়া ঘির কম্বো"
 							className={inputClass}
 						/>
 					</div>
 
 					<div className="md:col-span-2">
 						<label className={labelClass}>Description</label>
-
 						<textarea
 							rows={5}
 							value={form.description}
-							onChange={(event) =>
-								updateField('description', event.target.value)
+							onChange={(e) =>
+								updateField('description', e.target.value)
 							}
-							placeholder="Offer details..."
 							className={inputClass}
 						/>
 					</div>
@@ -450,21 +439,14 @@ export default function OfferForm({ offer = null }) {
 			</section>
 
 			{/* Combo items */}
-			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					<div>
-						<h2 className="text-lg font-bold text-slate-100">
-							Combo Items
-						</h2>
-						<p className="text-sm text-slate-400">
-							Add the products and quantities in this combo.
-						</p>
-					</div>
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
+				<div className="flex items-center justify-between gap-3">
+					<h2 className="text-lg font-bold">Combo Items</h2>
 
 					<button
 						type="button"
 						onClick={addItem}
-						className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800">
+						className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-4 py-2 text-sm font-semibold text-white">
 						<Plus size={17} />
 						Add Item
 					</button>
@@ -474,40 +456,35 @@ export default function OfferForm({ offer = null }) {
 					{form.items.map((item, index) => (
 						<div
 							key={index}
-							className="grid gap-3 rounded-xl border border-slate-700 bg-slate-950/70 p-3 md:grid-cols-[1fr_180px_auto]">
+							className="grid gap-3 rounded-xl border border-slate-700 bg-slate-950 p-3 md:grid-cols-[1fr_180px_auto]">
 							<input
-								required
 								value={item.name}
-								onChange={(event) =>
-									updateItem(
-										index,
-										'name',
-										event.target.value
-									)
+								onChange={(e) =>
+									updateItem(index, 'name', e.target.value)
 								}
-								placeholder="যেমন: কালোজিরা ফুলের মধু"
+								placeholder="Product name"
 								className={inputClass}
+								required
 							/>
 
 							<input
-								required
 								value={item.quantity}
-								onChange={(event) =>
+								onChange={(e) =>
 									updateItem(
 										index,
 										'quantity',
-										event.target.value
+										e.target.value
 									)
 								}
-								placeholder="যেমন: 500 গ্রাম"
+								placeholder="500 গ্রাম"
 								className={inputClass}
+								required
 							/>
 
 							<button
 								type="button"
 								onClick={() => removeItem(index)}
-								aria-label={`Remove item ${index + 1}`}
-								className="flex items-center justify-center rounded-xl border border-red-800/80 bg-red-950/30 px-4 text-red-400 hover:bg-red-900/40">
+								className="flex items-center justify-center rounded-xl border border-red-800 px-4 text-red-400">
 								<Trash2 size={18} />
 							</button>
 						</div>
@@ -516,42 +493,38 @@ export default function OfferForm({ offer = null }) {
 			</section>
 
 			{/* Pricing */}
-			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
-				<h2 className="text-lg font-bold text-slate-100">Pricing</h2>
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
+				<h2 className="text-lg font-bold">Pricing</h2>
 
 				<div className="mt-5 grid gap-5 md:grid-cols-3">
 					<div>
 						<label className={labelClass}>
 							Regular Price (৳) *
 						</label>
-
 						<input
 							required
 							type="number"
 							min="1"
 							step="0.01"
 							value={form.regularPrice}
-							onChange={(event) =>
-								updateField('regularPrice', event.target.value)
+							onChange={(e) =>
+								updateField('regularPrice', e.target.value)
 							}
-							placeholder="1500"
 							className={inputClass}
 						/>
 					</div>
 
 					<div>
 						<label className={labelClass}>Offer Price (৳) *</label>
-
 						<input
 							required
 							type="number"
 							min="0"
 							step="0.01"
 							value={form.offerPrice}
-							onChange={(event) =>
-								updateField('offerPrice', event.target.value)
+							onChange={(e) =>
+								updateField('offerPrice', e.target.value)
 							}
-							placeholder="1200"
 							className={inputClass}
 						/>
 					</div>
@@ -559,31 +532,25 @@ export default function OfferForm({ offer = null }) {
 					<div className="flex items-end">
 						<div className="w-full rounded-xl border border-emerald-800 bg-emerald-950/40 p-4">
 							<p className="text-sm text-emerald-300">Discount</p>
-
 							<p className="text-2xl font-bold text-emerald-300">
 								{discount}%
 							</p>
-
-							{regularPrice > 0 &&
-								offerPrice >= 0 &&
-								offerPrice <= regularPrice && (
-									<p className="text-sm text-emerald-300">
-										সাশ্রয়: ৳
-										{(
-											regularPrice - offerPrice
-										).toLocaleString('en-US')}
-									</p>
-								)}
+							{regularPrice > 0 && offerPrice <= regularPrice && (
+								<p className="text-sm text-emerald-300">
+									সাশ্রয়: ৳
+									{(regularPrice - offerPrice).toLocaleString(
+										'en-US'
+									)}
+								</p>
+							)}
 						</div>
 					</div>
 				</div>
 			</section>
 
 			{/* Feature image */}
-			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
-				<h2 className="text-lg font-bold text-slate-100">
-					Feature Image
-				</h2>
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
+				<h2 className="text-lg font-bold">Feature Image</h2>
 
 				<div className="mt-5">
 					{form.featureImg ? (
@@ -597,21 +564,18 @@ export default function OfferForm({ offer = null }) {
 							<button
 								type="button"
 								onClick={() => updateField('featureImg', '')}
-								aria-label="Remove feature image"
-								className="absolute right-3 top-3 rounded-full bg-slate-900/80 p-2 text-red-400 shadow shadow-black/50">
+								className="absolute right-3 top-3 rounded-full bg-slate-900/80 p-2 text-red-400">
 								<X size={18} />
 							</button>
 						</div>
 					) : (
-						<label className="flex aspect-video max-w-md cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700 bg-slate-950/80 hover:border-emerald-500">
+						<label className="flex aspect-video max-w-md cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700 bg-slate-950">
 							<ImagePlus size={40} className="text-slate-400" />
-
-							<span className="mt-3 text-sm font-semibold text-slate-200">
+							<span className="mt-3 text-sm font-semibold">
 								{uploading
 									? 'Uploading...'
 									: 'Choose Feature Image'}
 							</span>
-
 							<span className="mt-1 text-xs text-slate-400">
 								Maximum 5 MB
 							</span>
@@ -621,11 +585,10 @@ export default function OfferForm({ offer = null }) {
 								accept="image/*"
 								className="hidden"
 								disabled={uploading || saving}
-								onChange={(event) => {
-									const file = event.target.files?.[0];
-
+								onChange={(e) => {
+									const file = e.target.files?.[0];
 									void uploadImage(file);
-									event.target.value = '';
+									e.target.value = '';
 								}}
 							/>
 						</label>
@@ -634,22 +597,19 @@ export default function OfferForm({ offer = null }) {
 			</section>
 
 			{/* Stock and schedule */}
-			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
-				<h2 className="text-lg font-bold text-slate-100">
-					Stock & Schedule
-				</h2>
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
+				<h2 className="text-lg font-bold">Stock & Schedule</h2>
 
 				<div className="mt-5 grid gap-5 md:grid-cols-3">
 					<div>
 						<label className={labelClass}>Stock</label>
-
 						<input
 							type="number"
 							min="0"
 							step="1"
 							value={form.stock}
-							onChange={(event) =>
-								updateField('stock', event.target.value)
+							onChange={(e) =>
+								updateField('stock', e.target.value)
 							}
 							className={inputClass}
 						/>
@@ -657,13 +617,12 @@ export default function OfferForm({ offer = null }) {
 
 					<div>
 						<label className={labelClass}>Start Date *</label>
-
 						<input
 							required
 							type="datetime-local"
 							value={form.startDate}
-							onChange={(event) =>
-								updateField('startDate', event.target.value)
+							onChange={(e) =>
+								updateField('startDate', e.target.value)
 							}
 							className={inputClass}
 						/>
@@ -671,31 +630,29 @@ export default function OfferForm({ offer = null }) {
 
 					<div>
 						<label className={labelClass}>End Date *</label>
-
 						<input
 							required
 							type="datetime-local"
 							value={form.endDate}
-							onChange={(event) =>
-								updateField('endDate', event.target.value)
+							onChange={(e) =>
+								updateField('endDate', e.target.value)
 							}
 							className={inputClass}
 						/>
 					</div>
 				</div>
 
-				<div className="mt-5 flex flex-wrap gap-6">
+				<div className="mt-6 flex flex-wrap gap-6">
 					<label className="flex cursor-pointer items-center gap-3">
 						<input
 							type="checkbox"
 							checked={form.isActive}
-							onChange={(event) =>
-								updateField('isActive', event.target.checked)
+							onChange={(e) =>
+								updateField('isActive', e.target.checked)
 							}
 							className="h-5 w-5 accent-green-700"
 						/>
-
-						<span className="text-sm font-semibold text-slate-300">
+						<span className="text-sm font-semibold">
 							Active Offer
 						</span>
 					</label>
@@ -704,39 +661,38 @@ export default function OfferForm({ offer = null }) {
 						<input
 							type="checkbox"
 							checked={form.isFeatured}
-							onChange={(event) =>
-								updateField('isFeatured', event.target.checked)
+							onChange={(e) =>
+								updateField('isFeatured', e.target.checked)
 							}
 							className="h-5 w-5 accent-green-700"
 						/>
-
-						<span className="text-sm font-semibold text-slate-300">
+						<span className="text-sm font-semibold">
 							Featured Offer
 						</span>
 					</label>
 				</div>
+
+				<p className="mt-4 text-xs text-slate-400">
+					Active বন্ধ করলে অফারটি Inactive হবে। আবার চালু করলে Active
+					হবে।
+				</p>
 			</section>
 
 			{/* SEO */}
-			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm shadow-black/20">
-				<h2 className="text-lg font-bold text-slate-100">
-					SEO Settings
-				</h2>
+			<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
+				<h2 className="text-lg font-bold">SEO Settings</h2>
 
 				<div className="mt-5 space-y-5">
 					<div>
 						<label className={labelClass}>SEO Title</label>
-
 						<input
 							maxLength={70}
 							value={form.seoTitle}
-							onChange={(event) =>
-								updateField('seoTitle', event.target.value)
+							onChange={(e) =>
+								updateField('seoTitle', e.target.value)
 							}
-							placeholder="Honey & Ghee Combo Offer | Shalban Food"
 							className={inputClass}
 						/>
-
 						<p className="mt-1 text-xs text-slate-400">
 							{form.seoTitle.length}/70 characters
 						</p>
@@ -744,21 +700,15 @@ export default function OfferForm({ offer = null }) {
 
 					<div>
 						<label className={labelClass}>SEO Description</label>
-
 						<textarea
 							rows={3}
 							maxLength={170}
 							value={form.seoDescription}
-							onChange={(event) =>
-								updateField(
-									'seoDescription',
-									event.target.value
-								)
+							onChange={(e) =>
+								updateField('seoDescription', e.target.value)
 							}
-							placeholder="Discover special honey and ghee combo offers at Shalban Food."
 							className={inputClass}
 						/>
-
 						<p className="mt-1 text-xs text-slate-400">
 							{form.seoDescription.length}/170 characters
 						</p>
@@ -766,18 +716,16 @@ export default function OfferForm({ offer = null }) {
 
 					<div>
 						<label className={labelClass}>Keywords</label>
-
 						<input
 							value={form.keywords}
-							onChange={(event) =>
-								updateField('keywords', event.target.value)
+							onChange={(e) =>
+								updateField('keywords', e.target.value)
 							}
-							placeholder="combo offer, honey, ghee, Shalban Food"
+							placeholder="honey, ghee, combo offer"
 							className={inputClass}
 						/>
-
 						<p className="mt-1 text-xs text-slate-400">
-							Separate keywords with commas.
+							কমা দিয়ে আলাদা করুন।
 						</p>
 					</div>
 				</div>
@@ -788,9 +736,8 @@ export default function OfferForm({ offer = null }) {
 				<button
 					type="submit"
 					disabled={saving || uploading}
-					className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-7 py-3 font-bold text-white shadow-lg shadow-emerald-900/30 hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60">
+					className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-7 py-3 font-bold text-white shadow-lg hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60">
 					<Save size={18} />
-
 					{uploading
 						? 'Uploading...'
 						: saving

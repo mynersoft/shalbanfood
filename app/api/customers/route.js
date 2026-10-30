@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import {connectDB} from '@/lib/dbConnect';
+import { connectDB } from '@/lib/dbConnect';
 import User from '@/models/User';
 import Order from '@/models/Order';
+import { checkAuthRole } from '@/lib/checkAuthRole';
+import bcrypt from 'bcryptjs';
 
 export async function GET(request) {
 	try {
@@ -430,6 +432,123 @@ export async function GET(request) {
 			{
 				status: 500,
 			}
+		);
+	}
+}
+
+
+
+
+// create customer by admin 
+export async function POST(request) {
+	try {
+		// Admin authorization
+		const { isAdmin } = await checkAuthRole();
+
+		if (!isAdmin) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'আপনার এই কাজ করার অনুমতি নেই।',
+				},
+				{ status: 403 }
+			);
+		}
+
+		await connectDB();
+
+		const body = await request.json();
+
+		const name = body.name?.trim() || '';
+		const phone = body.phone?.replace(/\s+/g, '').trim() || '';
+		const area = body.address?.area?.trim() || '';
+		const thana = body.address?.thana?.trim() || '';
+		const city = body.address?.city?.trim() || '';
+
+		// Bangladesh phone validation
+		if (!/^01[3-9]\d{8}$/.test(phone)) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'সঠিক ১১ ডিজিটের বাংলাদেশি ফোন নম্বর দিন।',
+				},
+				{ status: 400 }
+			);
+		}
+
+		if (name.length > 100) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'নাম সর্বোচ্চ ১০০ অক্ষরের হতে পারবে।',
+				},
+				{ status: 400 }
+			);
+		}
+
+		// Check duplicate phone
+		const existingUser = await User.findOne({ phone }).select('_id');
+
+		if (existingUser) {
+			return NextResponse.json(
+				{
+					success: false,
+					message:
+						'এই ফোন নম্বর দিয়ে ইতোমধ্যে অ্যাকাউন্ট তৈরি করা হয়েছে।',
+				},
+				{ status: 409 }
+			);
+		}
+
+		// Phone number will be the initial password
+		const hashedPassword = await bcrypt.hash(phone, 12);
+
+		const customer = await User.create({
+			name: name || phone,
+			phone,
+			password: hashedPassword,
+			role: 'user',
+			address: {
+				area,
+				thana,
+				city,
+			},
+		});
+
+		return NextResponse.json(
+			{
+				success: true,
+				message: 'কাস্টমার সফলভাবে তৈরি হয়েছে।',
+				customer: {
+					_id: customer._id,
+					name: customer.name,
+					phone: customer.phone,
+					role: customer.role,
+					address: customer.address,
+					createdAt: customer.createdAt,
+				},
+			},
+			{ status: 201 }
+		);
+	} catch (error) {
+		console.error('CREATE CUSTOMER ERROR:', error);
+
+		if (error.code === 11000) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'এই ফোন নম্বর দিয়ে ইতোমধ্যে অ্যাকাউন্ট রয়েছে।',
+				},
+				{ status: 409 }
+			);
+		}
+
+		return NextResponse.json(
+			{
+				success: false,
+				message: 'কাস্টমার তৈরি করা সম্ভব হয়নি।',
+			},
+			{ status: 500 }
 		);
 	}
 }

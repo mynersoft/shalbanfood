@@ -67,19 +67,13 @@ const ComboOfferSchema = new mongoose.Schema(
 		regularPrice: {
 			type: Number,
 			required: true,
-			min: 0,
+			min: [1, 'Regular price must be greater than zero'],
 		},
 
 		offerPrice: {
 			type: Number,
 			required: true,
-			min: 0,
-			validate: {
-				validator(value) {
-					return Number.isFinite(value) && value <= this.regularPrice;
-				},
-				message: 'Offer price cannot exceed regular price',
-			},
+			min: [0, 'Offer price cannot be negative'],
 		},
 
 		featureImg: {
@@ -121,12 +115,6 @@ const ComboOfferSchema = new mongoose.Schema(
 		endDate: {
 			type: Date,
 			required: true,
-			validate: {
-				validator(value) {
-					return !this.startDate || value > this.startDate;
-				},
-				message: 'End date must be after start date',
-			},
 		},
 
 		isActive: {
@@ -169,33 +157,8 @@ const ComboOfferSchema = new mongoose.Schema(
 	},
 	{
 		timestamps: true,
-		toJSON: { virtuals: true },
-		toObject: { virtuals: true },
 	}
 );
-
-// Calculate discount percentage.
-ComboOfferSchema.virtual('discount').get(function () {
-	if (!this.regularPrice || this.regularPrice <= 0) {
-		return 0;
-	}
-
-	return Math.round(
-		((this.regularPrice - this.offerPrice) / this.regularPrice) * 100
-	);
-});
-
-// Calculate current offer status.
-ComboOfferSchema.virtual('offerStatus').get(function () {
-	const now = new Date();
-
-	if (!this.isActive) return 'inactive';
-	if (now < this.startDate) return 'upcoming';
-	if (now > this.endDate) return 'expired';
-	if (this.stock <= 0) return 'out_of_stock';
-
-	return 'active';
-});
 
 export default mongoose.models.ComboOffer ||
 	mongoose.model('ComboOffer', ComboOfferSchema);

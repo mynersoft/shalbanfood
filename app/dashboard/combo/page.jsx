@@ -79,7 +79,7 @@ export default function ComboOfferListPage() {
 		setLoading(true);
 
 		try {
-			const response = await fetch('/api/combooffer', {
+			const response = await fetch('/api/combooffer?admin=true', {
 				method: 'GET',
 				cache: 'no-store',
 				headers: {
@@ -489,7 +489,7 @@ export default function ComboOfferListPage() {
 													</p>
 
 													{discount > 0 && (
-														<span className="mt-1 inline-block rounded-md bg-red-50 px-2 py-1 text-xs font-semibold text-red-600">
+														<span className="mt-1 inline-block rounded-md bg-red-50 px-2 py-1 text-xs font-semibold text-green-600">
 															-{discount}%
 														</span>
 													)}
@@ -530,22 +530,10 @@ export default function ComboOfferListPage() {
 													<div className="flex justify-end gap-2">
 														<button
 															type="button"
-															title="View offer"
-															onClick={() =>
-																router.push(
-																	`/offers/${offer.slug}`
-																)
-															}
-															className="rounded-lg border p-2 text-gray-600 hover:bg-gray-100">
-															<Eye size={17} />
-														</button>
-
-														<button
-															type="button"
 															title="Edit offer"
 															onClick={() =>
 																router.push(
-																	`/dashboard/admin/offers/${offer._id}/edit`
+																	`/dashboard/combo/${offer._id}/edit`
 																)
 															}
 															className="rounded-lg border p-2 text-blue-600 hover:bg-blue-50">
@@ -621,7 +609,7 @@ export default function ComboOfferListPage() {
 												</p>
 
 												{discount > 0 && (
-													<p className="mt-1 text-xs font-semibold text-red-600">
+													<p className="mt-1 text-xs font-semibold text-green-600">
 														{discount}% off
 													</p>
 												)}
@@ -651,19 +639,7 @@ export default function ComboOfferListPage() {
 													type="button"
 													onClick={() =>
 														router.push(
-															`/offers/${offer.slug}`
-														)
-													}
-													className="inline-flex items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-semibold">
-													<Eye size={14} />
-													View
-												</button>
-
-												<button
-													type="button"
-													onClick={() =>
-														router.push(
-															`/dashboard/admin/offers/${offer._id}/edit`
+															`/dashboard/offers/${offer._id}/edit`
 														)
 													}
 													className="inline-flex items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-semibold text-blue-700">

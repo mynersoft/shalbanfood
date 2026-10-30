@@ -2,17 +2,12 @@ import { NextResponse } from 'next/server';
 
 import { connectDB } from '@/lib/dbConnect';
 import ComboOffer from '@/models/ComboOffer';
+import { checkAuthRole } from '@/lib/checkAuthRole';
 
-async function requireAdmin() {
-	// Integrate your project's NextAuth/session-based admin check.
-	// Return the authenticated admin when authorized.
-	// Otherwise throw an error or return an unauthorized response.
-	throw new Error('Server-side admin authorization is not configured');
-}
 
-function errorResponse(message, status = 400) {
-	return NextResponse.json({ success: false, message }, { status });
-}
+
+
+
 
 function validateOffer(body) {
 	const {
@@ -174,18 +169,21 @@ function getDiscount(offer) {
 
 export async function GET(request) {
 	try {
+		const { isAdmin } = await checkAuthRole();
+
 		await connectDB();
 
 		const { searchParams } = new URL(request.url);
+
 		const featured = searchParams.get('featured') === 'true';
 		const adminRequested = searchParams.get('admin') === 'true';
 
-		if (adminRequested) {
-			await requireAdmin();
-		}
-
 		const now = new Date();
-		const filter = adminRequested ? {} : { isActive: true };
+
+		// Only authenticated admin can request all offers
+		const showAllOffers = adminRequested && isAdmin;
+
+		const filter = showAllOffers ? {} : { isActive: true };
 
 		if (featured) {
 			filter.isFeatured = true;
@@ -195,14 +193,14 @@ export async function GET(request) {
 			.sort({ priority: -1, createdAt: -1 })
 			.lean();
 
-		// lean() skips virtuals, so add them manually
 		const allOffers = rawOffers.map((offer) => ({
 			...offer,
 			discount: getDiscount(offer),
 			offerStatus: getOfferStatus(offer, now),
 		}));
 
-		const offers = adminRequested
+		// Admin gets all offers; public gets only currently active offers
+		const offers = showAllOffers
 			? allOffers
 			: allOffers.filter((offer) => offer.offerStatus === 'active');
 
