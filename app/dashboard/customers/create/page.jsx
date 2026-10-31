@@ -1,392 +1,297 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 import {
-	Search,
-	RefreshCw,
-	Eye,
-	ChevronLeft,
-	ChevronRight,
-	Users,
-	ShoppingBag,
+	ArrowLeft,
 	UserPlus,
+	User,
+	Phone,
+	MapPin,
+	LockKeyhole,
+	Loader2,
 } from 'lucide-react';
 
-import { useCustomers } from '@/hooks/useCustomers';
+const initialForm = {
+	name: '',
+	phone: '',
+	area: '',
+	thana: '',
+	city: '',
+};
 
-export default function CustomersPage() {
-	const [searchInput, setSearchInput] = useState('');
-	const [search, setSearch] = useState('');
-	const [page, setPage] = useState(1);
+export default function CreateCustomerPage() {
+	const router = useRouter();
 
-	const limit = 10;
+	const [form, setForm] = useState(initialForm);
+	const [loading, setLoading] = useState(false);
 
-	const { data, isLoading, isFetching, isError, error, refetch } =
-		useCustomers({
-			page,
-			limit,
-			search,
-		});
-
-	const customers = data?.customers || [];
-
-	const pagination = data?.pagination || {
-		page: 1,
-		totalPages: 1,
-		totalCustomers: 0,
+	const updateField = (field, value) => {
+		setForm((prev) => ({
+			...prev,
+			[field]: value,
+		}));
 	};
 
-	// Search debounce
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setPage(1);
-			setSearch(searchInput.trim());
-		}, 400);
+	const handleSubmit = async (e) => {
+		e.preventDefault();
 
-		return () => clearTimeout(timer);
-	}, [searchInput]);
+		const phone = form.phone.replace(/\s+/g, '').trim();
 
-	// Loading
-	if (isLoading) {
-		return (
-			<div className="min-h-screen space-y-6 bg-transparent p-4 md:p-6 dark:text-slate-100">
-				<div className="h-8 w-48 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+		if (!/^01[3-9]\d{8}$/.test(phone)) {
+			toast.error('সঠিক ১১ ডিজিটের ফোন নম্বর দিন।');
+			return;
+		}
 
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-					{[1, 2, 3, 4].map((item) => (
-						<div
-							key={item}
-							className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-slate-800"
-						/>
-					))}
-				</div>
+		try {
+			setLoading(true);
 
-				<div className="h-96 animate-pulse rounded-xl bg-gray-200 dark:bg-slate-800" />
-			</div>
-		);
-	}
+			const res = await fetch('/api/customers', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					name: form.name.trim(),
+					phone,
+					address: {
+						area: form.area.trim(),
+						thana: form.thana.trim(),
+						city: form.city.trim(),
+					},
+				}),
+			});
 
-	// Error
-	if (isError) {
-		return (
-			<div className="p-6">
-				<div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-900/50 dark:bg-red-950/30">
-					<h2 className="font-semibold text-red-700 dark:text-red-400">
-						Failed to load customers
-					</h2>
+			const data = await res.json();
 
-					<p className="mt-1 text-sm text-red-600 dark:text-red-300">
-						{error?.message}
-					</p>
+			if (!res.ok || !data.success) {
+				throw new Error(data.message || 'কাস্টমার তৈরি করা যায়নি।');
+			}
 
-					<button
-						onClick={() => refetch()}
-						className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700">
-						Try Again
-					</button>
-				</div>
-			</div>
-		);
-	}
+			toast.success('কাস্টমার সফলভাবে তৈরি হয়েছে।');
+
+			router.push('/dashboard/admin/customers');
+			router.refresh();
+		} catch (error) {
+			toast.error(error.message || 'কিছু একটা সমস্যা হয়েছে।');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const inputClass =
+		'w-full rounded-lg border border-gray-600 bg-gray-950 px-3.5 py-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-[#1f5d3b] focus:ring-2 focus:ring-[#1f5d3b]/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#4d9a70] dark:focus:ring-[#4d9a70]/20';
+
+	const labelClass =
+		'mb-1.5 block text-sm font-medium text-slate-100';
 
 	return (
-		<div className="min-h-screen space-y-6 bg-transparent p-4 text-gray-900 md:p-6 dark:text-slate-100">
+		<div className="mx-auto max-w-3xl space-y-5 pb-10">
 			{/* Header */}
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div className="flex items-center gap-3">
+				<Link
+					href="/dashboard/customers"
+					className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-600 bg-gray-950 text-gray-300 transition">
+					<ArrowLeft size={19} />
+				</Link>
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
-						Customers
-					</h1>
-
-					<p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-						Manage your Shalban Food customers
-					</p>
-				</div>
-
-				<div className="flex gap-2">
-					{/* Refresh */}
-					<button
-						onClick={() => refetch()}
-						disabled={isFetching}
-						className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
-						<RefreshCw
-							size={16}
-							className={isFetching ? 'animate-spin' : ''}
-						/>
-						Refresh
-					</button>
-
-					{/* Create Customer */}
-					<Link
-						href="/dashboard/customers/create"
-						className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1f5d3b] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#194b30] dark:bg-[#276b47] dark:hover:bg-[#327f55]">
-						<UserPlus size={16} />
+					<h1 className="text-base font-semibold text-gray-100 dark:text-slate-100">
 						Create Customer
-					</Link>
-				</div>
-			</div>
-
-			{/* Summary */}
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				<SummaryCard
-					title="Total Customers"
-					value={pagination.totalCustomers}
-					icon={<Users size={20} />}
-				/>
-
-				<SummaryCard
-					title="Current Page"
-					value={customers.length}
-					icon={<UserPlus size={20} />}
-				/>
-
-				<SummaryCard
-					title="Page"
-					value={`${pagination.page} / ${pagination.totalPages}`}
-					icon={<ShoppingBag size={20} />}
-				/>
-			</div>
-
-			{/* Search */}
-			<div className="rounded-xl border border-gray-200 bg-gray-900 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-				<div className="relative max-w-lg">
-					<Search
-						size={18}
-						className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500"
-					/>
-
-					<input
-						type="text"
-						value={searchInput}
-						onChange={(e) => setSearchInput(e.target.value)}
-						placeholder="Search name, phone or email..."
-						className="w-full rounded-lg border border-gray-200 bg-gray-900 py-2.5 pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#1f5d3b] focus:ring-2 focus:ring-[#1f5d3b]/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#4d9a70] dark:focus:ring-[#4d9a70]/20"
-					/>
-				</div>
-			</div>
-
-			{/* Table */}
-			<div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-900 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-				<div className="overflow-x-auto">
-					<table className="w-full min-w-[1050px]">
-						<thead className="border-b border-gray-200 bg-gray-50 dark:border-slate-800 dark:bg-slate-800/70">
-							<tr>
-								<th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
-									Customer
-								</th>
-
-								<th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
-									Phone
-								</th>
-
-								<th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
-									Email
-								</th>
-
-								<th className="px-5 py-4 text-center text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
-									Orders
-								</th>
-
-								<th className="px-5 py-4 text-right text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
-									Spent
-								</th>
-
-								<th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
-									Last Order
-								</th>
-
-								<th className="px-5 py-4 text-center text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
-									Status
-								</th>
-
-								<th className="px-5 py-4 text-center text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
-									Action
-								</th>
-							</tr>
-						</thead>
-
-						<tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-							{customers.length === 0 ? (
-								<tr>
-									<td
-										colSpan={8}
-										className="px-5 py-16 text-center">
-										<Users
-											size={40}
-											className="mx-auto text-gray-300 dark:text-slate-600"
-										/>
-
-										<p className="mt-3 text-sm text-gray-500 dark:text-slate-400">
-											No customers found
-										</p>
-									</td>
-								</tr>
-							) : (
-								customers.map((customer) => (
-									<tr
-										key={customer._id}
-										className="transition hover:bg-gray-50 dark:hover:bg-slate-800/60">
-										{/* Customer */}
-										<td className="px-5 py-4">
-											<div className="flex items-center gap-3">
-												<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1f5d3b]/10 font-semibold text-[#1f5d3b] dark:bg-[#4d9a70]/15 dark:text-[#75bd91]">
-													{customer.name
-														?.charAt(0)
-														?.toUpperCase() || 'C'}
-												</div>
-
-												<div>
-													<p className="font-medium text-gray-900 dark:text-slate-100">
-														{customer.name}
-													</p>
-
-													<p className="text-xs text-gray-400 dark:text-slate-500">
-														Customer
-													</p>
-												</div>
-											</div>
-										</td>
-
-										{/* Phone */}
-										<td className="px-5 py-4 text-sm text-gray-600 dark:text-slate-300">
-											{customer.phone || '—'}
-										</td>
-
-										{/* Email */}
-										<td className="px-5 py-4 text-sm text-gray-600 dark:text-slate-300">
-											{customer.email || '—'}
-										</td>
-
-										{/* Orders */}
-										<td className="px-5 py-4 text-center text-sm text-gray-900 dark:text-slate-100">
-											<span className="font-semibold">
-												{customer.totalOrders}
-											</span>
-										</td>
-
-										{/* Spent */}
-										<td className="px-5 py-4 text-right text-sm font-semibold text-gray-900 dark:text-slate-100">
-											৳
-											{Number(
-												customer.totalSpent || 0
-											).toLocaleString('en-BD')}
-										</td>
-
-										{/* Last Order */}
-										<td className="px-5 py-4 text-sm text-gray-600 dark:text-slate-300">
-											{customer.lastOrder
-												? new Date(
-														customer.lastOrder
-													).toLocaleDateString(
-														'en-BD',
-														{
-															day: '2-digit',
-															month: 'short',
-															year: 'numeric',
-														}
-													)
-												: 'No order'}
-										</td>
-
-										{/* Status */}
-										<td className="px-5 py-4 text-center">
-											<StatusBadge
-												status={customer.status}
-											/>
-										</td>
-
-										{/* Action */}
-										<td className="px-5 py-4 text-center">
-											<Link
-												href={`/dashboard/customers/${customer._id}`}
-												className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-900 px-3 py-2 text-sm font-medium text-gray-700 transition hover:border-[#1f5d3b]/30 hover:bg-gray-50 hover:text-[#1f5d3b] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-[#4d9a70]/40 dark:hover:bg-slate-700 dark:hover:text-[#75bd91]">
-												<Eye size={16} />
-												View
-											</Link>
-										</td>
-									</tr>
-								))
-							)}
-						</tbody>
-					</table>
-				</div>
-
-				{/* Pagination */}
-				<div className="flex flex-col gap-3 border-t border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-					<p className="text-sm text-gray-500 dark:text-slate-400">
-						Showing {customers.length} of{' '}
-						{pagination.totalCustomers} customers
+					</h1>
+					<p className="mt-1 text-sm text-gray-300 dark:text-slate-400">
+						নতুন কাস্টমার অ্যাকাউন্ট তৈরি করুন।
 					</p>
+				</div>
+			</div>
 
-					<div className="flex items-center gap-2">
-						<button
-							disabled={page <= 1}
-							onClick={() =>
-								setPage((prev) => Math.max(prev - 1, 1))
-							}
-							className="rounded-lg border border-gray-200 bg-gray-900 p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
-							<ChevronLeft size={18} />
-						</button>
+			{/* Form */}
+			<form onSubmit={handleSubmit} className="space-y-5">
+				{/* Customer Information */}
+				<div className="rounded-xl border border-gray-600 bg-gray-950 p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+					<div className="mb-5 flex items-center gap-2 border-b border-gray-100 pb-4 dark:border-slate-800">
+						<UserPlus
+							size={19}
+							className="text-[#4d9a70]"
+						/>
+						<h2 className="font-semibold text-gray-100">
+							Customer Information
+						</h2>
+					</div>
 
-						<span className="px-2 text-sm text-gray-700 dark:text-slate-300">
-							{pagination.page} / {pagination.totalPages}
-						</span>
+					<div className="grid gap-5 sm:grid-cols-2">
+						{/* Name */}
+						<div className="sm:col-span-2 ">
+							<label className={labelClass}>Customer Name</label>
 
-						<button
-							disabled={page >= pagination.totalPages}
-							onClick={() =>
-								setPage((prev) =>
-									Math.min(prev + 1, pagination.totalPages)
-								)
-							}
-							className="rounded-lg border border-gray-200 bg-gray-900 p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
-							<ChevronRight size={18} />
-						</button>
+							<div className="relative">
+								<User
+									size={17}
+									className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500"
+								/>
+
+								<input
+									type="text"
+									value={form.name}
+									onChange={(e) =>
+										updateField('name', e.target.value)
+									}
+									placeholder="কাস্টমারের নাম"
+									maxLength={100}
+									className={`${inputClass} pl-10`}
+								/>
+							</div>
+
+							<p className="mt-1 text-xs text-gray-400 dark:text-slate-500">
+								নাম না দিলে ফোন নম্বরটি নাম হিসেবে ব্যবহার হবে।
+							</p>
+						</div>
+
+						{/* Phone */}
+						<div className="sm:col-span-2">
+							<label className={labelClass}>Phone Number *</label>
+
+							<div className="relative">
+								<Phone
+									size={17}
+									className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500"
+								/>
+
+								<input
+									type="tel"
+									required
+									value={form.phone}
+									onChange={(e) =>
+										updateField(
+											'phone',
+											e.target.value.replace(/[^\d]/g, '')
+										)
+									}
+									placeholder="01XXXXXXXXX"
+									maxLength={11}
+									className={`${inputClass} pl-10`}
+								/>
+							</div>
+						</div>
 					</div>
 				</div>
-			</div>
-		</div>
-	);
-}
 
-// Summary Card
-function SummaryCard({ title, value, icon }) {
-	return (
-		<div className="rounded-xl border border-gray-200 bg-gray-900 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-			<div className="flex items-center justify-between">
-				<div>
-					<p className="text-sm text-gray-500 dark:text-slate-400">
-						{title}
-					</p>
+				{/* Password Information */}
+				<div className="rounded-xl border  p-5 border-slate-800 bg-slate-900 sm:p-6">
+					<div className="mb-3 flex items-center gap-2">
+						<LockKeyhole
+							size={19}
+							className="text-[#4d9a70]"
+						/>
+						<h2 className="font-semibold text-slate-100">
+							Login Information
+						</h2>
+					</div>
 
-					<h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-slate-100">
-						{value}
-					</h2>
+					<div className="rounded-lg bg-gray-5 bg-slate-800">
+						<p className="text-sm font-medium text-slate-200">
+							Initial Password
+						</p>
+
+						<p className="mt-1 font-mono text-sm border border-slate-500 px-2 py-2 rounded text-slate-300">
+							{form.phone || 'ফোন নম্বর দেওয়ার পর এখানে দেখাবে'}
+						</p>
+
+						<p className="mt-2 text-xs leading-5 text-slate-400">
+							কাস্টমারের ফোন নম্বরই তার প্রাথমিক পাসওয়ার্ড হবে।
+							লগইন করার পর তাকে পাসওয়ার্ড পরিবর্তন করতে বলবে।
+						</p>
+					</div>
 				</div>
 
-				<div className="rounded-lg bg-[#1f5d3b]/10 p-3 text-[#1f5d3b] dark:bg-[#4d9a70]/15 dark:text-[#75bd91]">
-					{icon}
+				{/* Address */}
+				<div className="rounded-xl border border-gray-600 bg-gray-950 p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+					<div className="mb-5 flex items-center gap-2 border-b border-gray-100 pb-4 dark:border-slate-800">
+						<MapPin
+							size={19}
+							className="text-[#4d9a70]"
+						/>
+						<h2 className="font-semibold text-slate-100">
+							Address Information
+						</h2>
+						<span className="text-xs text-gray-400 dark:text-slate-500">
+							(Optional)
+						</span>
+					</div>
+
+					<div className="grid gap-4 sm:grid-cols-2">
+						{/* Area */}
+						<div>
+							<label className={labelClass}>Area / এলাকা</label>
+							<input
+								type="text"
+								value={form.area}
+								onChange={(e) =>
+									updateField('area', e.target.value)
+								}
+								placeholder="এলাকার নাম"
+								className={inputClass}
+							/>
+						</div>
+
+						{/* Thana */}
+						<div>
+							<label className={labelClass}>Thana / উপজেলা</label>
+							<input
+								type="text"
+								value={form.thana}
+								onChange={(e) =>
+									updateField('thana', e.target.value)
+								}
+								placeholder="থানা বা উপজেলার নাম"
+								className={inputClass}
+							/>
+						</div>
+
+						{/* City */}
+						<div className="sm:col-span-2">
+							<label className={labelClass}>City / জেলা</label>
+							<input
+								type="text"
+								value={form.city}
+								onChange={(e) =>
+									updateField('city', e.target.value)
+								}
+								placeholder="জেলার নাম"
+								className={inputClass}
+							/>
+						</div>
+					</div>
 				</div>
-			</div>
+
+				{/* Actions */}
+				<div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
+					<Link
+						href="/dashboard/customers"
+						className="rounded-lg border border-gray-600 bg-gray-950 px-5 py-3 text-center text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+						Cancel
+					</Link>
+
+					<button
+						type="submit"
+						disabled={loading}
+						className="flex items-center justify-center gap-2 rounded-lg bg-[#1f5d3b] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#194b30] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#276b47] dark:hover:bg-[#327f55]">
+						{loading ? (
+							<>
+								<Loader2 size={17} className="animate-spin" />
+								Creating...
+							</>
+						) : (
+							<>
+								<UserPlus size={17} />
+								Create Customer
+							</>
+						)}
+					</button>
+				</div>
+			</form>
 		</div>
-	);
-}
-
-// Status Badge
-function StatusBadge({ status }) {
-	if (status === 'active') {
-		return (
-			<span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-				Active
-			</span>
-		);
-	}
-
-	return (
-		<span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-			New
-		</span>
 	);
 }

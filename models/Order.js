@@ -1,118 +1,139 @@
 import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema(
-        {
-                invoiceNo: {
-                        type: String,
-                        unique: true,
-                        required: true,
-                },
+	{
+		invoiceNo: {
+			type: String,
+			unique: true,
+			required: true,
+		},
 
-                userId: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        ref: 'User',
-                },
+		userId: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'User',
+		},
 
-                customer: {
-                        name: { type: String, required: true },
-                        email: String,
-                        phone: { type: String, required: true },
-                },
+		customer: {
+			name: { type: String, required: true },
+			email: String,
+			phone: { type: String, required: true },
+		},
 
-                subtotal: {
-                        type: Number,
-                        required: true,
-                },
+		subtotal: {
+			type: Number,
+			required: true,
+		},
 
-                total: {
-                        type: Number,
-                        required: true,
-                },
+		total: {
+			type: Number,
+			required: true,
+		},
 
-                shippingFee: {
-                        type: Number,
-                        required: true,
-                },
+		shippingFee: {
+			type: Number,
+			required: true,
+		},
 
-                discount: {
-                        type: Number,
-                        default: 0,
-                        min: 0,
-                },
+		discount: {
+			type: Number,
+			default: 0,
+			min: 0,
+		},
 
-                // Admin can give additional discount after order
-                adminDiscount: {
-                        type: Number,
-                        default: 0,
-                        min: 0,
-                },
+		// Admin can give additional discount after order
+		adminDiscount: {
+			type: Number,
+			default: 0,
+			min: 0,
+		},
 
-                adminDiscountNote: {
-                        type: String,
-                        default: '',
-                        trim: true,
-                },
+		adminDiscountNote: {
+			type: String,
+			default: '',
+			trim: true,
+		},
 
-                adminDiscountUpdatedAt: {
-                        type: Date,
-                        default: null,
-                },
+		adminDiscountUpdatedAt: {
+			type: Date,
+			default: null,
+		},
 
-                status: {
-                        type: String,
-                        enum: [
-                                'pending',
-                                'confirmed',
-                                'processing',
-                                'shipped',
-                                'delivered',
-                                'cancelled',
-                                'return',
-                        ],
-                        default: 'pending',
-                },
+		status: {
+			type: String,
+			enum: [
+				'pending',
+				'confirmed',
+				'processing',
+				'shipped',
+				'delivered',
+				'cancelled',
+				'return',
+			],
+			default: 'pending',
+		},
 
-                payment: {
-                        method: {
-                                type: String,
-                                default: 'COD',
-                        },
+		payment: {
+			method: {
+				type: String,
+				default: 'COD',
+			},
 
-                        status: {
-                                type: String,
-                                enum: ['unpaid', 'paid', 'failed'],
-                                default: 'unpaid',
-                        },
+			status: {
+				type: String,
+				enum: ['unpaid', 'paid', 'failed'],
+				default: 'unpaid',
+			},
 
-                        transactionId: String,
-                },
+			transactionId: String,
+		},
 
-                shippingAddress: {
-                        thana: String,
-                        area: String,
-                        city: String,
-                        phone: String,
-                },
+		shippingAddress: {
+			thana: String,
+			area: String,
+			city: String,
+			phone: String,
+		},
 
-                orderItems: [
-                        {
-                                productId: String,
-                                name: String,
-                                quantity: Number,
-                                price: Number,
-                                image: String,
-                        },
-                ],
-
-                pushFid: {
-                        type: String,
-                        default: null,
-                },
-        },
-        {
-                timestamps: true,
-        }
+		orderItems: [
+			{
+				productId: {
+					type: String,
+					default: null,
+				},
+				variantId: {
+					type: String,
+					default: null,
+				},
+				variantLabel: {
+					type: String,
+					default: '',
+				},
+				name: {
+					type: String,
+					required: true,
+				},
+				quantity: {
+					type: Number,
+					required: true,
+				},
+				price: {
+					type: Number,
+					required: true,
+				},
+				image: {
+					type: String,
+					default: '',
+				},
+			},
+		],
+		pushFid: {
+			type: String,
+			default: null,
+		},
+	},
+	{
+		timestamps: true,
+	}
 );
 
-export default mongoose.models.Order ||
-        mongoose.model('Order', orderSchema);
+export default mongoose.models.Order || mongoose.model('Order', orderSchema);

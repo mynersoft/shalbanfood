@@ -21,6 +21,9 @@ import {
 	MessageCircle,
 	Filter,
 	ArrowUpDown,
+	Plus,
+	LocationEdit,
+	MapPin,
 } from 'lucide-react';
 
 import { toast } from 'react-hot-toast';
@@ -37,6 +40,7 @@ import AdminOrderDetailsModal, {
 	ORDER_STATUSES,
 } from '../components/order/AdminOrderDetailsModal';
 import { STATUS_ICON } from '@/constants/icons';
+import Link from 'next/link';
 
 const PAGE_SIZE = 10;
 
@@ -97,14 +101,12 @@ function formatDate(value) {
 
 function StatsCard({ title, value, icon: Icon, description }) {
 	return (
-		<div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131318]">
+		<div className="rounded-2xl border  p-4 shadow-sm border-white/10 bg-[#131318]">
 			<div className="flex items-start justify-between gap-3">
 				<div>
-					<p className="text-sm text-gray-500 dark:text-gray-400">
-						{title}
-					</p>
+					<p className="text-sm text-gray-300">{title}</p>
 
-					<p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+					<p className="mt-1 text-2xl font-bold text-white">
 						{value}
 					</p>
 
@@ -115,7 +117,7 @@ function StatsCard({ title, value, icon: Icon, description }) {
 					)}
 				</div>
 
-				<div className="rounded-xl bg-gray-100 p-2.5 dark:bg-white/5">
+				<div className="rounded-xl bg-gray-100 p-2.5 dark:bg-gray-950/5">
 					<Icon
 						size={20}
 						className="text-gray-700 dark:text-gray-300"
@@ -567,7 +569,7 @@ export default function AdminOrders() {
 				<button
 					type="button"
 					onClick={() => refetch()}
-					className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
+					className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-950 dark:text-black dark:hover:bg-gray-200">
 					<RefreshCw size={16} />
 					Try Again
 				</button>
@@ -601,21 +603,27 @@ export default function AdminOrders() {
 						type="button"
 						onClick={() => refetch()}
 						disabled={isFetching}
-						className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:bg-[#131318] dark:text-gray-200 dark:hover:bg-white/5">
+						className="inline-flex items-center gap-2 rounded-xl border border-gray-700 bg-gray-950 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:bg-[#131318] dark:text-gray-200 dark:hover:bg-gray-950/5">
 						<RefreshCw
 							size={16}
 							className={isFetching ? 'animate-spin' : ''}
 						/>
 						Refresh
 					</button>
-
 					<button
 						type="button"
 						onClick={exportCSV}
-						className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
+						className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-950 dark:text-black dark:hover:bg-gray-200">
 						<Download size={16} />
 						Export CSV
 					</button>
+
+					<Link
+						href="/dashboard/orders/create"
+						className="inline-flex items-center gap-2 rounded-lg bg-[#1f5d3b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#17482d]">
+						<Plus size={18} />
+						Create Custom Order
+					</Link>
 				</div>
 			</div>
 
@@ -657,7 +665,7 @@ export default function AdminOrders() {
 			    FILTERS
 			================================================== */}
 
-			<div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-[#131318]">
+			<div className="rounded-2xl border border-gray-700  p-4 border-white/10 bg-[#131318]">
 				<div className="flex flex-col gap-3 xl:flex-row">
 					{/* Search */}
 
@@ -672,7 +680,7 @@ export default function AdminOrders() {
 							value={search}
 							onChange={(e) => handleSearchChange(e.target.value)}
 							placeholder="Search order, customer, phone, email, tracking..."
-							className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-gray-900 outline-none transition focus:border-gray-400 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
+							className="h-11 w-full rounded-xl border border-gray-700  pl-10 pr-4 text-sm  outline-none transition focus:border-gray-400 bg-gray-950/5 text-white placeholder:text-gray-500 focus:border-white/20"
 						/>
 					</div>
 
@@ -689,14 +697,14 @@ export default function AdminOrders() {
 							onChange={(e) =>
 								handleStatusFilterChange(e.target.value)
 							}
-							className="h-11 min-w-[170px] appearance-none rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-8 text-sm text-gray-900 outline-none dark:border-white/10 dark:bg-white/5 dark:text-white">
+							className="h-11 min-w-[170px] appearance-none rounded-xl border  pl-9 pr-8 text-sm  outline-none border-white/10 bg-gray-950/5 text-white">
 							<option value="all">All Status</option>
 
 							{ORDER_STATUSES.map((status) => (
 								<option
 									key={status}
 									value={status}
-									className="bg-white dark:bg-[#131318]">
+									className="bg-gray-950 dark:bg-[#131318]">
 									{status.charAt(0).toUpperCase() +
 										status.slice(1)}
 								</option>
@@ -715,7 +723,7 @@ export default function AdminOrders() {
 						<select
 							value={sortBy}
 							onChange={(e) => handleSortChange(e.target.value)}
-							className="h-11 min-w-[170px] appearance-none rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-8 text-sm text-gray-900 outline-none dark:border-white/10 dark:bg-white/5 dark:text-white">
+							className="h-11 min-w-[170px] appearance-none rounded-xl border  pl-9 pr-8 text-sm outline-none border-white/10 bg-gray-950/5 text-white">
 							<option value="newest">Newest First</option>
 
 							<option value="oldest">Oldest First</option>
@@ -750,7 +758,7 @@ export default function AdminOrders() {
 			================================================== */}
 
 			{filteredOrders.length === 0 && (
-				<div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-white/10 dark:bg-[#131318]">
+				<div className="rounded-2xl border border-dashed border-gray-300 bg-gray-950 p-12 text-center dark:border-white/10 dark:bg-[#131318]">
 					<ShoppingBag size={42} className="mx-auto text-gray-400" />
 
 					<h3 className="mt-4 font-semibold text-gray-900 dark:text-white">
@@ -768,13 +776,13 @@ export default function AdminOrders() {
 			================================================== */}
 
 			{filteredOrders.length > 0 && (
-				<div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-[#131318]">
+				<div className="overflow-hidden rounded-2xl border border-gray-700 bg-gray-950 dark:border-white/10 dark:bg-[#131318]">
 					<div className="overflow-x-auto">
 						<table className="w-full min-w-[1100px] text-left">
-							<thead className="border-b border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/[0.025]">
+							<thead className="border  border-white/10 bg-gray-950/[0.025]">
 								<tr>
-									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-										Order
+									<th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+										Invoice No
 									</th>
 
 									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -784,8 +792,6 @@ export default function AdminOrders() {
 										Location
 									</th>
 
-
-									
 									<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
 										Total
 									</th>
@@ -804,7 +810,7 @@ export default function AdminOrders() {
 								</tr>
 							</thead>
 
-							<tbody className="divide-y divide-gray-200 dark:divide-white/10">
+							<tbody className="divide-y  divide-white/10">
 								{paginatedOrders.map((order) => {
 									const customer =
 										order.customer ||
@@ -840,21 +846,14 @@ export default function AdminOrders() {
 									return (
 										<tr
 											key={order._id}
-											className="transition hover:bg-gray-50 dark:hover:bg-white/[0.025]">
+											className="transition hover:bg-gray-950/[0.050]">
 											{/* ORDER */}
 
 											<td className="px-4 py-4">
 												<div>
-													<button
-														type="button"
-														onClick={() =>
-															setSelectedId(
-																order._id
-															)
-														}
-														className="font-semibold text-gray-900 hover:underline dark:text-white">
-														#{getOrderId(order)}
-													</button>
+													<p className="font-semibold hover:underline text-gray-400">
+														{order.invoiceNo}
+													</p>
 
 													<p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
 														{formatDate(
@@ -868,18 +867,18 @@ export default function AdminOrders() {
 
 											<td className="px-4 py-4">
 												<div className="max-w-[190px]">
-													<p className="truncate font-medium text-gray-900 dark:text-white">
+													<p className="truncate font-medium  text-white">
 														{customerName}
 													</p>
 
 													{phone && (
-														<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+														<p className="mt-1 text-xs  text-gray-400">
 															{phone}
 														</p>
 													)}
 
 													{customer.email && (
-														<p className="truncate text-xs text-gray-500 dark:text-gray-500">
+														<p className="truncate text-xs  text-gray-500">
 															{customer.email}
 														</p>
 													)}
@@ -890,14 +889,19 @@ export default function AdminOrders() {
 
 											<td className="px-4 py-4">
 												<div className="flex items-center gap-2">
-													<div className="rounded-lg bg-gray-100 p-2 dark:bg-white/5">
-														<ShoppingBag
+													<div className="rounded-lg  p-2 bg-gray-950/5">
+														<MapPin
 															size={15}
 															className="text-gray-500"
 														/>
 													</div>
-
-													<span className="text-sm text-gray-700 dark:text-gray-300">
+													<span className="text-sm text-gray-300">
+														{
+															order
+																.shippingAddress
+																.thana
+														}
+														<br />
 														{
 															order
 																.shippingAddress
@@ -906,11 +910,10 @@ export default function AdminOrders() {
 													</span>
 												</div>
 											</td>
-
 											{/* TOTAL */}
 
 											<td className="px-4 py-4">
-												<span className="font-semibold text-gray-900 dark:text-white">
+												<span className="font-semibold text-white">
 													{formatCurrency(total)}
 												</span>
 											</td>
@@ -919,7 +922,7 @@ export default function AdminOrders() {
 
 											<td className="px-4 py-4">
 												<div className="space-y-1">
-													<span className="text-sm text-gray-700 dark:text-gray-300">
+													<span className="text-sm text-gray-300">
 														{order.paymentMethod ||
 															'COD'}
 													</span>
@@ -948,7 +951,7 @@ export default function AdminOrders() {
 																e.target.value
 															)
 														}
-														className="h-8 w-full rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 outline-none focus:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300">
+														className="h-8 w-full rounded-lg border  px-2 text-xs  outline-none focus:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50 border-white/20 bg-gray-950/5 text-gray-300">
 														{ORDER_STATUSES.map(
 															(option) => (
 																<option
@@ -956,7 +959,7 @@ export default function AdminOrders() {
 																	value={
 																		option
 																	}
-																	className="bg-white dark:bg-[#131318]">
+																	className="bg-gray-950 dark:bg-[#131318]">
 																	{option
 																		.charAt(
 																			0
@@ -986,7 +989,7 @@ export default function AdminOrders() {
 																order._id
 															)
 														}
-														className="rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white">
+														className="rounded-lg border border-gray-700 p-2 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-white/10 dark:text-gray-400 dark:hover:bg-gray-950/10 dark:hover:text-white">
 														<Eye size={16} />
 													</button>
 
@@ -1039,14 +1042,14 @@ export default function AdminOrders() {
 					    PAGINATION
 					================================================== */}
 
-					<div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-white/10">
-						<p className="text-sm text-gray-500 dark:text-gray-400">
+					<div className="flex flex-col gap-3 border-t  px-4 py-4 sm:flex-row sm:items-center sm:justify-between border-white/10">
+						<p className="text-sm :text-gray-400">
 							Page{' '}
-							<span className="font-medium text-gray-900 dark:text-white">
+							<span className="font-medium text-white">
 								{safePage}
 							</span>{' '}
 							of{' '}
-							<span className="font-medium text-gray-900 dark:text-white">
+							<span className="font-medium text-white">
 								{totalPages}
 							</span>
 						</p>
@@ -1060,7 +1063,7 @@ export default function AdminOrders() {
 										Math.max(1, current - 1)
 									)
 								}
-								className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5">
+								className="inline-flex items-center gap-1 rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-300 dark:hover:bg-gray-950/5">
 								<ChevronLeft size={16} />
 								Previous
 							</button>
@@ -1073,7 +1076,7 @@ export default function AdminOrders() {
 										Math.min(totalPages, current + 1)
 									)
 								}
-								className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5">
+								className="inline-flex items-center gap-1 rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-300 dark:hover:bg-gray-950/5">
 								Next
 								<ChevronRight size={16} />
 							</button>
