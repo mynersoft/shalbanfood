@@ -1,7 +1,7 @@
 import { useProducts } from '@/hooks/useProducts';
 import Link from 'next/link';
 import ProductCard from '../products/ProductCard';
-import ProductSkeleton from '@/components/skeleton/ProductSkeleton';
+import ProductSkeleton from '../Skeleton/ProductSkeleton';
 
 const LatestProducts = () => {
 	const { data, isLoading, isFetching } = useProducts();
@@ -39,7 +39,7 @@ const LatestProducts = () => {
 
 			{/* Loading Skeleton */}
 			{isLoading ? (
-				<ProductSkeleton count={4} />
+				<ProductSkeleton  />
 			) : products.length === 0 ? (
 				/* Empty State */
 				<div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-16 text-center dark:border-gray-800 dark:bg-gray-900">

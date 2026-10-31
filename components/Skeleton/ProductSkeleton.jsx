@@ -10,6 +10,7 @@ const ProductSkeleton = ({ count = 4 }) => {
 						<div className="absolute inset-0 skeleton-shimmer" />
 					</div>
 
+					
 					{/* Content Skeleton */}
 					<div className="space-y-3 p-3 sm:p-4">
 						<div className="relative h-3 w-4/5 overflow-hidden rounded bg-gray-100">
