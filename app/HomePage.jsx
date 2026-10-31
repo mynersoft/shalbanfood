@@ -3,12 +3,12 @@ import ShopByCategory from '@/components/home/ShopByCategory';
 import Hero from '@/components/home/Hero';
 import LatestProducts from '@/components/home/LatestProducts';
 import ShowBlogPost from '@/components/home/ShowBlogPost';
+import ProductSkeleton from '@/components/Skeleton/ProductSkeleton';
 
 export default function HomePage() {
 	return (
 		<main className="min-h-screen bg-white">
 			<Hero />
-
 			<section className="mx-auto max-w-7xl px-4 pt-8 sm:pt-10 md:px-6 lg:px-8">
 				<ShopByCategory />
 			</section>

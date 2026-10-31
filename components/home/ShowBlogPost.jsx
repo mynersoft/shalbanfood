@@ -1,7 +1,10 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import ProductSkeleton from '../Skeleton/ProductSkeleton';
+
 
 const DEFAULT_IMAGE =
 	'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=80';
@@ -100,26 +103,7 @@ export default function ShowBlogPost({
 				</div>
 
 				{/* Loading skeleton */}
-				{loading && (
-					<div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-						{Array.from(
-							{ length: Math.min(Math.max(limit, 1), 3) },
-							(_, index) => (
-								<div
-									key={index}
-									className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-									<div className="aspect-[16/10] animate-pulse bg-gray-100" />
-									<div className="space-y-4 p-5">
-										<div className="h-3 w-1/3 animate-pulse rounded bg-gray-100" />
-										<div className="h-5 w-4/5 animate-pulse rounded bg-gray-100" />
-										<div className="h-3 w-full animate-pulse rounded bg-gray-100" />
-										<div className="h-3 w-2/3 animate-pulse rounded bg-gray-100" />
-									</div>
-								</div>
-							)
-						)}
-					</div>
-				)}
+				{loading && <ProductSkeleton count={4} />}
 
 				{/* Error state */}
 				{!loading && error && (
@@ -177,6 +161,7 @@ export default function ShowBlogPost({
 											onError={(event) => {
 												const image =
 													event.currentTarget;
+
 												image.onerror = null;
 												image.src = DEFAULT_IMAGE;
 											}}
@@ -217,7 +202,7 @@ export default function ShowBlogPost({
 										</p>
 
 										{/* Footer */}
-										<div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-4 mt-5">
+										<div className="mt-auto mt-5 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
 											<span className="truncate text-xs font-medium text-gray-500">
 												{post.tags?.[0] ||
 													'Shalban Food'}

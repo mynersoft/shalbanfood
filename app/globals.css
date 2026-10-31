@@ -35,3 +35,35 @@ body {
 		display: none !important;
 	}
 }
+
+
+
+
+
+
+
+/* skeleton  */
+
+
+.skeleton-shimmer {
+    transform: translateX(-100%);
+    animation: skeleton-shimmer 1.5s infinite;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.8),
+        transparent
+    );
+}
+
+@keyframes skeleton-shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer {
+        animation: none;
+    }
+}
