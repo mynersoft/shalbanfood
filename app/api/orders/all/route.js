@@ -4,30 +4,23 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/dbConnect';
 import Order from '@/models/Order';
+import { checkAuthRole } from '@/lib/checkAuthRole';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
 	try {
-		const session = await getServerSession(authOptions);
 
-		if (!session?.user) {
-			return NextResponse.json(
-				{ success: false, message: 'Unauthorized' },
-				{ status: 401 }
-			);
-		}
+		const {isAdmin} = await checkAuthRole();
 
-		if (session.user.role !== 'admin') {
+		if (!isAdmin) {
 			return NextResponse.json(
 				{ success: false, message: 'Admin access required' },
 				{ status: 403 }
 			);
 		}
-
 		await connectDB();
-
 		const orders = await Order.find({}).sort({ createdAt: -1 }).lean();
 
 		return NextResponse.json({

@@ -73,7 +73,7 @@ export default function CreateCustomerPage() {
 
 			toast.success('কাস্টমার সফলভাবে তৈরি হয়েছে।');
 
-			router.push('/dashboard/admin/customers');
+			router.push('/dashboard/customers');
 			router.refresh();
 		} catch (error) {
 			toast.error(error.message || 'কিছু একটা সমস্যা হয়েছে।');
