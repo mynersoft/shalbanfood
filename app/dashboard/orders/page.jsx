@@ -1,7 +1,5 @@
 'use client';
-
 import { useMemo, useState } from 'react';
-
 import {
 	Search,
 	Package,
@@ -24,6 +22,7 @@ import {
 	Plus,
 	LocationEdit,
 	MapPin,
+	Tag,
 } from 'lucide-react';
 
 import { toast } from 'react-hot-toast';
@@ -33,7 +32,6 @@ import {
 	useUpdateOrder,
 	useDeleteOrder,
 } from '@/hooks/useOrder';
-
 import { getOrderWhatsAppUrl } from '@/lib/whatsapp';
 import AdminOrderDetailsModal, {
 	getOrderId,
@@ -41,6 +39,7 @@ import AdminOrderDetailsModal, {
 } from '../components/order/AdminOrderDetailsModal';
 import { STATUS_ICON } from '@/constants/icons';
 import Link from 'next/link';
+import AdminDiscountModal from '@/components/Dashboard/AdminDiscountModal';
 
 const PAGE_SIZE = 10;
 
@@ -139,6 +138,7 @@ export default function AdminOrders() {
 
 	const [search, setSearch] = useState('');
 
+	const [discountOrder, setDiscountOrder] = useState(null);
 	const [statusFilter, setStatusFilter] = useState('all');
 
 	const [sortBy, setSortBy] = useState('newest');
@@ -983,6 +983,34 @@ export default function AdminOrders() {
 
 													<button
 														type="button"
+														onClick={() =>
+															setDiscountOrder(
+																order
+															)
+														}
+														disabled={
+															order.payment
+																?.status ===
+																'paid' ||
+															[
+																'cancelled',
+																'return',
+															].includes(
+																order.status
+															)
+														}
+														className="inline-flex items-center gap-2 rounded-lg bg-green-100 px-3 py-2 text-sm font-medium text-green-800 transition hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/70">
+														<Tag size={16} />
+														{Number(
+															order.adminDiscount ||
+																0
+														) > 0
+															? 'Edit Discount'
+															: 'Add Discount'}
+													</button>
+
+													<button
+														type="button"
 														title="View order"
 														onClick={() =>
 															setSelectedId(
@@ -1098,6 +1126,12 @@ export default function AdminOrders() {
 					selectedOrder ? busyId === selectedOrder._id : false
 				}
 			/>
+			{discountOrder && (
+				<AdminDiscountModal
+					order={discountOrder}
+					onClose={() => setDiscountOrder(null)}
+				/>
+			)}
 		</div>
 	);
 }

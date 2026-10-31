@@ -53,6 +53,7 @@ export async function PATCH(request, { params }) {
                 { status: 400 }
             );
         }
+        
 
         await connectDB();
 
@@ -116,7 +117,6 @@ export async function PATCH(request, { params }) {
         // Update order
         order.adminDiscount = adminDiscount;
         order.adminDiscountNote = adminDiscountNote;
-        order.adminDiscountBy = session.user.id;
         order.adminDiscountUpdatedAt = new Date();
         order.total = finalTotal;
 
