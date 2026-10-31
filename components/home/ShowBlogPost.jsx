@@ -103,7 +103,7 @@ export default function ShowBlogPost({
 				</div>
 
 				{/* Loading skeleton */}
-				{loading && <ProductSkeleton count={4} />}
+				{loading && <ProductSkeleton />}
 
 				{/* Error state */}
 				{!loading && error && (
