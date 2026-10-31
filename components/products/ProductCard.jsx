@@ -180,12 +180,7 @@ export default function ProductCard({ product }) {
             ">
 			{/* Product Image */}
 			<Link href={productHref} className="block">
-				<div
-					className="
-			relative aspect-square
-			w-full overflow-hidden
-			bg-white
-		">
+				<div className="relative aspect-square w-full h-[200px] overflow-hidden bg-white">
 					{product?.image ? (
 						<Image
 							src={product.image}
@@ -267,17 +262,15 @@ export default function ProductCard({ product }) {
 			<div
 				className="
                     flex flex-1 flex-col
-                    p-3 sm:p-4
+                     sm:p-4
                 ">
 				{/* Product Name */}
 				<Link href={productHref}>
 					<h2
 						className="
-                            line-clamp-2
-                            min-h-[44px]
+                            line-clamp-2 pb-2
                             text-[15px]
                             font-medium
-                            leading-5
                             text-gray-800
                             transition-colors
                             hover:text-orange-500
@@ -289,7 +282,7 @@ export default function ProductCard({ product }) {
 
 				{/* Variant Selection */}
 				{variants.length > 1 && (
-					<div className="mt-2">
+					<div >
 						<div className="flex flex-wrap gap-1.5">
 							{variants.map((variant, index) => {
 								const key = getVariantKey(variant, index);
@@ -335,7 +328,7 @@ export default function ProductCard({ product }) {
 
 				{/* Single Variant */}
 				{variants.length === 1 && selected && (
-					<p className="mt-2 text-xs text-gray-500">
+					<p className=" text-xs text-gray-500">
 						{formatSize(selected)}
 					</p>
 				)}
@@ -343,7 +336,7 @@ export default function ProductCard({ product }) {
 				{/* Price */}
 				<div
 					className="
-                        mt-auto pt-3
+                        mt-auto pt-1
                         flex flex-wrap
                         items-baseline gap-2
                     ">
