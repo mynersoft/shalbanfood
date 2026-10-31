@@ -1,31 +1,19 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import { getServerSession } from 'next-auth';
-
-import dbConnect from '@/lib/dbConnect';
-import { authOptions } from '@/lib/auth';
 import Order from '@/models/Order';
+import { checkAuthRole } from '@/lib/checkAuthRole';
+import { connectDB } from '@/lib/dbConnect';
 
 export const dynamic = 'force-dynamic';
 
 // PATCH: Update admin discount
 export async function PATCH(request, { params }) {
     try {
-        // Authentication
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user) {
-            return NextResponse.json(
-                { success: false, message: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
+       
+        const { isAdmin } = await checkAuthRole();
 
         // Admin authorization
-        if (
-            session.user.role !== 'admin' &&
-            session.user.role !== 'ADMIN'
-        ) {
+        if (!isAdmin) {
             return NextResponse.json(
                 { success: false, message: 'Admin access required' },
                 { status: 403 }
@@ -66,7 +54,7 @@ export async function PATCH(request, { params }) {
             );
         }
 
-        await dbConnect();
+        await connectDB();
 
         const order = await Order.findById(id);
 
