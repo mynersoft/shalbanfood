@@ -45,6 +45,7 @@ const createVariant = () => ({
 	value: '',
 	unit: 'gram',
 	regularPrice: '',
+	buyPrice: '',
 	sellPrice: '',
 	stock: 0,
 	soldCount: 0,
@@ -62,21 +63,14 @@ const createDefaultForm = () => ({
 	subCategory: '',
 	brand: '',
 	warranty: '',
-
 	shortDescription: '',
 	description: '',
-
-	sku: '',
-
 	seoTitle: '',
 	seoDescription: '',
 	keywords: '',
-
 	canonicalUrl: '',
-
 	image: null,
 	existingImage: '',
-
 	isActive: true,
 	isFeatured: false,
 
@@ -174,6 +168,8 @@ export default function ProductFormModal({
 
 							regularPrice: variant.regularPrice ?? '',
 
+							buyPrice: variant.buyPrice ?? '',
+
 							sellPrice: variant.sellPrice ?? '',
 
 							stock: variant.stock ?? 0,
@@ -193,7 +189,6 @@ export default function ProductFormModal({
 				warranty: editingProduct.warranty || '',
 				shortDescription: editingProduct.shortDescription || '',
 				description: editingProduct.description || '',
-				sku: editingProduct.sku || '',
 				seoTitle: editingProduct.seoTitle || '',
 				seoDescription: editingProduct.seoDescription || '',
 				keywords: Array.isArray(editingProduct.keywords)
@@ -420,6 +415,8 @@ export default function ProductFormModal({
 
 			const regularPrice = Number(variant.regularPrice);
 
+			const buyPrice = Number(variant.buyPrice);
+
 			const sellPrice = Number(variant.sellPrice);
 
 			const stock = Number(variant.stock);
@@ -442,6 +439,12 @@ export default function ProductFormModal({
 			if (!Number.isFinite(regularPrice) || regularPrice < 0) {
 				newErrors[`variant_${index}_regularPrice`] =
 					'Invalid regular price.';
+			}
+
+			/* BUY PRICE */
+
+			if (!Number.isFinite(buyPrice) || buyPrice < 0) {
+				newErrors[`variant_${index}_buyPrice`] = 'Invalid buy price.';
 			}
 
 			/* SELL PRICE */
@@ -573,98 +576,40 @@ export default function ProductFormModal({
 
 		try {
 			const formData = new FormData();
-
-			/* =================================================
-               BASIC
-            ================================================= */
-
 			formData.append('name', form.name.trim());
-
 			formData.append('slug', generateSlug(form.slug));
-
 			formData.append('category', form.category.trim().toLowerCase());
-
 			formData.append(
 				'subCategory',
 				form.subCategory.trim().toLowerCase()
 			);
-
 			formData.append('brand', form.brand.trim());
-
 			formData.append('warranty', form.warranty.trim());
-
-			/* =================================================
-               CONTENT
-            ================================================= */
-
 			formData.append('shortDescription', form.shortDescription.trim());
-
 			formData.append('description', form.description.trim());
-
-			/* =================================================
-               SKU
-            ================================================= */
-
-			formData.append('sku', form.sku.trim().toUpperCase());
-
-			/* =================================================
-               SEO
-            ================================================= */
-
 			formData.append('seoTitle', form.seoTitle.trim());
-
 			formData.append('seoDescription', form.seoDescription.trim());
-
 			const keywords = form.keywords
 				.split(',')
 				.map((item) => item.trim())
 				.filter(Boolean);
 
 			formData.append('keywords', JSON.stringify(keywords));
-
-			/* =================================================
-               CANONICAL
-            ================================================= */
-
 			formData.append('canonicalUrl', form.canonicalUrl.trim());
-
-			/* =================================================
-               VARIANTS
-            ================================================= */
-
 			const variants = form.variants.map((variant) => {
 				const item = {
 					value: Number(variant.value),
-
 					unit: variant.unit,
-
+					buyPrice: Number(variant.buyPrice),
 					regularPrice: Number(variant.regularPrice),
-
 					sellPrice: Number(variant.sellPrice),
-
 					stock: Number(variant.stock || 0),
-
 					sku: variant.sku?.trim().toUpperCase() || '',
 				};
-
-				/*
-				 * IMPORTANT:
-				 * Preserve existing variant _id
-				 * during edit.
-				 */
 
 				if (variant._id) {
 					item._id = variant._id;
 				}
-
-				/*
-				 * soldCount is intentionally
-				 * NOT sent from the form.
-				 *
-				 * API/model should preserve
-				 * existing soldCount.
-				 */
-
 				return item;
 			});
 
@@ -1196,44 +1141,8 @@ export default function ProductFormModal({
 								/>
 							</div>
 
-							{/* PRODUCT SKU */}
+							
 
-							<div>
-								<label
-									className="
-                                        mb-2
-                                        block
-                                        text-sm
-                                        text-gray-300
-                                    ">
-									Product SKU
-								</label>
-
-								<input
-									value={form.sku}
-									onChange={(e) =>
-										updateField(
-											'sku',
-											e.target.value.toUpperCase()
-										)
-									}
-									placeholder="HONEY-LICHU"
-									className="
-                                        w-full
-                                        rounded-lg
-                                        border
-                                        border-gray-700
-                                        bg-gray-950
-                                        px-3
-                                        py-2.5
-                                        text-sm
-                                        uppercase
-                                        text-white
-                                        outline-none
-                                        focus:border-green-500
-                                    "
-								/>
-							</div>
 						</div>
 					</section>
 
@@ -1471,7 +1380,7 @@ export default function ProductFormModal({
                                                 gap-3
                                                 sm:grid-cols-2
                                                 lg:grid-cols-3
-                                                xl:grid-cols-6
+                                                xl:grid-cols-7
                                             ">
 										{/* SIZE */}
 
@@ -1562,8 +1471,53 @@ export default function ProductFormModal({
 											</select>
 										</div>
 
-										{/* REGULAR PRICE */}
+										{/* Buy PRICE */}
 
+										<div>
+											<label className="mb-1 block text-xs text-gray-500">
+												Buy Price *
+											</label>
+
+											<input
+												type="number"
+												min="0"
+												step="any"
+												value={variant.buyPrice}
+												onChange={(e) =>
+													updateVariant(
+														index,
+														'buyPrice',
+														e.target.value
+													)
+												}
+												placeholder="700"
+												className="
+                                                        w-full
+                                                        rounded-lg
+                                                        border
+                                                        border-gray-700
+                                                        bg-gray-900
+                                                        px-3
+                                                        py-2
+                                                        text-sm
+                                                        text-white
+                                                        outline-none
+                                                        focus:border-green-500
+                                                    "
+											/>
+
+											{errors[
+												`variant_${index}_buyPrice`
+											] && (
+												<p className="mt-1 text-xs text-red-400">
+													{
+														errors[
+															`variant_${index}_buyPrice`
+														]
+													}
+												</p>
+											)}
+										</div>
 										<div>
 											<label className="mb-1 block text-xs text-gray-500">
 												Regular Price *

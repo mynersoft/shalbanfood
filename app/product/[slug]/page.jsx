@@ -11,11 +11,6 @@ import Product from '@/models/Product';
 
 import ProductPurchase from './ProductPurchase';
 
-/* =========================================================
-   CACHING (ISR): page is rebuilt at most every 5 minutes.
-   Call revalidatePath('/product/' + slug) in your product
-   API after create/update/delete for instant updates.
-========================================================= */
 
 export const revalidate = 300;
 
@@ -24,7 +19,7 @@ export const revalidate = 300;
 ========================================================= */
 
 const SITE_URL = (
-	process.env.NEXT_PUBLIC_SITE_URL || 'https://shalbanfood.vercel.app'
+	process.env.NEXT_PUBLIC_SITE_URL || 'https://shalbanfood.shop'
 ).replace(/\/+$/, '');
 
 const SITE_NAME = 'Shalban Food';
@@ -354,17 +349,6 @@ export default async function ProductPage({ params }) {
 							Home
 						</Link>
 					</li>
-
-					<li aria-hidden="true">
-						<ChevronRight size={14} />
-					</li>
-
-					<li>
-						<Link href="/shop" className="hover:text-green-600">
-							Shop
-						</Link>
-					</li>
-
 					<li aria-hidden="true">
 						<ChevronRight size={14} />
 					</li>
@@ -394,14 +378,14 @@ export default async function ProductPage({ params }) {
 					{/* IMAGE */}
 
 					<div>
-						<div className="relative aspect-square overflow-hidden rounded-2xl bg-gray-50">
+						<div className="relative h-[400px] overflow-hidden rounded-2xl bg-gray-50">
 							{product.image ? (
 								<Image
 									src={product.image}
 									alt={`${product.name} - ${SITE_NAME}`}
 									fill
 									priority
-									sizes="(max-width: 1024px) 100vw, 50vw"
+									sizes="(max-width: 1024px) 100vw, 20vw"
 									className="object-contain p-5"
 								/>
 							) : (
@@ -415,13 +399,9 @@ export default async function ProductPage({ params }) {
 					{/* INFORMATION */}
 
 					<div>
-						<Link
-							href={`/category/${encodeURIComponent(product.category)}`}
-							className="text-sm font-medium capitalize text-green-600 hover:underline">
-							{formatCategory(product.category)}
-						</Link>
+						
 
-						<h1 className="mt-2 text-3xl font-bold leading-tight text-gray-900 sm:text-4xl">
+						<h1 className="mt-2 text-3xl font-bold leading-tight text-gray-900 sm:text-xl">
 							{product.name}
 						</h1>
 
@@ -432,16 +412,11 @@ export default async function ProductPage({ params }) {
 
 							{product.sku && <span>SKU: {product.sku}</span>}
 
-							{totalSold > 0 && <span>{totalSold}+ sold</span>}
+							{/* sold  */}
+							{/* {totalSold > 0 && <span>{totalSold}+ sold</span>} */}
 						</div>
 
-						{product.shortDescription && (
-							<p className="mt-5 leading-7 text-gray-600">
-								{product.shortDescription}
-							</p>
-						)}
 
-						{/* Interactive: price, size, quantity, cart */}
 
 						<ProductPurchase
     productId={String(product._id)}

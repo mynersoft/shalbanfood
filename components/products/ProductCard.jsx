@@ -372,7 +372,7 @@ export default function ProductCard({ product }) {
                         gap-2 rounded-lg
                         border-2 border-[#F28C18]
                         bg-white
-                        px-2 py-2.5
+                        px-2 py-1.5
                         text-sm font-semibold
                         text-[#F28C18]
                         transition-all duration-200

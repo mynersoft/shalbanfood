@@ -11,10 +11,13 @@ const money = (v) =>
   `৳${Number(v || 0).toLocaleString("en-BD")}`;
 
 export default function StatCards({ summary = {} }) {
+
+  console.log(summary);
+  
   const cards = [
     {
       title: "This Month Sales",
-      value: money(summary.monthSales),
+      value: money(summary.totalSales),
       icon: DollarSign,
       color: "text-green-400 bg-green-500/10",
       href: "/dashboard/orders",
@@ -35,7 +38,7 @@ export default function StatCards({ summary = {} }) {
     },
     {
       title: "Products",
-      value: summary.products || 0,
+      value: summary.totalProducts || 0,
       icon: Package,
       color: "text-orange-400 bg-orange-500/10",
       href: "/dashboard/products",

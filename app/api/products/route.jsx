@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/dbConnect';
 import Product from '@/models/Product';
 
 import cloudinary from '@/lib/cloudinary';
+import { checkAuthRole } from '@/lib/checkAuthRole';
 
 
 // ======================================================
@@ -566,20 +567,7 @@ export async function POST(req) {
         // SKU
         // =================================================
 
-        const sku =
-            String(
-                formData.get(
-                    'sku'
-                ) || ''
-            )
-                .trim()
-                .toUpperCase();
-
-
-        // =================================================
-        // SEO
-        // =================================================
-
+     
         const seoTitle =
             String(
                 formData.get(
@@ -787,13 +775,7 @@ export async function POST(req) {
                                 0
                         ),
 
-                    sku:
-                        String(
-                            variant.sku ||
-                                ''
-                        )
-                            .trim()
-                            .toUpperCase(),
+                  
                 })
             );
 
@@ -910,7 +892,7 @@ export async function POST(req) {
                 image:
                     finalImage,
 
-                sku,
+             
 
                 seoTitle,
 
@@ -1000,17 +982,28 @@ export async function POST(req) {
 // ======================================================
 
 export async function PUT(req) {
-    try {
-        await connectDB();
 
+
+    try {
+
+        const { isAdmin } = await checkAuthRole();
+        if (!isAdmin) { 
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: 'Unauthorized access.'
+                },
+                {
+                    status: 403
+                }
+            );
+        }
+
+        await connectDB();
 
         const formData =
             await req.formData();
 
-
-        // =================================================
-        // PRODUCT ID
-        // =================================================
 
         const _id =
             formData.get('_id');
@@ -1031,9 +1024,6 @@ export async function PUT(req) {
         }
 
 
-        // =================================================
-        // FIND PRODUCT
-        // =================================================
 
         const existingProduct =
             await Product.findById(
@@ -1114,26 +1104,6 @@ export async function PUT(req) {
             ) || '';
 
 
-        // =================================================
-        // SKU
-        // =================================================
-
-        const sku =
-            String(
-                formData.get(
-                    'sku'
-                ) ||
-                    existingProduct.sku ||
-                    ''
-            )
-                .trim()
-                .toUpperCase();
-
-
-        // =================================================
-        // SEO
-        // =================================================
-
         const seoTitle =
             String(
                 formData.get(
@@ -1168,10 +1138,7 @@ export async function PUT(req) {
             ).trim();
 
 
-        // =================================================
-        // STATUS
-        // =================================================
-
+      
         const isActive =
             formData.get(
                 'isActive'
@@ -1184,9 +1151,6 @@ export async function PUT(req) {
             ) === 'true';
 
 
-        // =================================================
-        // BASIC VALIDATION
-        // =================================================
 
         if (
             !name ||
@@ -1241,10 +1205,7 @@ export async function PUT(req) {
         }
 
 
-        // =================================================
-        // DUPLICATE SLUG CHECK
-        // =================================================
-
+    
         const duplicateSlug =
             await Product.findOne({
                 slug,
@@ -1363,6 +1324,10 @@ export async function PUT(req) {
                             Number(
                                 variant.regularPrice
                             ),
+                        buyPrice:
+                            Number(
+                                variant.buyPrice
+                            ),
 
                         sellPrice:
                             Number(
@@ -1392,13 +1357,7 @@ export async function PUT(req) {
                                           0
                                   ),
 
-                        sku:
-                            String(
-                                variant.sku ||
-                                    ''
-                            )
-                                .trim()
-                                .toUpperCase(),
+                       
                     };
                 }
             );
@@ -1537,8 +1496,7 @@ export async function PUT(req) {
             ).trim();
 
 
-        existingProduct.sku =
-            sku;
+    
 
 
         existingProduct.seoTitle =

@@ -71,10 +71,12 @@ export async function GET() {
       .select("total createdAt status")
       .lean();
 
+    // live time sales 
     const totalSales = validOrders.reduce(
       (sum, order) => sum + Number(order.total || 0),
       0
     );
+
 
     const todaySales = todayOrders.reduce((sum, order) => {
       if (["cancelled", "return"].includes(order.status)) return sum;

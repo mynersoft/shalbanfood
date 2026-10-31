@@ -33,7 +33,6 @@ export async function fetchDashboardOverview() {
 			data.message || `Dashboard request failed (HTTP ${res.status})`
 		);
 	}
-
 	return data;
 }
 
@@ -46,6 +45,14 @@ export function useDashboardOverview() {
 	});
 }
 
+
+
+
+
+
+
+
+// stock update 
 async function updateVariantStock({ productId, variantId, stock }) {
 	const response = await fetch(
 		`/api/products/${productId}/variants/${variantId}/stock`,

@@ -17,11 +17,11 @@ const VariantSchema = new mongoose.Schema(
 			required: true,
 			min: 0,
 		},
-buyPrice: {
-    type: Number,
-    default: 0,
-    min: 0,
-},
+		buyPrice: {
+			type: Number,
+			default: 0,
+			min: 0,
+		},
 		sellPrice: {
 			type: Number,
 			required: true,
@@ -162,7 +162,6 @@ const ProductSchema = new mongoose.Schema(
 	}
 );
 
-
 ProductSchema.pre('validate', function () {
 	if (!Array.isArray(this.variants)) return;
 
@@ -197,7 +196,6 @@ ProductSchema.index({
 	isFeatured: 1,
 	createdAt: -1,
 });
-
 
 export default mongoose.models.Product ||
 	mongoose.model('Product', ProductSchema);

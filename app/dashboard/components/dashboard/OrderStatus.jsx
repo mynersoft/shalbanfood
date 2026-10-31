@@ -25,7 +25,7 @@ export default function OrderStatus({ statusCounts = {}, totalOrders = 0 }) {
         <p className="mt-1 text-xs text-gray-400">Order breakdown</p>
       </div>
 
-      <div className="space-y-3 p-5">
+      <div className="space-y-3 p-5 flex">
         {Object.entries(CONFIG).map(([status, config]) => {
           const [label, Icon, color] = config;
           const count = statusCounts[status] || 0;

@@ -16,7 +16,10 @@ import {
 } from 'lucide-react';
 import { LOW_STOCK_LIMIT } from '@/constants/dashboard';
 import { formatUnit } from '@/helper/formateUnit';
-import { useUpdateVariantStock } from '@/hooks/useDashboard';
+import {
+	useDashboardOverview,
+	useUpdateVariantStock,
+} from '@/hooks/useDashboard';
 
 const BRAND = '#1f5d14';
 
@@ -72,6 +75,11 @@ function StatCard({ icon: Icon, title, value, subtitle }) {
 
 export default function InventoryPage() {
 	const updateStockMutation = useUpdateVariantStock();
+	const { data, isLoading, isFetching, isError, refetch } =
+		useDashboardOverview();
+
+	const summary = data?.summary;
+
 	const [products, setProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
@@ -86,37 +94,18 @@ export default function InventoryPage() {
 	const fetchProducts = useCallback(async () => {
 		setLoading(true);
 		setError('');
-
 		try {
-			// Change this endpoint if your existing product API differs.
-			const response = await fetch('/api/products?limit=50', {
-				cache: 'no-store',
-			});
+			const productList = Array.isArray(data)
+				? data
+				: data?.products || data?.data || data?.items || [];
 
-			const result = await response.json();
-
-			if (!response.ok) {
-				throw new Error(result.message || 'পণ্যের তথ্য লোড হয়নি।');
-			}
-
-			const list = Array.isArray(result)
-				? result
-				: (result.products ??
-					result.data?.products ??
-					result.data ??
-					[]);
-
-			if (!Array.isArray(list)) {
-				throw new Error('API response-এ পণ্যের তালিকা পাওয়া যায়নি।');
-			}
-
-			setProducts(list);
+			setProducts(Array.isArray(productList) ? productList : []);
 		} catch (err) {
 			setError(err.message || 'পণ্য লোড করতে সমস্যা হয়েছে।');
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [data]);
 
 	useEffect(() => {
 		fetchProducts();
@@ -125,22 +114,31 @@ export default function InventoryPage() {
 	// Flatten variants so every size/weight has its own inventory row.
 	const inventory = useMemo(
 		() =>
-			products.flatMap((product) =>
-				(product.variants || []).map((variant) => ({
-					productId: String(product._id),
-					variantId: String(variant._id),
-					name: product.name,
-					category: product.category || 'uncategorized',
-					image: product.image || '',
-					isActive: product.isActive,
-					value: variant.value,
-					unit: variant.unit,
-					stock: Number(variant.stock || 0),
-					soldCount: Number(variant.soldCount || 0),
-					regularPrice: Number(variant.regularPrice || 0),
-					sellPrice: Number(variant.sellPrice || 0),
-					sku: variant.sku || '',
-				}))
+			(Array.isArray(products) ? products : []).flatMap((product) =>
+				(Array.isArray(product.variants) ? product.variants : []).map(
+					(variant) => ({
+						productId: String(product._id),
+						variantId: String(variant._id),
+						name: product.name,
+						category: product.category || 'uncategorized',
+						image: product.image || '',
+						isActive: product.isActive,
+						value: variant.value,
+						unit: variant.unit,
+						stock: Number(variant.stock || 0),
+						soldCount: Number(variant.soldCount || 0),
+						buyPrice: Number(
+							variant.buyPrice ??
+								variant.purchasePrice ??
+								variant.costPrice ??
+								variant.regularPrice ??
+								0
+						),
+						regularPrice: Number(variant.regularPrice || 0),
+						sellPrice: Number(variant.sellPrice || 0),
+						sku: variant.sku || '',
+					})
+				)
 			),
 		[products]
 	);
@@ -154,7 +152,7 @@ export default function InventoryPage() {
 		const totalUnits = inventory.reduce((sum, item) => sum + item.stock, 0);
 
 		const stockCost = inventory.reduce(
-			(sum, item) => sum + item.stock * item.regularPrice,
+			(sum, item) => sum + item.stock * item.buyPrice,
 			0
 		);
 
@@ -203,7 +201,7 @@ export default function InventoryPage() {
 				if (sortBy === 'stock-low') return a.stock - b.stock;
 				if (sortBy === 'stock-high') return b.stock - a.stock;
 				if (sortBy === 'value') {
-					return b.stock * b.regularPrice - a.stock * a.regularPrice;
+					return b.stock * b.buyPrice - a.stock * a.buyPrice;
 				}
 
 				return a.name.localeCompare(b.name, 'bn');
@@ -321,21 +319,20 @@ export default function InventoryPage() {
 					<StatCard
 						icon={Package}
 						title="মোট পণ্য"
-						value={stats.products}
+						value={summary?.totalProducts}
 						subtitle={`${stats.variants}টি ভ্যারিয়েন্ট`}
 					/>
 
 					<StatCard
 						icon={Boxes}
 						title="মোট স্টক"
-						value={stats.totalUnits.toLocaleString('en-BD')}
+						value={summary?.stockQuantity}
 						subtitle="সব ভ্যারিয়েন্টের ইউনিটের যোগফল"
 					/>
-
 					<StatCard
 						icon={CircleDollarSign}
 						title="স্টকের ক্রয়মূল্য"
-						value={money(stats.stockCost)}
+						value={money(summary?.stockSalesValue)}
 						subtitle="Regular price × stock"
 					/>
 
@@ -462,38 +459,42 @@ export default function InventoryPage() {
 						</div>
 					) : (
 						<div className="overflow-x-auto">
-							<table className="w-full min-w-[1050px] text-left text-sm">
+							<table className="w-full min-w-[1120px] text-left text-sm">
 								<thead className="border-y border-[#292d2a] bg-[#131614] text-xs text-gray-500">
 									<tr>
 										<th className="px-5 py-3 font-medium">
-											পণ্য
+											Name
 										</th>
-										<th className="px-4 py-3 font-medium">
+										<th className="px-2 py-3 font-medium">
 											SKU
 										</th>
+										<th className="px-2 py-3 font-medium">
+											Weight/Size
+										</th>
+										<th className="px-2 py-3 font-medium">
+											Buy price{' '}
+										</th>
+										<th className="px-2 py-3 font-medium">
+											Regular Price
+										</th>
+										<th className="px-2 py-3 font-medium">
+											Sell Price
+										</th>
+										<th className="px-2 py-3 font-medium">
+											Profit
+										</th>
+										<th className="px-2 py-3 font-medium">
+											Sold Count
+										</th>
+
 										<th className="px-4 py-3 font-medium">
-											ভ্যারিয়েন্ট
+											Stock Value
 										</th>
 										<th className="px-4 py-3 font-medium">
-											ক্রয়মূল্য
-										</th>
-										<th className="px-4 py-3 font-medium">
-											বিক্রয়মূল্য
-										</th>
-										<th className="px-4 py-3 font-medium">
-											স্টক
-										</th>
-										<th className="px-4 py-3 font-medium">
-											বিক্রি
-										</th>
-										<th className="px-4 py-3 font-medium">
-											স্টক মূল্য
-										</th>
-										<th className="px-4 py-3 font-medium">
-											স্ট্যাটাস
+											Status
 										</th>
 										<th className="px-5 py-3 text-right font-medium">
-											অ্যাকশন
+											Actions
 										</th>
 									</tr>
 								</thead>
@@ -555,6 +556,9 @@ export default function InventoryPage() {
 												</td>
 
 												<td className="px-4 py-4 text-gray-400">
+													{money(item.buyPrice)}
+												</td>
+												<td className="px-4 py-4 text-gray-400">
 													{money(item.regularPrice)}
 												</td>
 
@@ -562,8 +566,18 @@ export default function InventoryPage() {
 													{money(item.sellPrice)}
 												</td>
 
-												<td className="px-4 py-4 font-semibold text-white">
-													{item.stock}
+												<td
+													className={`px-4 py-4 font-medium ${
+														item.sellPrice -
+															item.buyPrice >=
+														0
+															? 'text-emerald-400'
+															: 'text-red-400'
+													}`}>
+													{money(
+														item.sellPrice -
+															item.buyPrice
+													)}
 												</td>
 
 												<td className="px-4 py-4 text-gray-400">
@@ -573,7 +587,7 @@ export default function InventoryPage() {
 												<td className="px-4 py-4 font-medium text-gray-200">
 													{money(
 														item.stock *
-															item.regularPrice
+															item.buyPrice
 													)}
 												</td>
 
