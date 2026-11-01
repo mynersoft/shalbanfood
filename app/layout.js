@@ -397,7 +397,7 @@ export default function RootLayout({ children }) {
 				<InternetStatus />
 				<Providers>
 					<ConditionalMainLayout>
-						<MaintenanceToast />
+						
 						{children}
 					</ConditionalMainLayout>
 				</Providers>
