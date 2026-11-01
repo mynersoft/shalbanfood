@@ -142,15 +142,44 @@ if (!products.length) {
 
 	const canonicalUrl = `${SITE_URL}/category/${slug}`;
 
-	/*
-	 * Product data JSON-safe করার জন্য
-	 */
-	const safeProducts = products.map((product) => ({
-		...product,
-		_id: product._id.toString(),
-		createdAt: product.createdAt?.toISOString(),
-		updatedAt: product.updatedAt?.toISOString(),
-	}));
+
+
+
+
+
+function serializeData(value) {
+	if (value === null || value === undefined) {
+		return value;
+	}
+
+	// MongoDB ObjectId
+	if (value?._bsontype === 'ObjectId') {
+		return value.toString();
+	}
+
+	// Date
+	if (value instanceof Date) {
+		return value.toISOString();
+	}
+
+	// Array
+	if (Array.isArray(value)) {
+		return value.map(serializeData);
+	}
+
+	// Object
+	if (typeof value === 'object') {
+		return Object.fromEntries(
+			Object.entries(value).map(([key, val]) => [key, serializeData(val)])
+		);
+	}
+
+	return value;
+}
+
+
+
+const safeProducts = products.map((product) => serializeData(product));
 
 	/* ---------------------------------------------------
        ItemList Schema

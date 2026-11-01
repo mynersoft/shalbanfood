@@ -35,7 +35,9 @@ export const getCartItemKey = (item) => {
 
 	if (!productId) return '';
 
-	return `${productId}::${getVariantIdentity(item)}`;
+	const type = item?.type === 'combo' ? 'combo' : 'product';
+
+	return `${type}:${productId}::${getVariantIdentity(item)}`;
 };
 
 /* --------------------------------
@@ -240,7 +242,6 @@ const cartSlice = createSlice({
 
 		removeFromCart: (state, action) => {
 			const payload = action.payload;
-
 			if (typeof payload === 'object' && payload !== null) {
 				const key = getCartItemKey({
 					_id:
@@ -249,8 +250,9 @@ const cartSlice = createSlice({
 						payload.product ||
 						payload.slug,
 
-					variantId: payload.variantId,
+					type: payload.type || 'product',
 
+					variantId: payload.variantId,
 					variantKey: payload.variantKey,
 				});
 
@@ -262,9 +264,7 @@ const cartSlice = createSlice({
 					(item) => getProductId(item) !== String(payload)
 				);
 			}
-
 			state.qty = calculateQty(state.items);
-
 			saveStorage(state.items);
 		},
 

@@ -53,7 +53,6 @@ const UserSchema = new mongoose.Schema(
 			select: false,
 		},
 
-	
 		address: {
 			type: AddressSchema,
 			default: () => ({}),
@@ -63,6 +62,11 @@ const UserSchema = new mongoose.Schema(
 			type: String,
 			enum: ['user', 'admin', 'seller'],
 			default: 'user',
+		},
+		isActive: {
+			type: Boolean,
+			default: true,
+			index: true,
 		},
 	},
 	{

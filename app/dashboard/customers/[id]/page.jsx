@@ -101,6 +101,8 @@ export default function CustomerDetailsPage() {
 
 	const orders = data?.orders || [];
 
+	console.log(orders);
+
 	return (
 		<div className="space-y-6 p-4 md:p-6">
 			{/* Header */}
@@ -142,18 +144,12 @@ export default function CustomerDetailsPage() {
 
 						<div className="mt-3 flex flex-col gap-2 text-sm  text-slate-400 md:flex-row md:gap-6">
 							<span className="flex items-center gap-2">
-								<Phone
-									size={16}
-									className=" text-slate-500"
-								/>
+								<Phone size={16} className=" text-slate-500" />
 								{customer?.phone || 'N/A'}
 							</span>
 
 							<span className="flex items-center gap-2">
-								<Mail
-									size={16}
-									className=" text-slate-500"
-								/>
+								<Mail size={16} className=" text-slate-500" />
 								{customer?.email || 'N/A'}
 							</span>
 						</div>
@@ -232,7 +228,10 @@ export default function CustomerDetailsPage() {
 						<thead className=" bg-slate-800/70">
 							<tr>
 								<th className="px-5 py-4 text-left text-xs font-semibold uppercase  text-slate-400">
-									Invoice
+									Invoice No
+								</th>
+								<th className="px-5 py-4 text-left text-xs font-semibold uppercase  text-slate-400">
+									Items
 								</th>
 
 								<th className="px-5 py-4 text-left text-xs font-semibold uppercase  text-slate-400">
@@ -282,8 +281,19 @@ export default function CustomerDetailsPage() {
 										className=" transition hover: text-slate-200 hover:bg-slate-800/50">
 										{/* Invoice */}
 
-										<td className="px-5 py-4 font-medium">
-											#{order.invoiceNo}
+										<td className="px-2 py-4 font-medium">
+											{order.invoiceNo}
+										</td>
+										<td className=" py-4 font-medium">
+											{order?.orderItems?.map(
+												(item, index) => (
+													<span
+														key={index}
+														className="text-sm font-normal">
+														{item.name}
+													</span>
+												)
+											)}
 										</td>
 
 										{/* Date */}
@@ -364,9 +374,7 @@ function StatCard({ title, value, icon }) {
 				</div>
 
 				<div>
-					<p className="text-sm  text-slate-400">
-						{title}
-					</p>
+					<p className="text-sm  text-slate-400">{title}</p>
 
 					<p className="mt-1 text-xl font-bold  text-slate-100">
 						{value}
@@ -386,24 +394,20 @@ function OrderStatus({ status }) {
 		pending:
 			'bg-yellow-100 text-yellow-700 bg-yellow-950/50 text-yellow-400',
 
-		processing:
-			'bg-blue-100 text-blue-700 bg-blue-950/50 text-blue-400',
+		processing: 'bg-blue-100 text-blue-700 bg-blue-950/50 text-blue-400',
 
 		shipped:
 			'bg-purple-100 text-purple-700 bg-purple-950/50 text-purple-400',
 
-		delivered:
-			'bg-green-100 text-green-700 bg-green-950/50 text-green-400',
+		delivered: 'bg-green-100 text-green-700 bg-green-950/50 text-green-400',
 
-		cancelled:
-			'bg-red-100 text-red-700 bg-red-950/50 text-red-400',
+		cancelled: 'bg-red-100 text-red-700 bg-red-950/50 text-red-400',
 	};
 
 	return (
 		<span
 			className={`rounded-full px-3 py-1 text-xs font-medium ${
-				styles[status] ||
-				'  bg-slate-800 text-slate-400'
+				styles[status] || '  bg-slate-800 text-slate-400'
 			}`}>
 			{status || 'unknown'}
 		</span>

@@ -19,15 +19,16 @@ import {
 import { selectCartTotalItems } from '@/redux/store/slices/cartSlice';
 import CartDrawer from './CartDrawer';
 
+
 const menuItems = [
-    { label: 'Home', href: '/' },
-    { label: 'Shop', href: '/shop' },
-    { label: 'Honey', href: '/honey' },
-    { label: 'Ghee', href: '/ghee' },
-    { label: 'Combo Offers', href: '/combo-offer' },
-    { label: 'Blog', href: '/blog' },
-    { label: 'About Us', href: '/about' },
-    { label: 'Contact', href: '/contact' },
+	{ label: 'Home', href: '/' },
+	{ label: 'Shop', href: '/shop' },
+	{ label: 'Honey', href: '/category/honey' },
+	{ label: 'Ghee', href: '/category/ghee' },
+	{ label: 'Combo Offers', href: '/combo-offer' },
+	{ label: 'Blog', href: '/blog' },
+	{ label: 'About', href: '/about-us' },
+	{ label: 'Contact', href: '/contact-us' },
 ];
 
 export default function Header() {

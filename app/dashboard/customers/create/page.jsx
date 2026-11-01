@@ -38,7 +38,6 @@ export default function CreateCustomerPage() {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-
 		const phone = form.phone.replace(/\s+/g, '').trim();
 
 		if (!/^01[3-9]\d{8}$/.test(phone)) {
@@ -64,15 +63,11 @@ export default function CreateCustomerPage() {
 					},
 				}),
 			});
-
 			const data = await res.json();
-
 			if (!res.ok || !data.success) {
 				throw new Error(data.message || 'কাস্টমার তৈরি করা যায়নি।');
 			}
-
 			toast.success('কাস্টমার সফলভাবে তৈরি হয়েছে।');
-
 			router.push('/dashboard/customers');
 			router.refresh();
 		} catch (error) {

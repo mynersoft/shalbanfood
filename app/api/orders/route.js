@@ -12,6 +12,7 @@ import { generateInvoiceID } from '@/utils/generateInvoiceId';
 import ShippingCost from '@/models/ShippingCost';
 
 import { deductOrderStock, rollbackOrderStock } from '@/lib/deductOrderStock';
+import ComboOffer from '@/models/ComboOffer';
 
 export const runtime = 'nodejs';
 
@@ -90,18 +91,12 @@ export const POST = withErrorHandler(async (req) => {
 
 	const { userId, customer, shippingAddress, orderItems, voucherCode } = body;
 
-	// ----------------------------------------
-	// 1. Validate customer
-	// ----------------------------------------
-
+	// 1. Customer validation
 	if (!customer?.name?.trim() || !customer?.phone?.trim()) {
 		throw new ApiError('Name and phone are required', 400);
 	}
 
-	// ----------------------------------------
-	// 2. Validate shipping address
-	// ----------------------------------------
-
+	// 2. Shipping validation
 	if (
 		!shippingAddress?.area ||
 		!shippingAddress?.city ||
@@ -110,10 +105,7 @@ export const POST = withErrorHandler(async (req) => {
 		throw new ApiError('Complete shipping address is required', 400);
 	}
 
-	// ----------------------------------------
-	// 3. Validate order items
-	// ----------------------------------------
-
+	// 3. Cart validation
 	if (!Array.isArray(orderItems) || orderItems.length === 0) {
 		throw new ApiError('Order items are required', 400);
 	}
@@ -124,31 +116,82 @@ export const POST = withErrorHandler(async (req) => {
 
 	await connectDB();
 
-	// ----------------------------------------
-	// 4. Validate products and actual prices
-	// ----------------------------------------
-
 	const formattedOrderItems = [];
+	const formattedProductItems = [];
+	const formattedComboItems = [];
 
+	// 4. Validate Product and Combo Offer separately
 	for (const item of orderItems) {
-		const productId = String(item.productId || item._id || '').trim();
+		const type = item.type === 'combo' ? 'combo' : 'product';
 
-		const variantId = String(item.variantId || '').trim();
+		const productId = String(item.productId || item._id || '').trim();
 
 		const quantity = Number(item.quantity);
 
-		if (
-			!mongoose.Types.ObjectId.isValid(productId) ||
-			!mongoose.Types.ObjectId.isValid(variantId)
-		) {
-			throw new ApiError(
-				'Product and variant information is required',
-				400
-			);
+		if (!mongoose.Types.ObjectId.isValid(productId)) {
+			throw new ApiError('Invalid product information', 400);
 		}
 
 		if (!Number.isInteger(quantity) || quantity <= 0) {
 			throw new ApiError('Invalid product quantity', 400);
+		}
+
+		// --------------------------------
+		// COMBO OFFER
+		// --------------------------------
+		if (type === 'combo') {
+			const comboOffer = await ComboOffer.findOne({
+				_id: productId,
+				isActive: true,
+			}).lean();
+
+			if (!comboOffer) {
+				throw new ApiError('Combo offer not found or unavailable', 404);
+			}
+
+			const stock = Number(comboOffer.stock);
+			const price = Number(comboOffer.offerPrice);
+
+			if (!Number.isFinite(stock) || stock < quantity) {
+				throw new ApiError(
+					`Insufficient stock for ${comboOffer.name}`,
+					400
+				);
+			}
+
+			if (!Number.isFinite(price) || price <= 0) {
+				throw new ApiError(`Invalid price for ${comboOffer.name}`, 400);
+			}
+
+			const formattedItem = {
+				type: 'combo',
+				productId: String(comboOffer._id),
+				comboOfferId: String(comboOffer._id),
+				comboItems: (comboOffer.items || []).map((comboItem) => ({
+					name: comboItem.name || '',
+					quantity: String(comboItem.quantity || ''),
+				})),
+				variantId: null,
+				variantLabel: '',
+				name: comboOffer.name,
+				quantity,
+				price,
+				image: comboOffer.featureImg || '',
+			};
+
+			formattedOrderItems.push(formattedItem);
+			formattedComboItems.push(formattedItem);
+
+			continue;
+		}
+
+		// --------------------------------
+		// NORMAL PRODUCT
+		// --------------------------------
+		const variantId = String(item.variantId || '').trim();
+
+		if (!mongoose.Types.ObjectId.isValid(variantId)) {
+			throw new ApiError('Product variant information is required', 400);
 		}
 
 		const product = await Product.findOne({
@@ -173,11 +216,12 @@ export const POST = withErrorHandler(async (req) => {
 
 		const price = Number(variant.sellPrice);
 
-		if (!Number.isFinite(price) || price < 0) {
+		if (!Number.isFinite(price) || price <= 0) {
 			throw new ApiError(`Invalid price for ${product.name}`, 400);
 		}
 
-		formattedOrderItems.push({
+		const formattedItem = {
+			type: 'product',
 			productId: String(product._id),
 			variantId: String(variant._id),
 			variantLabel: `${variant.value} ${variant.unit}`,
@@ -185,22 +229,19 @@ export const POST = withErrorHandler(async (req) => {
 			quantity,
 			price,
 			image: product.image || '',
-		});
+		};
+
+		formattedOrderItems.push(formattedItem);
+		formattedProductItems.push(formattedItem);
 	}
 
-	// ----------------------------------------
-	// 5. Calculate subtotal
-	// ----------------------------------------
-
+	// 5. Calculate subtotal using database prices
 	const subtotal = formattedOrderItems.reduce(
 		(sum, item) => sum + item.price * item.quantity,
 		0
 	);
 
-	// ----------------------------------------
 	// 6. Voucher validation
-	// ----------------------------------------
-
 	let discountAmount = 0;
 
 	if (voucherCode) {
@@ -218,17 +259,13 @@ export const POST = withErrorHandler(async (req) => {
 			}
 		} catch (error) {
 			console.error('Voucher validation error:', error);
-
 			discountAmount = 0;
 		}
 	}
 
 	discountAmount = Math.max(0, Math.min(discountAmount, subtotal));
 
-	// ----------------------------------------
 	// 7. Shipping calculation
-	// ----------------------------------------
-
 	const shippingCost = await ShippingCost.findOne({}).lean();
 
 	const district = String(
@@ -256,10 +293,7 @@ export const POST = withErrorHandler(async (req) => {
 
 	const total = Math.max(0, subtotal - discountAmount + shippingFee);
 
-	// ----------------------------------------
-	// 8. Generate unique invoice
-	// ----------------------------------------
-
+	// 8. Generate invoice
 	let invoiceNo = null;
 
 	for (let i = 0; i < 5; i++) {
@@ -279,10 +313,7 @@ export const POST = withErrorHandler(async (req) => {
 		throw new ApiError('Invoice generation failed', 500);
 	}
 
-	// ----------------------------------------
 	// 9. Push notification device
-	// ----------------------------------------
-
 	const requestedFid = typeof body.pushFid === 'string' ? body.pushFid : null;
 
 	const matchingDevice =
@@ -294,13 +325,9 @@ export const POST = withErrorHandler(async (req) => {
 				}).select('fid')
 			: null;
 
-	// ----------------------------------------
 	// 10. Prepare order payload
-	// ----------------------------------------
-
 	const orderPayload = {
 		invoiceNo,
-
 		pushFid: matchingDevice?.fid || null,
 
 		customer: {
@@ -312,7 +339,6 @@ export const POST = withErrorHandler(async (req) => {
 		subtotal,
 		total,
 		shippingFee,
-
 		status: 'pending',
 		discount: discountAmount,
 
@@ -336,46 +362,76 @@ export const POST = withErrorHandler(async (req) => {
 		orderPayload.userId = userId;
 	}
 
-	// ----------------------------------------
 	// 11. Deduct stock and create order
-	// WITHOUT MONGODB TRANSACTION
-	// ----------------------------------------
-
-	let deductedItems = [];
+	let deductedProductItems = [];
+	const deductedComboItems = [];
 	let order;
 
 	try {
-		// Deduct stock atomically
-		deductedItems = await deductOrderStock(formattedOrderItems);
+		// Deduct normal product stock only
+		if (formattedProductItems.length > 0) {
+			deductedProductItems = await deductOrderStock(
+				formattedProductItems
+			);
+		}
 
-		// Create order after successful stock deduction
+		// Deduct combo stock atomically
+		for (const item of formattedComboItems) {
+			const updatedCombo = await ComboOffer.findOneAndUpdate(
+				{
+					_id: item.comboOfferId,
+					isActive: true,
+					stock: { $gte: item.quantity },
+				},
+				{
+					$inc: { stock: -item.quantity },
+				},
+				{ new: true }
+			);
+
+			if (!updatedCombo) {
+				throw new ApiError(
+					`Insufficient combo stock for ${item.name}`,
+					400
+				);
+			}
+
+			deductedComboItems.push({
+				comboOfferId: item.comboOfferId,
+				quantity: item.quantity,
+			});
+		}
+
 		const createdOrders = await Order.create([orderPayload]);
-
 		order = createdOrders[0];
 	} catch (error) {
 		console.error('Order creation error:', error);
 
-		// Restore stock if order creation fails
-		if (deductedItems.length > 0) {
+		// Rollback normal product stock
+		if (deductedProductItems.length > 0) {
 			try {
-				await rollbackOrderStock(deductedItems);
-
-				console.log('Order stock rollback successful');
+				await rollbackOrderStock(deductedProductItems);
 			} catch (rollbackError) {
-				console.error(
-					'CRITICAL: Stock rollback failed:',
-					rollbackError
+				console.error('Product stock rollback failed:', rollbackError);
+			}
+		}
+
+		// Rollback combo stock
+		for (const item of deductedComboItems) {
+			try {
+				await ComboOffer.updateOne(
+					{ _id: item.comboOfferId },
+					{ $inc: { stock: item.quantity } }
 				);
+			} catch (rollbackError) {
+				console.error('Combo stock rollback failed:', rollbackError);
 			}
 		}
 
 		throw error;
 	}
 
-	// ----------------------------------------
-	// 12. Success response
-	// ----------------------------------------
-
+	// 12. Success
 	return NextResponse.json(
 		{
 			success: true,

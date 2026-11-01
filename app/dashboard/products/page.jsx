@@ -52,6 +52,17 @@ const getTotalStock = (product) => {
 	);
 };
 
+const getTotalSoldCount = (product) => {
+	if (!Array.isArray(product?.variants)) {
+		return 0;
+	}
+
+	return product.variants.reduce(
+		(total, variant) => total + Number(variant.soldCount || 0),
+		0
+	);
+};
+
 const getPriceText = (product) => {
 	if (!Array.isArray(product?.variants) || !product.variants.length) {
 		return '৳0';
@@ -127,7 +138,6 @@ export default function ProductsPage() {
 		page,
 		limit,
 	});
-
 	const { data: categoryData } = useCategories();
 
 	const categories = Array.isArray(categoryData) ? categoryData : [];
@@ -385,6 +395,7 @@ export default function ProductsPage() {
 								<th className="px-4 py-4">Price</th>
 
 								<th className="px-4 py-4">Stock</th>
+								<th className="px-4 py-4">Sold Count</th>
 
 								<th className="px-4 py-4 text-right">Action</th>
 							</tr>
@@ -463,6 +474,12 @@ export default function ProductsPage() {
 													: 'text-sm text-red-400'
 											}>
 											{getTotalStock(product)}
+										</span>
+									</td>
+									{/* Sold Count */}
+									<td className="px-4 py-4">
+										<span className="text-sm font-medium text-blue-400">
+											{getTotalSoldCount(product)}
 										</span>
 									</td>
 

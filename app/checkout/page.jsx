@@ -332,9 +332,12 @@ export default function CheckoutClient() {
 
 	const grandTotal = Math.max(subtotal - discount, 0) + deliveryCharge;
 
-	/* =====================================================
-       FORM CHANGE
-    ===================================================== */
+	const getVariantIdentity = (item) => ({
+		productId: getProductId(item),
+		type: item?.type === 'combo' ? 'combo' : 'product',
+		variantId: item?.variantId ?? null,
+		variantKey: item?.variantKey ?? null,
+	});
 
 	const handleChange = (e) => {
 		const { name, value } = e.target;
@@ -363,11 +366,16 @@ export default function CheckoutClient() {
        REMOVE CART ITEM
     ===================================================== */
 
-	const handleRemove = (item) => {
-		dispatch(removeFromCart(getVariantIdentity(item)));
-
-		toast.success('Product removed from cart');
-	};
+const handleRemove = (item) => {
+	dispatch(
+		removeFromCart({
+			productId: getProductId(item),
+			type: item?.type === 'combo' ? 'combo' : 'product',
+			variantId: item?.variantId ? String(item.variantId) : null,
+			variantKey: item?.variantKey || null,
+		})
+	);
+};
 
 	/* =====================================================
        UPDATE QUANTITY
@@ -517,9 +525,11 @@ export default function CheckoutClient() {
 		/* Cart validation */
 
 		const hasInvalidItem = cart.some((item) => {
+			const isCombo = item?.type === 'combo';
+
 			return (
 				!getProductId(item) ||
-				!item?.variantId ||
+				(!isCombo && !item?.variantId) ||
 				getUnitPrice(item) <= 0 ||
 				getQuantity(item) < 1
 			);
@@ -527,35 +537,35 @@ export default function CheckoutClient() {
 
 		if (hasInvalidItem) {
 			toast.error(
-				'কার্টে কোনো পণ্যের variant বা মূল্য সঠিক নেই। পণ্যটি আবার যোগ করুন।'
+				'কার্টে কোনো পণ্যের তথ্য বা মূল্য সঠিক নেই। পণ্যটি আবার যোগ করুন।'
 			);
-
 			return;
 		}
 
 		/* Prepare order items */
 
 		const orderItems = cart.map((item) => {
-			const variantLabel = getVariantLabel(item);
+			const isCombo = item?.type === 'combo';
 
-			return {
+			const orderItem = {
+				type: isCombo ? 'combo' : 'product',
 				productId: String(getProductId(item)),
-
-				variantId: String(item.variantId),
-
-				variantLabel,
-
 				name: item.name || 'Product',
-
 				quantity: getQuantity(item),
-
-				// Display value only. Backend should verify price.
 				price: getUnitPrice(item),
-
 				image: getProductImage(item),
 			};
-		});
 
+			if (isCombo) {
+				orderItem.comboOfferId = String(getProductId(item));
+				orderItem.comboItems = item.comboItems || item.items || [];
+			} else {
+				orderItem.variantId = String(item.variantId);
+				orderItem.variantLabel = getVariantLabel(item);
+			}
+
+			return orderItem;
+		});
 		/* Push notification FID */
 
 		const pushFid =

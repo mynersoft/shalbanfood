@@ -40,11 +40,11 @@ const STATUS_LABELS = {
 };
 
 const STATUS_STYLES = {
-	active: 'bg-green-100 text-green-700',
-	inactive: 'bg-gray-100 text-gray-600',
-	upcoming: 'bg-blue-100 text-blue-700',
-	expired: 'bg-red-100 text-red-700',
-	out_of_stock: 'bg-orange-100 text-orange-700',
+	active: 'border border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
+	inactive: 'border border-zinc-700 bg-zinc-800 text-zinc-300',
+	upcoming: 'border border-cyan-400/20 bg-cyan-400/10 text-cyan-300',
+	expired: 'border border-red-400/20 bg-red-400/10 text-red-300',
+	out_of_stock: 'border border-orange-400/20 bg-orange-400/10 text-orange-300',
 };
 
 function formatDate(value) {
@@ -191,41 +191,46 @@ export default function ComboOfferListPage() {
 	};
 
 	return (
-		<main className="min-h-screen space-y-6 bg-gray-50 p-4 sm:p-6 lg:p-8">
+		<main className="min-h-screen space-y-6 bg-black p-4 text-white sm:p-6 lg:p-8">
 			{/* Header */}
-			<div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-				<div>
-					<div className="flex items-center gap-2">
-						<Package size={25} className="text-green-700" />
-						<h1 className="text-2xl font-bold text-gray-900">
-							Combo Offers
-						</h1>
+			<div className="relative overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 px-5 py-6 sm:px-7">
+				<div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-emerald-500/10 blur-3xl" />
+				<div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+					<div>
+						<div className="flex items-center gap-3">
+							<div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-2 text-emerald-400">
+								<Package size={23} />
+							</div>
+							<h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+								Combo Offers
+							</h1>
+						</div>
+
+						<p className="mt-3 text-sm text-zinc-400">
+							Manage your Shalban Food combo offers.
+						</p>
 					</div>
 
-					<p className="mt-1 text-sm text-gray-500">
-						Manage your Shalban Food combo offers.
-					</p>
-				</div>
+					<div className="flex flex-wrap gap-2">
+						<button
+							type="button"
+							onClick={fetchOffers}
+							disabled={loading}
+							className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-300 transition hover:border-white/20 hover:bg-white/10 disabled:opacity-60">
+							<RefreshCw
+								size={17}
+								className={loading ? 'animate-spin' : ''}
+							/>
+							Refresh
+						</button>
 
-				<div className="flex flex-wrap gap-2">
-					<button
-						type="button"
-						onClick={fetchOffers}
-						disabled={loading}
-						className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60">
-						<RefreshCw
-							size={17}
-							className={loading ? 'animate-spin' : ''}
-						/>
-						Refresh
-					</button>
-
-					<Link
-						href="/dashboard/combo/create"
-						className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-5 py-3 text-sm font-bold text-white hover:bg-green-800">
-						<Plus size={18} />
-						Create Offer
-					</Link>
+						<Link
+							href="/dashboard/combo/create"
+							className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-black shadow-lg shadow-emerald-500/20 transition hover:-translate-y-0.5 hover:bg-emerald-400">
+							<Plus size={18} />
+							Create Offer
+						</Link>
+					</div>
 				</div>
 			</div>
 
@@ -262,15 +267,15 @@ export default function ComboOfferListPage() {
 					return (
 						<div
 							key={stat.label}
-							className="rounded-2xl border bg-white p-5 shadow-sm">
+							className="rounded-2xl border border-white/10 bg-zinc-950 p-5 transition hover:border-white/20">
 							<div className="flex items-center justify-between gap-2">
-								<p className="text-sm text-gray-500">
+								<p className="text-sm font-medium text-zinc-400">
 									{stat.label}
 								</p>
-								<Icon size={20} className={stat.color} />
+								<Icon size={20} className="text-zinc-400" />
 							</div>
 
-							<p className="mt-3 text-3xl font-bold text-gray-900">
+							<p className="mt-3 text-3xl font-bold text-white">
 								{stat.value}
 							</p>
 						</div>
@@ -279,12 +284,12 @@ export default function ComboOfferListPage() {
 			</div>
 
 			{/* Search and filters */}
-			<section className="rounded-2xl border bg-white p-4 shadow-sm">
+			<section className="rounded-2xl border border-white/10 bg-zinc-950 p-4">
 				<div className="flex flex-col gap-3 lg:flex-row">
 					<div className="relative flex-1">
 						<Search
 							size={19}
-							className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+							className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
 						/>
 
 						<input
@@ -292,7 +297,7 @@ export default function ComboOfferListPage() {
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
 							placeholder="Search offer, slug or product..."
-							className="w-full rounded-xl border py-3 pl-10 pr-4 outline-none focus:border-green-600"
+							className="w-full rounded-xl border border-white/10 bg-black py-3 pl-10 pr-4 text-white placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/60"
 						/>
 					</div>
 
@@ -301,7 +306,7 @@ export default function ComboOfferListPage() {
 						onChange={(event) =>
 							setStatusFilter(event.target.value)
 						}
-						className="rounded-xl border bg-white px-4 py-3 outline-none focus:border-green-600">
+						className="rounded-xl border border-white/10 bg-black px-4 py-3 text-zinc-300 outline-none focus:border-emerald-500/60">
 						<option value="all">All statuses</option>
 						<option value="active">Active</option>
 						<option value="inactive">Inactive</option>
@@ -310,52 +315,52 @@ export default function ComboOfferListPage() {
 						<option value="out_of_stock">Out of stock</option>
 					</select>
 
-					<label className="flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium text-gray-700">
+					<label className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-black px-4 py-3 text-sm font-medium text-zinc-300">
 						<input
 							type="checkbox"
 							checked={featuredOnly}
 							onChange={(event) =>
 								setFeaturedOnly(event.target.checked)
 							}
-							className="h-4 w-4 accent-green-700"
+							className="h-4 w-4 accent-emerald-500"
 						/>
 						<Star size={16} />
 						Featured only
 					</label>
 				</div>
 
-				<p className="mt-3 text-sm text-gray-500">
+				<p className="mt-3 text-sm text-zinc-500">
 					Showing {filteredOffers.length} of {offers.length} offers
 				</p>
 			</section>
 
 			{/* Offer list */}
-			<section className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+			<section className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950">
 				{loading ? (
 					<div className="flex min-h-64 items-center justify-center">
 						<RefreshCw
 							size={28}
-							className="animate-spin text-green-700"
+							className="animate-spin text-emerald-400"
 						/>
-						<span className="ml-3 text-gray-600">
+						<span className="ml-3 text-zinc-400">
 							Loading combo offers...
 						</span>
 					</div>
 				) : filteredOffers.length === 0 ? (
 					<div className="flex min-h-72 flex-col items-center justify-center px-5 text-center">
-						<Package size={44} className="text-gray-300" />
+						<Package size={44} className="text-zinc-700" />
 
-						<h2 className="mt-4 text-lg font-bold text-gray-800">
+						<h2 className="mt-4 text-lg font-bold text-white">
 							No combo offers found
 						</h2>
 
-						<p className="mt-1 text-sm text-gray-500">
+						<p className="mt-1 text-sm text-zinc-500">
 							Try another search or create a new offer.
 						</p>
 
 						<Link
-							href="/dashboard/admin/offers/create"
-							className="mt-5 rounded-xl bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-800">
+							href="/dashboard/combo/create"
+							className="mt-5 rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-black hover:bg-emerald-400">
 							Create Combo Offer
 						</Link>
 					</div>
@@ -364,7 +369,7 @@ export default function ComboOfferListPage() {
 						{/* Desktop table */}
 						<div className="hidden overflow-x-auto lg:block">
 							<table className="w-full text-left text-sm">
-								<thead className="bg-gray-50 text-xs uppercase text-gray-500">
+								<thead className="border-b border-white/10 bg-black/40 text-xs uppercase text-zinc-500">
 									<tr>
 										<th className="px-5 py-4">Offer</th>
 										<th className="px-5 py-4">Items</th>
@@ -378,7 +383,7 @@ export default function ComboOfferListPage() {
 									</tr>
 								</thead>
 
-								<tbody className="divide-y divide-gray-100">
+								<tbody className="divide-y divide-white/[0.07]">
 									{filteredOffers.map((offer) => {
 										const status = getOfferStatus(offer);
 
@@ -401,28 +406,26 @@ export default function ComboOfferListPage() {
 										return (
 											<tr
 												key={offer._id}
-												className="hover:bg-gray-50">
+												className="transition hover:bg-white/[0.025]">
 												<td className="px-5 py-4">
 													<div className="flex min-w-64 items-center gap-3">
 														<img
-															src={
-																offer.featureImg
-															}
-															alt={offer.name}
-															className="h-14 w-14 rounded-xl border object-cover"
-														/>
+													src={offer.featureImg}
+													alt={offer.name}
+													className="h-14 w-14 rounded-xl border border-white/10 bg-zinc-900 object-cover"
+												/>
 
 														<div className="min-w-0">
-															<p className="font-bold text-gray-900">
+															<p className="font-bold text-white">
 																{offer.name}
 															</p>
 
-															<p className="mt-1 break-all text-xs text-gray-500">
-																{offer.slug}
-															</p>
+													<p className="mt-1 break-all text-xs text-zinc-500">
+														{offer.slug}
+													</p>
 
-															{offer.isFeatured && (
-																<span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-amber-600">
+													{offer.isFeatured && (
+													<span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-amber-300">
 																	<Star
 																		size={
 																			12
@@ -451,7 +454,7 @@ export default function ComboOfferListPage() {
 																		{
 																			item.name
 																		}
-																		<span className="ml-1 text-gray-400">
+																		<span className="ml-1 text-zinc-500">
 																			(
 																			{
 																				item.quantity
@@ -464,47 +467,41 @@ export default function ComboOfferListPage() {
 
 														{(offer.items || [])
 															.length > 3 && (
-															<p className="text-xs text-gray-500">
-																+
-																{offer.items
-																	.length -
-																	3}{' '}
-																more
+															<p className="text-xs text-zinc-500">
+																+{offer.items.length - 3} more
 															</p>
 														)}
 													</div>
 												</td>
 
 												<td className="whitespace-nowrap px-5 py-4">
-													<p className="font-bold text-green-700">
+													<p className="font-bold text-emerald-400">
 														{money(
 															offer.offerPrice
 														)}
 													</p>
 
-													<p className="text-xs text-gray-400 line-through">
-														{money(
-															offer.regularPrice
-														)}
+													<p className="text-xs text-zinc-600 line-through">
+														{money(offer.regularPrice)}
 													</p>
 
 													{discount > 0 && (
-														<span className="mt-1 inline-block rounded-md bg-red-50 px-2 py-1 text-xs font-semibold text-green-600">
+														<span className="mt-1 inline-block rounded-md border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-xs font-semibold text-emerald-300">
 															-{discount}%
 														</span>
 													)}
 												</td>
 
 												<td className="px-5 py-4">
-													<p className="font-semibold text-gray-800">
+													<p className="font-semibold text-zinc-200">
 														{offer.stock ?? 0}
 													</p>
-													<p className="text-xs text-gray-500">
-														Sold: {offer.sold ?? 0}
-													</p>
-												</td>
+												<p className="text-xs text-zinc-500">
+													Sold: {offer.sold ?? 0}
+												</p>
+											</td>
 
-												<td className="whitespace-nowrap px-5 py-4 text-xs text-gray-600">
+											<td className="whitespace-nowrap px-5 py-4 text-xs text-zinc-400">
 													<p>
 														Start:{' '}
 														{formatDate(
@@ -536,7 +533,7 @@ export default function ComboOfferListPage() {
 																	`/dashboard/combo/${offer._id}/edit`
 																)
 															}
-															className="rounded-lg border p-2 text-blue-600 hover:bg-blue-50">
+															className="rounded-lg border border-white/10 bg-white/5 p-2 text-emerald-400 transition hover:bg-white/10">
 															<Pencil size={17} />
 														</button>
 
@@ -554,7 +551,7 @@ export default function ComboOfferListPage() {
 																	offer
 																)
 															}
-															className="rounded-lg border p-2 text-red-600 hover:bg-red-50 disabled:opacity-50">
+															className="rounded-lg border border-white/10 bg-white/5 p-2 text-red-400 transition hover:bg-red-500/10 disabled:opacity-50">
 															<Trash2 size={17} />
 														</button>
 													</div>
@@ -586,42 +583,39 @@ export default function ComboOfferListPage() {
 								return (
 									<article
 										key={offer._id}
-										className="overflow-hidden rounded-2xl border">
+										className="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
 										<div className="flex gap-3 p-4">
 											<img
 												src={offer.featureImg}
 												alt={offer.name}
-												className="h-20 w-20 rounded-xl border object-cover"
-											/>
+														className="h-20 w-20 rounded-xl border border-white/10 bg-zinc-900 object-cover"
+													/>
 
-											<div className="min-w-0 flex-1">
-												<h3 className="font-bold text-gray-900">
-													{offer.name}
-												</h3>
+													<div className="min-w-0 flex-1">
+														<h3 className="font-bold text-white">
+															{offer.name}
+														</h3>
 
-												<p className="mt-1 text-sm text-green-700">
-													{money(offer.offerPrice)}
-													<span className="ml-2 text-xs text-gray-400 line-through">
-														{money(
-															offer.regularPrice
-														)}
-													</span>
+														<p className="mt-1 text-sm text-emerald-400">
+															{money(offer.offerPrice)}
+															<span className="ml-2 text-xs text-zinc-600 line-through">
+																{money(offer.regularPrice)}
+															</span>
+														</p>
+
+														{discount > 0 && (
+															<p className="mt-1 text-xs font-semibold text-emerald-300">
+																{discount}% off
 												</p>
-
-												{discount > 0 && (
-													<p className="mt-1 text-xs font-semibold text-green-600">
-														{discount}% off
-													</p>
-												)}
-
-												<span
+											)}
+											<span
 													className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[status]}`}>
 													{STATUS_LABELS[status]}
 												</span>
 											</div>
 										</div>
 
-										<div className="border-t bg-gray-50 px-4 py-3 text-sm text-gray-600">
+										<div className="border-t border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-400">
 											<p>
 												Stock: {offer.stock ?? 0}
 												{' · '}
@@ -639,10 +633,10 @@ export default function ComboOfferListPage() {
 													type="button"
 													onClick={() =>
 														router.push(
-															`/dashboard/offers/${offer._id}/edit`
+															`/dashboard/combo/${offer._id}/edit`
 														)
 													}
-													className="inline-flex items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-semibold text-blue-700">
+													className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-emerald-400">
 													<Pencil size={14} />
 													Edit
 												</button>
@@ -656,7 +650,7 @@ export default function ComboOfferListPage() {
 													onClick={() =>
 														handleDelete(offer)
 													}
-													className="inline-flex items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">
+													className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-red-400 disabled:opacity-50">
 													<Trash2 size={14} />
 													Delete
 												</button>

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Package, Wallet, CalendarDays } from "lucide-react";
 
-const money = (v) => `৳${Number(v || 0).toLocaleString("en-BD")}`;
+const money = (v) =>
+	`৳${Math.round(Number(v || 0)).toLocaleString('en-BD', { maximumFractionDigits: 0 })}`;
 
 export default function SummaryCards({ summary = {} }) {
   const items = [

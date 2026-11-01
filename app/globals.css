@@ -30,20 +30,8 @@ body {
 }
 
 
-@media print {
-	body > *:not(#invoice-modal) {
-		display: none !important;
-	}
-}
-
-
-
-
-
-
 
 /* skeleton  */
-
 
 .skeleton-shimmer {
     transform: translateX(-100%);

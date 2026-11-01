@@ -11,6 +11,7 @@ import {
 	Users,
 	ShoppingBag,
 	UserPlus,
+	UserRoundPen,
 } from 'lucide-react';
 
 import { useCustomers } from '@/hooks/useCustomers';
@@ -32,6 +33,9 @@ export default function CustomersPage() {
 		});
 
 	const customers = data?.customers || [];
+	const sortedCustomers = [...customers].sort(
+		(a, b) => Number(b.totalSpent || 0) - Number(a.totalSpent || 0)
+	);
 
 	const pagination = data?.pagination || {
 		page: 1,
@@ -138,7 +142,7 @@ export default function CustomersPage() {
 
 				<SummaryCard
 					title="Customers on Page"
-					value={customers.length}
+					value={sortedCustomers.length}
 					icon={<UserPlus size={21} />}
 				/>
 
@@ -186,6 +190,7 @@ export default function CustomersPage() {
 									'Customer',
 									'Phone',
 									'Email',
+									'Address',
 									'Orders',
 									'Spent',
 									'Last Order',
@@ -210,7 +215,7 @@ export default function CustomersPage() {
 						</thead>
 
 						<tbody className="divide-y divide-gray-800">
-							{customers.length === 0 ? (
+							{sortedCustomers.length === 0 ? (
 								<tr>
 									<td
 										colSpan={8}
@@ -232,7 +237,7 @@ export default function CustomersPage() {
 									</td>
 								</tr>
 							) : (
-								customers.map((customer) => (
+								sortedCustomers.map((customer) => (
 									<tr
 										key={customer._id}
 										className="transition-colors hover:bg-gray-800/60">
@@ -255,23 +260,23 @@ export default function CustomersPage() {
 														{customer.name ||
 															'Unnamed'}
 													</p>
-													<p className="mt-0.5 text-xs text-gray-500">
-														Customer
-													</p>
 												</div>
 											</div>
 										</td>
 
 										{/* Phone */}
 										<td className="px-5 py-4 text-sm text-gray-300">
-											{customer.phone || '—'}
+											{customer.phone || ''}
 										</td>
 
 										{/* Email */}
 										<td className="px-5 py-4 text-sm text-gray-300">
-											{customer.email || '—'}
+											{customer.email || ''}
 										</td>
-
+										<td className="px-5 py-4 text-sm text-gray-300">
+											{customer.address.thana},{' '}
+											{customer.address.city}
+										</td>
 										{/* Orders */}
 										<td className="px-5 py-4 text-center text-sm font-medium text-gray-200">
 											{customer.totalOrders ?? 0}
@@ -286,7 +291,7 @@ export default function CustomersPage() {
 										</td>
 
 										{/* Last Order */}
-										<td className="px-5 py-4 text-sm text-gray-400">
+										<td className="px-5 py-4 text-sm text-gray-400 wrap whitespace-nowrap text-center">
 											{customer.lastOrder &&
 											!Number.isNaN(
 												new Date(
@@ -314,13 +319,22 @@ export default function CustomersPage() {
 										</td>
 
 										{/* Action */}
-										<td className="px-5 py-4 text-center">
-											<Link
-												href={`/dashboard/customers/${customer._id}`}
-												className="inline-flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-200 transition hover:border-gray-600 hover:bg-gray-700">
-												<Eye size={15} />
-												View
-											</Link>
+										<td className="px-5 py-4 text-center ">
+											<div className="flex items-center justify-center gap-2 ">
+												<Link
+													href={`/dashboard/customers/${customer._id}/edit`}
+													className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-[#4d9a70] hover:bg-slate-800 hover:text-white">
+													<UserRoundPen size={16} />
+													Edit
+												</Link>
+
+												<Link
+													href={`/dashboard/customers/${customer._id}`}
+													className="inline-flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-200 transition hover:border-gray-600 hover:bg-gray-700">
+													<Eye size={15} />
+													View
+												</Link>
+											</div>
 										</td>
 									</tr>
 								))

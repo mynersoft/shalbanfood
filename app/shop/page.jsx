@@ -1,49 +1,36 @@
-
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-	ShoppingBag,
-	Search,
-	ArrowRight,
-	RefreshCw,
-	X,
-} from 'lucide-react';
+
+import { ShoppingBag, Search, ArrowRight, RefreshCw, X } from 'lucide-react';
 
 import ShopList from '@/components/shop/ShopLists';
 import { useProducts } from '@/hooks/useProducts';
 
+const EMPTY_PRODUCTS = [];
+
 export default function ShopPage() {
 	const { data, isLoading, isFetching } = useProducts();
 
-	const products = data?.products || [];
+	// Stable products reference
+	const products = Array.isArray(data?.products)
+		? data.products
+		: EMPTY_PRODUCTS;
 
 	const [search, setSearch] = useState('');
-	
-	const [filtered, setFiltered] = useState([]);
 
-	// Initialize products
-	useEffect(() => {
-		setFiltered(products);
-	}, [products]);
+	// Search products without useEffect or setState
+	const filtered = useMemo(() => {
+		const keyword = search.trim().toLowerCase();
 
-	// Search + Sort
-	useEffect(() => {
-		let result = [...products];
-
-		// Search
-		if (search.trim()) {
-			const keyword = search.toLowerCase().trim();
-
-			result = result.filter((product) =>
-				product.name?.toLowerCase().includes(keyword)
-			);
+		if (!keyword) {
+			return products;
 		}
 
-	
-
-		setFiltered(result);
+		return products.filter((product) =>
+			product?.name?.toLowerCase().includes(keyword)
+		);
 	}, [products, search]);
 
 	const clearSearch = () => {
@@ -52,9 +39,7 @@ export default function ShopPage() {
 
 	return (
 		<main className="min-h-screen bg-[#fafbf9]">
-			{/* =========================================
-				HEADER
-			========================================= */}
+			{/* Header */}
 			<section className="border-b border-gray-100 bg-white">
 				<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 					<div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -63,8 +48,7 @@ export default function ShopPage() {
 							<div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
 								<Link
 									href="/"
-									className="transition hover:text-[#1f5d3b]"
-								>
+									className="transition hover:text-[#1f5d3b]">
 									Home
 								</Link>
 
@@ -104,23 +88,16 @@ export default function ShopPage() {
 				</div>
 			</section>
 
-			{/* =========================================
-				SHOP CONTENT
-			========================================= */}
+			{/* Shop Content */}
 			<section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-				{/* Search + Sort */}
+				{/* Search */}
 				<div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					{/* Search */}
 					<div className="relative w-full sm:max-w-md">
 						<Search
 							className="
 								pointer-events-none
-								absolute
-								left-4
-								top-1/2
-								h-4
-								w-4
-								-translate-y-1/2
+								absolute left-4 top-1/2
+								h-4 w-4 -translate-y-1/2
 								text-gray-400
 							"
 						/>
@@ -131,18 +108,11 @@ export default function ShopPage() {
 							onChange={(e) => setSearch(e.target.value)}
 							placeholder="Search products..."
 							className="
-								h-11
-								w-full
-								rounded-xl
-								border
-								border-gray-300
-								bg-white
-								pl-11
-								pr-10
-								text-sm
-								text-gray-900
-								outline-none
-								transition
+								h-11 w-full rounded-xl
+								border border-gray-300
+								bg-white pl-11 pr-10
+								text-sm text-gray-900
+								outline-none transition
 								placeholder:text-gray-400
 								focus:border-[#1f5d3b]
 								focus:ring-2
@@ -155,28 +125,19 @@ export default function ShopPage() {
 								type="button"
 								onClick={clearSearch}
 								className="
-									absolute
-									right-3
-									top-1/2
-									flex
-									-translate-y-1/2
-									items-center
-									justify-center
-									rounded-full
-									p-1
-									text-gray-400
-									transition
+									absolute right-3 top-1/2
+									flex -translate-y-1/2
+									items-center justify-center
+									rounded-full p-1
+									text-gray-400 transition
 									hover:bg-gray-100
 									hover:text-gray-700
 								"
-								aria-label="Clear search"
-							>
+								aria-label="Clear search">
 								<X className="h-4 w-4" />
 							</button>
 						)}
 					</div>
-
-					
 				</div>
 
 				{/* Result Info */}
@@ -201,36 +162,24 @@ export default function ShopPage() {
 					)}
 				</div>
 
-				{/* =========================================
-					LOADING SKELETON
-				========================================= */}
+				{/* Loading Skeleton */}
 				{isLoading ? (
 					<div
 						className="
-							grid
-							grid-cols-2
-							gap-3
-							sm:grid-cols-3
-							sm:gap-4
+							grid grid-cols-2 gap-3
+							sm:grid-cols-3 sm:gap-4
 							lg:grid-cols-4
-						"
-					>
+						">
 						{Array.from({ length: 8 }).map((_, index) => (
 							<div
 								key={index}
 								className="
-									overflow-hidden
-									rounded-2xl
-									border
-									border-gray-100
-									bg-white
-									shadow-sm
-								"
-							>
-								{/* Image Skeleton */}
+									overflow-hidden rounded-2xl
+									border border-gray-100
+									bg-white shadow-sm
+								">
 								<div className="aspect-square animate-pulse bg-gray-200" />
 
-								{/* Content Skeleton */}
 								<div className="space-y-3 p-3 sm:p-4">
 									<div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
 
@@ -250,42 +199,25 @@ export default function ShopPage() {
 						))}
 					</div>
 				) : filtered.length > 0 ? (
-					/* =========================================
-						PRODUCTS
-					========================================= */
+					/* Products */
 					<ShopList products={filtered} />
 				) : (
-					/* =========================================
-						EMPTY SEARCH
-					========================================= */
+					/* Empty Search */
 					<div
 						className="
-							flex
-							min-h-[380px]
-							items-center
-							justify-center
-							rounded-3xl
-							border
-							border-dashed
-							border-gray-200
-							bg-white
-							px-6
-							py-16
-						"
-					>
+							flex min-h-[380px]
+							items-center justify-center
+							rounded-3xl border
+							border-dashed border-gray-200
+							bg-white px-6 py-16
+						">
 						<div className="max-w-md text-center">
 							<div
 								className="
-									mx-auto
-									flex
-									h-16
-									w-16
-									items-center
-									justify-center
-									rounded-full
-									bg-[#eef6f0]
-								"
-							>
+									mx-auto flex h-16 w-16
+									items-center justify-center
+									rounded-full bg-[#eef6f0]
+								">
 								<Search className="h-7 w-7 text-[#1f5d3b]" />
 							</div>
 
@@ -296,7 +228,7 @@ export default function ShopPage() {
 							<p className="mt-2 text-sm leading-6 text-gray-500">
 								We couldn't find any product matching{' '}
 								<span className="font-medium text-gray-700">
-									"{search}"
+									&quot;{search}&quot;
 								</span>
 								.
 							</p>
@@ -305,21 +237,12 @@ export default function ShopPage() {
 								type="button"
 								onClick={clearSearch}
 								className="
-									mt-6
-									inline-flex
-									items-center
-									gap-2
-									rounded-xl
-									bg-[#1f5d3b]
-									px-5
-									py-3
-									text-sm
-									font-semibold
-									text-white
-									transition
+									mt-6 inline-flex items-center gap-2
+									rounded-xl bg-[#1f5d3b]
+									px-5 py-3 text-sm font-semibold
+									text-white transition
 									hover:bg-[#174a2f]
-								"
-							>
+								">
 								Clear Search
 								<ArrowRight className="h-4 w-4" />
 							</button>
@@ -330,4 +253,3 @@ export default function ShopPage() {
 		</main>
 	);
 }
-

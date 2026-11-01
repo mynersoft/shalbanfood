@@ -1,6 +1,9 @@
-in production - shipping fee not actual -- database should data
 
+user
+	^update profile -updated data not show
 
+product
+	edit sku not update 
 
 
 

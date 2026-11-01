@@ -40,7 +40,6 @@ const orderSchema = new mongoose.Schema(
 			min: 0,
 		},
 
-		// Admin can give additional discount after order
 		adminDiscount: {
 			type: Number,
 			default: 0,
@@ -80,11 +79,20 @@ const orderSchema = new mongoose.Schema(
 
 			status: {
 				type: String,
-				enum: ['unpaid', 'paid', 'failed'],
+				enum: ['unpaid', 'partial', 'paid', 'failed'],
 				default: 'unpaid',
 			},
 
-			transactionId: String,
+			paidAmount: {
+				type: Number,
+				default: 0,
+				min: 0,
+			},
+
+			transactionId: {
+				type: String,
+				default: '',
+			},
 		},
 
 		shippingAddress: {
@@ -96,36 +104,63 @@ const orderSchema = new mongoose.Schema(
 
 		orderItems: [
 			{
+				type: {
+					type: String,
+					enum: ['product', 'combo'],
+					default: 'product',
+				},
+
 				productId: {
 					type: String,
 					default: null,
 				},
+
 				variantId: {
 					type: String,
 					default: null,
 				},
+
 				variantLabel: {
 					type: String,
 					default: '',
 				},
+
+				comboOfferId: {
+					type: String,
+					default: null,
+				},
+
+				comboItems: [
+					{
+						name: { type: String, default: '' },
+						quantity: { type: String, default: '' },
+					},
+				],
+
 				name: {
 					type: String,
 					required: true,
 				},
+
 				quantity: {
 					type: Number,
 					required: true,
+					min: 1,
 				},
+
 				price: {
 					type: Number,
 					required: true,
+					min: 0,
 				},
+
 				image: {
 					type: String,
 					default: '',
 				},
 			},
 		],
+
 		pushFid: {
 			type: String,
 			default: null,

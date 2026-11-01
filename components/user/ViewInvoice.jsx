@@ -100,7 +100,7 @@ export default function ViewInvoice({ order, onClose }) {
 							স্বাদের সাথে আস্থার বন্ধন
 						</p>
 						<p className="mt-3 text-sm uppercase ">
-							Invoice:{' '}
+							Invoice No:{' '}
 							<span className="font-semibold">
 								{invoiceNo || '—'}
 							</span>
@@ -122,7 +122,7 @@ export default function ViewInvoice({ order, onClose }) {
 				</header>
 
 				{/* Customer & Seller */}
-				<section className="grid gap-8 border-b border-neutral-200 py-7 sm:grid-cols-2">
+				<section className="grid gap-8 border-b border-neutral-200 py-7 sm:grid-cols-2 justify-between">
 					<div>
 						<h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
 							Bill & Ship To
@@ -133,14 +133,18 @@ export default function ViewInvoice({ order, onClose }) {
 						{addr.area && (
 							<p className="mt-1 text-sm">{addr.area}</p>
 						)}
-						{addr.thana && <p className="text-sm">{addr.thana}</p>}
-						{addr.city && <p className="text-sm">{addr.city}</p>}
+						{addr.thana && (
+							<p className="text-sm">
+								{addr.thana}, {addr.city}
+							</p>
+						)}
+
 						{addr.phone && (
 							<p className="mt-1 text-sm">{addr.phone}</p>
 						)}
 					</div>
 
-					<div>
+					<div className="sm:text-right">
 						<h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
 							Sold By
 						</h2>
@@ -148,7 +152,8 @@ export default function ViewInvoice({ order, onClose }) {
 						<p className="mt-1 text-sm">
 							Madhupur, Tangail, Bangladesh
 						</p>
-						<p className="mt-1 text-sm">support@shalban.com</p>
+						<p className="mt-1 text-sm">01868944080</p>
+						<p className="mt-1 text-sm">shalbanfood@gmail.com</p>
 					</div>
 				</section>
 
@@ -282,16 +287,18 @@ export default function ViewInvoice({ order, onClose }) {
 					body {
 						margin: 0 !important;
 						padding: 0 !important;
-						background: white !important;
+						background: #fff !important;
 					}
 
+					/* Hide everything first */
 					body * {
-						visibility: hidden;
+						visibility: hidden !important;
 					}
 
+					/* Show invoice only */
 					.invoice-paper,
 					.invoice-paper * {
-						visibility: visible;
+						visibility: visible !important;
 					}
 
 					.invoice-paper {
@@ -301,12 +308,23 @@ export default function ViewInvoice({ order, onClose }) {
 						width: 100% !important;
 						max-width: none !important;
 						margin: 0 !important;
+						padding: 0 !important;
+						background: #fff !important;
+						color: #000 !important;
 					}
 
+					.invoice-paper * {
+						color: #000 !important;
+						box-shadow: none !important;
+					}
+
+					/* Prevent unwanted page breaks */
+					.invoice-paper header,
 					.invoice-paper section,
 					.invoice-paper tr,
 					.invoice-paper footer {
-						break-inside: avoid;
+						break-inside: avoid !important;
+						page-break-inside: avoid !important;
 					}
 
 					.invoice-paper table {

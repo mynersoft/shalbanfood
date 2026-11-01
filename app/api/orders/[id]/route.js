@@ -18,7 +18,7 @@ const ORDER_STATUSES = [
 	'return',
 ];
 
-const PAYMENT_STATUSES = ['unpaid', 'paid', 'failed'];
+const PAYMENT_STATUSES = ['unpaid', 'partial', 'paid', 'failed'];
 
 const STATUS_MESSAGES = {
 	pending: {
@@ -55,6 +55,18 @@ function jsonError(message, status = 400) {
 	return NextResponse.json({ success: false, message }, { status });
 }
 
+function getPaymentInfo(order) {
+	const total = Number(order.total || 0);
+	const paidAmount = Number(order.payment?.paidAmount || 0);
+
+	return {
+		total,
+		paidAmount,
+		dueAmount: Math.max(0, total - paidAmount),
+		status: order.payment?.status || 'unpaid',
+	};
+}
+
 async function authorizeAdmin() {
 	const auth = await checkAuthRole();
 
@@ -62,7 +74,6 @@ async function authorizeAdmin() {
 		return jsonError('Please log in to continue.', 401);
 	}
 
-	// This assumes checkAuthRole() returns isAdmin: true for admins.
 	if (auth.isAdmin !== true) {
 		return jsonError('You are not authorized to perform this action.', 403);
 	}
@@ -74,13 +85,13 @@ async function getOrderId(params) {
 	const { id } = await params;
 
 	if (!mongoose.Types.ObjectId.isValid(id)) {
-		return { error: jsonError('Invalid order ID.', 400) };
+		return {
+			error: jsonError('Invalid order ID.', 400),
+		};
 	}
 
 	return { id };
 }
-
-
 
 // PATCH /api/orders/:id
 export async function PATCH(request, { params }) {
@@ -103,7 +114,9 @@ export async function PATCH(request, { params }) {
 			return jsonError('Invalid request body.', 400);
 		}
 
-		const { status, paymentStatus, trackingNumber, adminNote } = body;
+		const { status, paymentStatus, paidAmount, trackingNumber, adminNote } =
+			body;
+
 		const update = {};
 
 		if (status !== undefined) {
@@ -111,14 +124,7 @@ export async function PATCH(request, { params }) {
 				typeof status !== 'string' ||
 				!ORDER_STATUSES.includes(status.trim().toLowerCase())
 			) {
-				return NextResponse.json(
-					{
-						success: false,
-						message: 'Invalid order status.',
-						allowedStatuses: ORDER_STATUSES,
-					},
-					{ status: 400 }
-				);
+				return jsonError('Invalid order status.', 400);
 			}
 
 			update.status = status.trim().toLowerCase();
@@ -139,7 +145,22 @@ export async function PATCH(request, { params }) {
 				);
 			}
 
-			update['payment.status'] = paymentStatus.trim().toLowerCase();
+			update.paymentStatus = paymentStatus.trim().toLowerCase();
+		}
+
+		if (paidAmount !== undefined) {
+			const amount = Number(paidAmount);
+
+			if (
+				paidAmount === '' ||
+				paidAmount === null ||
+				!Number.isFinite(amount) ||
+				amount < 0
+			) {
+				return jsonError('Invalid paid amount.', 400);
+			}
+
+			update.paidAmount = amount;
 		}
 
 		if (trackingNumber !== undefined) {
@@ -173,15 +194,67 @@ export async function PATCH(request, { params }) {
 			return jsonError('Order not found.', 404);
 		}
 
-		const previousStatus = order.status;
-		const previousPaymentStatus = order.payment?.status;
+		if (!order.payment) {
+			order.payment = {
+				method: 'COD',
+				status: 'unpaid',
+				paidAmount: 0,
+			};
+		}
 
+		const previousStatus = order.status;
+		const previousPaymentStatus = order.payment.status;
+		const previousPaidAmount = Number(order.payment.paidAmount || 0);
+
+		// Order status
 		if (update.status !== undefined) {
 			order.status = update.status;
 		}
 
-		if (update['payment.status'] !== undefined) {
-			order.payment.status = update['payment.status'];
+		// Paid amount takes priority and determines payment status.
+		if (update.paidAmount !== undefined) {
+			if (update.paidAmount > Number(order.total || 0)) {
+				return jsonError('Paid amount cannot exceed order total.', 400);
+			}
+
+			order.payment.paidAmount = update.paidAmount;
+
+			if (update.paidAmount === 0) {
+				order.payment.status = 'unpaid';
+			} else if (update.paidAmount < Number(order.total || 0)) {
+				order.payment.status = 'partial';
+			} else {
+				order.payment.status = 'paid';
+			}
+		}
+
+		// Explicit payment status, if supplied.
+		if (update.paymentStatus !== undefined) {
+			const requestedStatus = update.paymentStatus;
+
+			if (requestedStatus === 'paid') {
+				order.payment.paidAmount = Number(order.total || 0);
+				order.payment.status = 'paid';
+			} else if (requestedStatus === 'unpaid') {
+				order.payment.paidAmount = 0;
+				order.payment.status = 'unpaid';
+			} else if (requestedStatus === 'partial') {
+				const currentPaid = Number(order.payment.paidAmount || 0);
+
+				if (
+					currentPaid <= 0 ||
+					currentPaid >= Number(order.total || 0)
+				) {
+					return jsonError(
+						'Partial payment requires a paid amount between 0 and the order total.',
+						400
+					);
+				}
+
+				order.payment.status = 'partial';
+			} else if (requestedStatus === 'failed') {
+				order.payment.status = 'failed';
+			}
 		}
 
 		if (update.trackingNumber !== undefined) {
@@ -195,10 +268,14 @@ export async function PATCH(request, { params }) {
 		await order.save();
 
 		const statusChanged = previousStatus !== order.status;
-		const paymentStatusChanged =
-			previousPaymentStatus !== order.payment?.status;
 
-		// Notify the customer only when the order status changes.
+		const paymentStatusChanged =
+			previousPaymentStatus !== order.payment.status;
+
+		const paidAmountChanged =
+			previousPaidAmount !== Number(order.payment.paidAmount || 0);
+
+		// Notify customer only when order status changes.
 		if (statusChanged && order.userId) {
 			const statusInfo = STATUS_MESSAGES[order.status];
 			const invoiceRef = order.invoiceNo || 'Your order';
@@ -210,7 +287,9 @@ export async function PATCH(request, { params }) {
 					message: `${invoiceRef} — ${statusInfo.message}`,
 					type: 'order',
 					link: order.invoiceNo
-						? `/user/tracking-order?invoiceNo=${encodeURIComponent(order.invoiceNo)}`
+						? `/user/tracking-order?invoiceNo=${encodeURIComponent(
+								order.invoiceNo
+							)}`
 						: '/user/tracking-order',
 					eventKey: `order:${order._id}:${order.status}`,
 				});
@@ -223,9 +302,11 @@ export async function PATCH(request, { params }) {
 			success: true,
 			message: 'Order updated successfully.',
 			order,
+			paymentInfo: getPaymentInfo(order),
 			changes: {
 				statusChanged,
 				paymentStatusChanged,
+				paidAmountChanged,
 			},
 		});
 	} catch (error) {

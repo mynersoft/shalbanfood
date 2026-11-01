@@ -20,39 +20,54 @@ export default function OfferCard({ offer }) {
 				)
 			: 0;
 
-	const handleAddToCart = () => {
-		if (!offer.stock || offer.stock <= 0) {
-			toast.error('This offer is out of stock');
-			return;
-		}
+const handleAddToCart = () => {
+	if (!offer || Number(offer.stock) <= 0) {
+		toast.error('এই অফারটি বর্তমানে স্টকে নেই।');
+		return;
+	}
 
-		dispatch(
-			addToCart({
-				product: {
-					...offer,
-					_id: offer._id,
-					type: 'combo',
-					name: offer.name,
-					slug: offer.slug,
-					price: offer.offerPrice,
-					regularPrice: offer.regularPrice,
-					sellPrice: offer.offerPrice,
-					featureImg: offer.featureImg,
-					stock: offer.stock,
-					comboItems: offer.items,
-				},
-				quantity: 1,
-			})
-		);
+	const offerPrice = Number(offer.offerPrice) || 0;
+	const regularPrice = Number(offer.regularPrice) || 0;
 
-		toast.success('Combo added to cart');
-	};
+	if (offerPrice <= 0) {
+		toast.error('এই অফারের মূল্য সঠিক নয়।');
+		return;
+	}
+
+	dispatch(
+		addToCart({
+			product: {
+				...offer,
+
+				_id: String(offer._id),
+				type: 'combo',
+
+				name: offer.name,
+				slug: offer.slug,
+
+				price: offerPrice,
+				regularPrice,
+				sellPrice: offerPrice,
+
+				featureImg: offer.featureImg,
+				image: offer.featureImg,
+
+				stock: Number(offer.stock),
+
+				comboItems: offer.items || [],
+			},
+			quantity: 1,
+		})
+	);
+
+	toast.success(`${offer.name} কার্টে যোগ হয়েছে`);
+};
 
 	return (
 		<article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-green-100 hover:shadow-xl">
 			<div className="relative h-52 w-full overflow-hidden bg-gray-100">
 				<Link
-					href={`/offers/${offer.slug}`}
+					href={`/combo-offer/${offer.slug}`}
 					className="relative block h-full w-full">
 					<Image
 						src={offer.featureImg}
@@ -75,7 +90,7 @@ export default function OfferCard({ offer }) {
 			</div>
 
 			<div className="flex flex-1 flex-col p-5">
-				<Link href={`/offers/${offer.slug}`}>
+				<Link href={`/combo-offer/${offer.slug}`}>
 					<h3 className="line-clamp-2 min-h-[48px] text-sm font-bold leading-6 text-gray-900 transition hover:text-green-700">
 						{offer.name}
 					</h3>

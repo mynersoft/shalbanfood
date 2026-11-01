@@ -10,14 +10,13 @@ import {
 } from 'lucide-react';
 
 import { useDashboardOverview } from '@/hooks/useDashboard';
-
 import StatCards from './components/dashboard/StatCards';
-import MiniStats from './components/dashboard/MiniStats';
 import SalesChart from './components/dashboard/SalesChart';
 import OrderStatus from './components/dashboard/OrderStatus';
 import RecentOrders from './components/dashboard/RecentOrders';
 import InventoryPanels from './components/dashboard/InventoryPanels';
 import SummaryCards from './components/dashboard/SummaryCards';
+
 
 export default function DashboardPage() {
 	const { data, isLoading, isFetching, isError, error, refetch } =

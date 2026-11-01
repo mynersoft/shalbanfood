@@ -16,7 +16,7 @@ export const userSidebarMenu = [
 
 	{
 		label: 'Tracking order',
-		link: '/user/tracking-order',
+		link: '/tracking-order',
 		icon: <Car />,
 	},
 	

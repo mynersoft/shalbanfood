@@ -34,7 +34,7 @@ import {
 import useLoginUser from '@/hooks/useAuth';
 import TopBar from './TopBar';
 import { useRouter } from 'next/navigation';
-import CardDrawer from './CardDrawer';
+import CardDrawer from './CartDrawer';
 import HeaderNavigation from './HeaderNavigation';
 
 export default function Header() {

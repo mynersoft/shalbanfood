@@ -26,6 +26,7 @@ const getProductId = (item) => {
 
 const getVariantIdentity = (item) => ({
 	productId: getProductId(item),
+	type: item?.type === 'combo' ? 'combo' : 'product',
 	variantId: item?.variantId ?? null,
 	variantKey: item?.variantKey ?? null,
 });
@@ -47,7 +48,6 @@ const toNumber = (value, fallback = 0) => {
 	}
 
 	const number = Number(value);
-
 	return Number.isFinite(number) ? number : fallback;
 };
 
@@ -80,16 +80,13 @@ const getOriginalPrice = (item) => {
 const calculateFinalPrice = (item) => {
 	const price = getBasePrice(item);
 
-	// Cart price is already the selected variant price.
 	if (item?.price !== undefined && item?.price !== null) {
 		return price;
 	}
 
 	const discountValue = toNumber(item?.discount?.value, 0);
 
-	if (discountValue <= 0) {
-		return price;
-	}
+	if (discountValue <= 0) return price;
 
 	if (item?.discount?.type === 'percentage') {
 		return Math.max(price - (price * discountValue) / 100, 0);
@@ -126,7 +123,7 @@ const formatPrice = (value) =>
 const formatStock = (value) => Math.floor(toNumber(value, 0));
 
 /* --------------------------------
-   Cart Items Component
+   Cart Items
 -------------------------------- */
 
 const CartItems = () => {
@@ -136,19 +133,32 @@ const CartItems = () => {
 
 	const hydrated = useSelector((state) => state.cart?.hydrated ?? false);
 
-	/* ==============================
-       Remove Item
-    ============================== */
 
-	const handleRemove = (item) => {
-		dispatch(removeFromCart(getVariantIdentity(item)));
+const getCartKey = (item) => {
+	const type = item.type === 'combo' ? 'combo' : 'product';
 
-		toast.success('Product removed from cart');
+	return `${type}:${item._id || item.slug}::${
+		item.variantId || item.variantKey || 'base'
+	}`;
+};
+
+
+
+	/* Remove Item */
+
+const handleRemove = (item) => {
+	dispatch(
+		removeFromCart({
+			productId: String(item._id || item.slug || ''),
+			type: item.type || 'product',
+			variantId: item.variantId ? String(item.variantId) : null,
+			variantKey: item.variantKey || null,
+		})
+	);
 	};
+	
 
-	/* ==============================
-       Update Quantity
-    ============================== */
+	/* Update Quantity */
 
 	const handleQuantityChange = (item, newQty) => {
 		const quantity = Number(newQty);
@@ -167,12 +177,12 @@ const CartItems = () => {
 		const stock = formatStock(stockValue);
 
 		if (hasStock && stock <= 0) {
-			toast.error('This product is currently out of stock');
+			toast.error('এই পণ্যটি বর্তমানে স্টকে নেই');
 			return;
 		}
 
 		if (hasStock && quantity > stock) {
-			toast.error(`Only ${stock} items available`);
+			toast.error(`শুধুমাত্র ${stock} টি স্টকে আছে`);
 			return;
 		}
 
@@ -184,9 +194,7 @@ const CartItems = () => {
 		);
 	};
 
-	/* ==============================
-       Loading State
-    ============================== */
+	/* Loading */
 
 	if (!hydrated) {
 		return (
@@ -202,9 +210,7 @@ const CartItems = () => {
 		);
 	}
 
-	/* ==============================
-       Empty Cart
-    ============================== */
+	/* Empty Cart */
 
 	if (items.length === 0) {
 		return (
@@ -230,9 +236,7 @@ const CartItems = () => {
 		);
 	}
 
-	/* ==============================
-       Main UI
-    ============================== */
+	/* Main UI */
 
 	return (
 		<div className="min-w-0 space-y-4">
@@ -251,7 +255,6 @@ const CartItems = () => {
 
 				<div className="flex items-center gap-2 rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-[#1f5d3b]">
 					<Package size={18} />
-
 					<span>{items.length} items</span>
 				</div>
 			</div>
@@ -261,8 +264,9 @@ const CartItems = () => {
 			{items.map((item, index) => {
 				const productId = getProductId(item);
 
-				const originalPrice = getOriginalPrice(item);
+				const isCombo = item?.type === 'combo';
 
+				const originalPrice = getOriginalPrice(item);
 				const finalPrice = calculateFinalPrice(item);
 
 				const quantity = Math.max(
@@ -271,22 +275,23 @@ const CartItems = () => {
 				);
 
 				const itemTotal = finalPrice * quantity;
-
 				const originalItemTotal = originalPrice * quantity;
 
 				const savedAmount = Math.max(originalItemTotal - itemTotal, 0);
 
 				const discountText = getDiscountText(item);
-
 				const productImage = getProductImage(item);
 
 				const hasDiscount = finalPrice < originalPrice;
 
-				const productHref = item?.slug
-					? `/product/${encodeURIComponent(item.slug)}`
-					: productId
-						? `/product/${encodeURIComponent(productId)}`
-						: '/shop';
+				// Combo and normal product have different routes
+				const productHref = isCombo
+					? `/combo-offer/${encodeURIComponent(item?.slug || '')}`
+					: item?.slug
+						? `/product/${encodeURIComponent(item.slug)}`
+						: productId
+							? `/product/${encodeURIComponent(productId)}`
+							: '/shop';
 
 				/* Stock */
 
@@ -308,11 +313,13 @@ const CartItems = () => {
 				const variantLabel =
 					item?.variantLabel ||
 					(item?.size?.value !== undefined &&
-					item?.size?.value !== null
-						? `${item.size.value} ${item.size.unit || ''}`
-						: '');
+						item?.size?.value !== null)
+						? item?.variantLabel ||
+							`${item.size.value} ${item.size.unit || ''}`
+						: '';
 
 				const itemKey = [
+					isCombo ? 'combo' : 'product',
 					productId,
 					item?.variantId || '',
 					item?.variantKey || '',
@@ -322,8 +329,6 @@ const CartItems = () => {
 					<article
 						key={itemKey || index}
 						className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:border-gray-300 hover:shadow-md">
-						{/* Product | Quantity | Total */}
-
 						<div className="grid grid-cols-1 gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_180px_125px] lg:items-center lg:gap-5">
 							{/* Product Information */}
 
@@ -339,8 +344,14 @@ const CartItems = () => {
 										className="object-contain p-2 transition duration-300 group-hover:scale-105"
 									/>
 
+									{isCombo && (
+										<span className="absolute bottom-1 left-1 rounded bg-[#1f5d3b] px-1.5 py-0.5 text-[9px] font-bold text-white">
+											COMBO
+										</span>
+									)}
+
 									{discountText && hasDiscount && (
-										<span className="absolute left-1 top-1 rounded-md bg-red-500 px-1.5 py-1 text-[9px] font-bold text-white">
+										<span className="absolute right-1 top-1 rounded-md bg-red-500 px-1.5 py-1 text-[9px] font-bold text-white">
 											{discountText}
 										</span>
 									)}
@@ -365,23 +376,25 @@ const CartItems = () => {
 										</button>
 									</div>
 
-									{/* Variant Label */}
-
-									{variantLabel && (
+									{variantLabel && !isCombo && (
 										<p className="mt-1 text-xs font-medium text-gray-600">
 											Variant: {variantLabel}
 										</p>
 									)}
 
-									{/* SKU */}
+									{isCombo &&
+										Array.isArray(item?.comboItems) && (
+											<p className="mt-1 text-xs text-gray-500">
+												{item.comboItems.length} combo
+												items included
+											</p>
+										)}
 
 									{item?.sku && (
 										<p className="mt-1 text-[10px] text-gray-400">
 											SKU: {item.sku}
 										</p>
 									)}
-
-									{/* Price */}
 
 									<div className="mt-2 flex flex-wrap items-center gap-2">
 										<span className="text-base font-bold text-[#1f5d3b]">
@@ -395,15 +408,11 @@ const CartItems = () => {
 										)}
 									</div>
 
-									{/* Savings */}
-
 									{savedAmount > 0 && (
 										<p className="mt-1 text-[11px] font-semibold text-[#1f5d3b]">
 											You save ৳{formatPrice(savedAmount)}
 										</p>
 									)}
-
-									{/* Available Stock */}
 
 									{hasStock && !isOutOfStock && (
 										<p className="mt-1 text-[10px] text-gray-400">
@@ -474,7 +483,6 @@ const CartItems = () => {
 									className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-red-500 transition hover:bg-red-50 sm:hidden lg:flex"
 									aria-label="Remove product">
 									<Trash2 size={14} />
-
 									<span className="lg:hidden">Remove</span>
 								</button>
 							</div>
@@ -484,7 +492,7 @@ const CartItems = () => {
 
 						{isOutOfStock && (
 							<div className="border-t border-red-100 bg-red-50 px-4 py-2.5 text-center text-xs font-medium text-red-700">
-								This variant is currently out of stock.
+								This item is currently out of stock.
 							</div>
 						)}
 

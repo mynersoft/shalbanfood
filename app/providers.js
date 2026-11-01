@@ -1,8 +1,7 @@
 'use client';
 
 import { Provider as ReduxProvider } from 'react-redux';
-
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider, useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
