@@ -40,6 +40,23 @@ export const getCartItemKey = (item) => {
 	return `${type}:${productId}::${getVariantIdentity(item)}`;
 };
 
+/* Build the key from an action payload (used by every reducer) */
+const getPayloadKey = (payload) => {
+	const isCombo = payload?.type === 'combo';
+
+	return getCartItemKey({
+		_id:
+			payload?.productId ||
+			payload?._id ||
+			payload?.product ||
+			payload?.slug,
+		type: isCombo ? 'combo' : 'product',
+		// combos never have variants
+		variantId: isCombo ? null : payload?.variantId,
+		variantKey: isCombo ? null : payload?.variantKey,
+	});
+};
+
 /* --------------------------------
    Price Helpers
 -------------------------------- */
@@ -178,61 +195,40 @@ const cartSlice = createSlice({
 			}
 
 			const qty = normalizeQuantity(quantity);
-
 			const key = getCartItemKey(product);
-
 			const price = normalizePrice(product);
+			const stock = getStock(product.stock);
+
+			if (stock <= 0) return;
 
 			const existing = state.items.find(
 				(item) => getCartItemKey(item) === key
 			);
 
-			const stock = getStock(product.stock);
-
-			if (stock <= 0) {
-				return;
-			}
-
 			if (existing) {
-				const nextQuantity = existing.quantity + qty;
-
-				existing.quantity = Math.min(nextQuantity, stock);
-
+				existing.quantity = Math.min(existing.quantity + qty, stock);
 				existing.price = price;
-
 				existing.regularPrice =
 					product.regularPrice ?? existing.regularPrice;
-
 				existing.sellPrice = product.sellPrice ?? price;
-
 				existing.stock = stock;
-
 				existing.size = product.size ?? existing.size;
-
 				existing.variantId = normalizeId(product.variantId);
-
 				existing.variantKey = normalizeId(product.variantKey);
-
 				existing.variantLabel =
 					product.variantLabel ?? existing.variantLabel;
-
 				existing.sku = product.sku ?? existing.sku;
 			} else {
 				state.items.push({
 					...product,
-
 					variantId: normalizeId(product.variantId),
-
 					variantKey: normalizeId(product.variantKey),
-
 					price,
-
 					quantity: Math.min(qty, stock),
 				});
 			}
 
 			state.qty = calculateQty(state.items);
-
 			saveStorage(state.items);
 		},
 
@@ -242,19 +238,9 @@ const cartSlice = createSlice({
 
 		removeFromCart: (state, action) => {
 			const payload = action.payload;
+
 			if (typeof payload === 'object' && payload !== null) {
-				const key = getCartItemKey({
-					_id:
-						payload.productId ||
-						payload._id ||
-						payload.product ||
-						payload.slug,
-
-					type: payload.type || 'product',
-
-					variantId: payload.variantId,
-					variantKey: payload.variantKey,
-				});
+				const key = getPayloadKey(payload);
 
 				state.items = state.items.filter(
 					(item) => getCartItemKey(item) !== key
@@ -264,6 +250,7 @@ const cartSlice = createSlice({
 					(item) => getProductId(item) !== String(payload)
 				);
 			}
+
 			state.qty = calculateQty(state.items);
 			saveStorage(state.items);
 		},
@@ -275,21 +262,9 @@ const cartSlice = createSlice({
 		incrementQty: (state, action) => {
 			const payload = action.payload;
 
-			if (!payload || typeof payload !== 'object') {
-				return;
-			}
+			if (!payload || typeof payload !== 'object') return;
 
-			const key = getCartItemKey({
-				_id:
-					payload.productId ||
-					payload._id ||
-					payload.product ||
-					payload.slug,
-
-				variantId: payload.variantId,
-
-				variantKey: payload.variantKey,
-			});
+			const key = getPayloadKey(payload);
 
 			const item = state.items.find(
 				(entry) => getCartItemKey(entry) === key
@@ -304,7 +279,6 @@ const cartSlice = createSlice({
 			}
 
 			state.qty = calculateQty(state.items);
-
 			saveStorage(state.items);
 		},
 
@@ -315,21 +289,9 @@ const cartSlice = createSlice({
 		decrementQty: (state, action) => {
 			const payload = action.payload;
 
-			if (!payload || typeof payload !== 'object') {
-				return;
-			}
+			if (!payload || typeof payload !== 'object') return;
 
-			const key = getCartItemKey({
-				_id:
-					payload.productId ||
-					payload._id ||
-					payload.product ||
-					payload.slug,
-
-				variantId: payload.variantId,
-
-				variantKey: payload.variantKey,
-			});
+			const key = getPayloadKey(payload);
 
 			const item = state.items.find(
 				(entry) => getCartItemKey(entry) === key
@@ -346,7 +308,6 @@ const cartSlice = createSlice({
 			}
 
 			state.qty = calculateQty(state.items);
-
 			saveStorage(state.items);
 		},
 
@@ -355,56 +316,31 @@ const cartSlice = createSlice({
         ============================== */
 
 		updateQuantity: (state, action) => {
-			const {
-				productId,
-				type = 'product',
-				variantId = null,
-				variantKey = null,
-				quantity,
-			} = action.payload || {};
-
-			const targetId = normalizeId(productId);
-			const targetType = type === 'combo' ? 'combo' : 'product';
-
-			if (!targetId) return;
-
-			const item = state.items.find((entry) => {
-				if (getProductId(entry) !== targetId) return false;
-
-				const entryType = entry?.type === 'combo' ? 'combo' : 'product';
-
-				if (entryType !== targetType) return false;
-
-				// Combo-এর ক্ষেত্রে ID ও type-ই যথেষ্ট।
-				if (targetType === 'combo') return true;
-
-				return (
-					getVariantIdentity(entry) ===
-					getVariantIdentity({ variantId, variantKey })
-				);
-			});
-
-			if (!item) {
-				console.warn('Cart item not found:', {
-					productId: targetId,
-					type: targetType,
-					cartItems: state.items,
-				});
-				return;
-			}
-
-			const qty = Number(quantity);
+			const payload = action.payload || {};
+			const qty = Number(payload.quantity);
 
 			if (!Number.isInteger(qty) || qty < 1) return;
 
-			const stock = getStock(item.stock);
+			const key = getPayloadKey(payload);
 
-			if (stock <= 0) {
-				console.warn('Cart item has no available stock:', item);
-				return;
+			if (!key) return;
+
+			const item = state.items.find(
+				(entry) => getCartItemKey(entry) === key
+			);
+
+			if (!item) return;
+
+			const stock = Number(item.stock);
+
+			if (Number.isFinite(stock) && stock > 0) {
+				item.quantity = Math.min(qty, Math.floor(stock));
+			} else if (!Number.isFinite(stock)) {
+				// no stock info on the item, accept the quantity
+				item.quantity = qty;
+			} else {
+				return; // stock is 0
 			}
-
-			item.quantity = Math.min(qty, stock);
 
 			state.qty = calculateQty(state.items);
 			saveStorage(state.items);
@@ -427,7 +363,6 @@ const cartSlice = createSlice({
 
 		setCart: (state, action) => {
 			state.items = normalizeCart(action.payload);
-
 			state.qty = calculateQty(state.items);
 
 			saveStorage(state.items);
@@ -441,9 +376,7 @@ const cartSlice = createSlice({
 			if (state.hydrated) return;
 
 			state.items = normalizeCart(readStorage());
-
 			state.qty = calculateQty(state.items);
-
 			state.hydrated = true;
 
 			saveStorage(state.items);
@@ -497,13 +430,9 @@ export const selectCartTotal = (state) =>
 	);
 
 export const selectCartItemQuantity =
-	(productId, variantId = null, variantKey = null) =>
+	(productId, variantId = null, variantKey = null, type = 'product') =>
 	(state) => {
-		const key = getCartItemKey({
-			_id: productId,
-			variantId,
-			variantKey,
-		});
+		const key = getPayloadKey({ productId, variantId, variantKey, type });
 
 		return (
 			state.cart.items.find((item) => getCartItemKey(item) === key)

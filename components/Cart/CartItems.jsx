@@ -6,10 +6,7 @@ import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import { Minus, Plus, Trash2, Package } from 'lucide-react';
 
-import {
-	removeFromCart,
-	updateQuantity,
-} from '@/redux/store/slices/cartSlice';
+import { removeFromCart, updateQuantity } from '@/redux/store/slices/cartSlice';
 
 /* --------------------------------
    Helpers
@@ -26,13 +23,6 @@ const getProductId = (item) => {
 			''
 	);
 };
-
-const getVariantIdentity = (item) => ({
-	productId: getProductId(item),
-	type: item?.type === 'combo' ? 'combo' : 'product',
-	variantId: item?.variantId ?? null,
-	variantKey: item?.variantKey ?? null,
-});
 
 const getProductImage = (item) => {
 	const image =
@@ -57,15 +47,11 @@ const toNumber = (value, fallback = 0) => {
 const getBasePrice = (item) => {
 	const price = toNumber(item?.price, NaN);
 
-	if (Number.isFinite(price) && price >= 0) {
-		return price;
-	}
+	if (Number.isFinite(price) && price >= 0) return price;
 
 	const sellPrice = toNumber(item?.sellPrice, NaN);
 
-	if (Number.isFinite(sellPrice) && sellPrice >= 0) {
-		return sellPrice;
-	}
+	if (Number.isFinite(sellPrice) && sellPrice >= 0) return sellPrice;
 
 	return Math.max(toNumber(item?.regularPrice, 0), 0);
 };
@@ -133,97 +119,57 @@ const CartItems = () => {
 	const dispatch = useDispatch();
 
 	const items = useSelector((state) => state.cart?.items ?? []);
-
 	const hydrated = useSelector((state) => state.cart?.hydrated ?? false);
 
-	const getCartKey = (item) => {
-		const type = item.type === 'combo' ? 'combo' : 'product';
+	/* Build payload used by remove / update */
 
-		return `${type}:${item._id || item.slug}::${
-			item.variantId || item.variantKey || 'base'
-		}`;
+	const buildPayload = (item) => {
+		const isCombo = item?.type === 'combo';
+
+		return {
+			productId: getProductId(item),
+			type: isCombo ? 'combo' : 'product',
+			variantId: isCombo
+				? null
+				: item?.variantId
+					? String(item.variantId)
+					: null,
+			variantKey: isCombo ? null : item?.variantKey || null,
+		};
 	};
 
 	/* Remove Item */
 
 	const handleRemove = (item) => {
-		dispatch(
-			removeFromCart({
-				productId: String(item._id || item.slug || ''),
-				type: item.type || 'product',
-				variantId: item.variantId ? String(item.variantId) : null,
-				variantKey: item.variantKey || null,
-			})
-		);
+		dispatch(removeFromCart(buildPayload(item)));
 	};
 
 	/* Update Quantity */
 
-	// const handleQuantityChange = (item, newQty) => {
-	// 	const quantity = Number(newQty);
+	const handleQuantityChange = (item, newQty) => {
+		const quantity = Number(newQty);
 
-	// 	if (!Number.isInteger(quantity) || quantity < 1) {
-	// 		return;
-	// 	}
+		if (!Number.isInteger(quantity) || quantity < 1) return;
 
-	// 	const stockValue = item?.stock;
+		const stockValue = item?.stock;
+		const hasStock =
+			stockValue !== null &&
+			stockValue !== undefined &&
+			stockValue !== '';
+		const stock = Number(stockValue || 0);
 
-	// 	const hasStock =
-	// 		stockValue !== null &&
-	// 		stockValue !== undefined &&
-	// 		stockValue !== '';
+		if (hasStock && stock <= 0) {
+			toast.error('এই পণ্যটি বর্তমানে স্টকে নেই');
+			return;
+		}
 
-	// 	const stock = formatStock(stockValue);
+		if (hasStock && quantity > stock) {
+			toast.error(`শুধুমাত্র ${stock} টি স্টকে আছে`);
+			return;
+		}
 
-	// 	if (hasStock && stock <= 0) {
-	// 		toast.error('এই পণ্যটি বর্তমানে স্টকে নেই');
-	// 		return;
-	// 	}
-
-	// 	if (hasStock && quantity > stock) {
-	// 		toast.error(`শুধুমাত্র ${stock} টি স্টকে আছে`);
-	// 		return;
-	// 	}
-
-	// 	dispatch(
-	// 		updateQuantity({
-	// 			...getVariantIdentity(item),
-	// 			quantity,
-	// 		})
-	// 	);
-	// };
-
-
-const handleQuantityChange = (item, newQty) => {
-	const quantity = Number(newQty);
-
-	if (!Number.isInteger(quantity) || quantity < 1) {
-		return;
-	}
-
-	const stock = formatStock(item?.stock);
-
-	if (stock <= 0) {
-		toast.error('এই পণ্যটি বর্তমানে স্টকে নেই');
-		return;
-	}
-
-	if (quantity > stock) {
-		toast.error(`শুধুমাত্র ${stock} টি স্টকে আছে`);
-		return;
-	}
-
-	dispatch(
-		updateQuantity({
-			productId: getProductId(item),
-			type: item?.type === 'combo' ? 'combo' : 'product',
-			variantId: item?.variantId ?? null,
-			variantKey: item?.variantKey ?? null,
-			quantity,
-		})
-	);
-};
-
+		dispatch(updateQuantity({ ...buildPayload(item), quantity }));
+	};
 
 	/* Loading */
 
@@ -306,12 +252,10 @@ const handleQuantityChange = (item, newQty) => {
 
 				const itemTotal = finalPrice * quantity;
 				const originalItemTotal = originalPrice * quantity;
-
 				const savedAmount = Math.max(originalItemTotal - itemTotal, 0);
 
 				const discountText = getDiscountText(item);
 				const productImage = getProductImage(item);
-
 				const hasDiscount = finalPrice < originalPrice;
 
 				// Combo and normal product have different routes
@@ -332,20 +276,15 @@ const handleQuantityChange = (item, newQty) => {
 					stockValue !== '';
 
 				const stock = formatStock(stockValue);
-
 				const isOutOfStock = hasStock && stock <= 0;
-
 				const isMaxStock = hasStock && stock > 0 && quantity >= stock;
 
 				/* Variant */
-
 				const variantLabel =
 					item?.variantLabel ||
-					(item?.size?.value !== undefined &&
-						item?.size?.value !== null)
-						? item?.variantLabel ||
-							`${item.size.value} ${item.size.unit || ''}`
-						: '';
+					(item?.size?.value != null
+						? `${item.size.value} ${item.size.unit || ''}`.trim()
+						: '');
 
 				const itemKey = [
 					isCombo ? 'combo' : 'product',
@@ -404,6 +343,12 @@ const handleQuantityChange = (item, newQty) => {
 											<Trash2 size={16} />
 										</button>
 									</div>
+
+									{variantLabel && !isCombo && (
+										<p className="mt-1 text-xs text-gray-500">
+											{variantLabel}
+										</p>
+									)}
 
 									{isCombo &&
 										Array.isArray(item?.comboItems) && (
