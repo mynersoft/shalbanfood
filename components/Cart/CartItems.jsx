@@ -6,7 +6,10 @@ import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import { Minus, Plus, Trash2, Package } from 'lucide-react';
 
-import { removeFromCart, updateQuantity } from '@/redux/store/slices/cartSlice';
+import {
+	removeFromCart,
+	updateQuantity,
+} from '@/redux/store/slices/cartSlice';
 
 /* --------------------------------
    Helpers
@@ -133,66 +136,94 @@ const CartItems = () => {
 
 	const hydrated = useSelector((state) => state.cart?.hydrated ?? false);
 
+	const getCartKey = (item) => {
+		const type = item.type === 'combo' ? 'combo' : 'product';
 
-const getCartKey = (item) => {
-	const type = item.type === 'combo' ? 'combo' : 'product';
-
-	return `${type}:${item._id || item.slug}::${
-		item.variantId || item.variantKey || 'base'
-	}`;
-};
-
-
+		return `${type}:${item._id || item.slug}::${
+			item.variantId || item.variantKey || 'base'
+		}`;
+	};
 
 	/* Remove Item */
 
-const handleRemove = (item) => {
-	dispatch(
-		removeFromCart({
-			productId: String(item._id || item.slug || ''),
-			type: item.type || 'product',
-			variantId: item.variantId ? String(item.variantId) : null,
-			variantKey: item.variantKey || null,
-		})
-	);
-	};
-	
-
-	/* Update Quantity */
-
-	const handleQuantityChange = (item, newQty) => {
-		const quantity = Number(newQty);
-
-		if (!Number.isInteger(quantity) || quantity < 1) {
-			return;
-		}
-
-		const stockValue = item?.stock;
-
-		const hasStock =
-			stockValue !== null &&
-			stockValue !== undefined &&
-			stockValue !== '';
-
-		const stock = formatStock(stockValue);
-
-		if (hasStock && stock <= 0) {
-			toast.error('এই পণ্যটি বর্তমানে স্টকে নেই');
-			return;
-		}
-
-		if (hasStock && quantity > stock) {
-			toast.error(`শুধুমাত্র ${stock} টি স্টকে আছে`);
-			return;
-		}
-
+	const handleRemove = (item) => {
 		dispatch(
-			updateQuantity({
-				...getVariantIdentity(item),
-				quantity,
+			removeFromCart({
+				productId: String(item._id || item.slug || ''),
+				type: item.type || 'product',
+				variantId: item.variantId ? String(item.variantId) : null,
+				variantKey: item.variantKey || null,
 			})
 		);
 	};
+
+	/* Update Quantity */
+
+	// const handleQuantityChange = (item, newQty) => {
+	// 	const quantity = Number(newQty);
+
+	// 	if (!Number.isInteger(quantity) || quantity < 1) {
+	// 		return;
+	// 	}
+
+	// 	const stockValue = item?.stock;
+
+	// 	const hasStock =
+	// 		stockValue !== null &&
+	// 		stockValue !== undefined &&
+	// 		stockValue !== '';
+
+	// 	const stock = formatStock(stockValue);
+
+	// 	if (hasStock && stock <= 0) {
+	// 		toast.error('এই পণ্যটি বর্তমানে স্টকে নেই');
+	// 		return;
+	// 	}
+
+	// 	if (hasStock && quantity > stock) {
+	// 		toast.error(`শুধুমাত্র ${stock} টি স্টকে আছে`);
+	// 		return;
+	// 	}
+
+	// 	dispatch(
+	// 		updateQuantity({
+	// 			...getVariantIdentity(item),
+	// 			quantity,
+	// 		})
+	// 	);
+	// };
+
+
+const handleQuantityChange = (item, newQty) => {
+	const quantity = Number(newQty);
+
+	if (!Number.isInteger(quantity) || quantity < 1) {
+		return;
+	}
+
+	const stock = formatStock(item?.stock);
+
+	if (stock <= 0) {
+		toast.error('এই পণ্যটি বর্তমানে স্টকে নেই');
+		return;
+	}
+
+	if (quantity > stock) {
+		toast.error(`শুধুমাত্র ${stock} টি স্টকে আছে`);
+		return;
+	}
+
+	dispatch(
+		updateQuantity({
+			productId: getProductId(item),
+			type: item?.type === 'combo' ? 'combo' : 'product',
+			variantId: item?.variantId ?? null,
+			variantKey: item?.variantKey ?? null,
+			quantity,
+		})
+	);
+};
+
 
 	/* Loading */
 
@@ -263,7 +294,6 @@ const handleRemove = (item) => {
 
 			{items.map((item, index) => {
 				const productId = getProductId(item);
-
 				const isCombo = item?.type === 'combo';
 
 				const originalPrice = getOriginalPrice(item);
@@ -294,7 +324,6 @@ const handleRemove = (item) => {
 							: '/shop';
 
 				/* Stock */
-
 				const stockValue = item?.stock;
 
 				const hasStock =
@@ -376,12 +405,6 @@ const handleRemove = (item) => {
 										</button>
 									</div>
 
-									{variantLabel && !isCombo && (
-										<p className="mt-1 text-xs font-medium text-gray-600">
-											Variant: {variantLabel}
-										</p>
-									)}
-
 									{isCombo &&
 										Array.isArray(item?.comboItems) && (
 											<p className="mt-1 text-xs text-gray-500">
@@ -389,12 +412,6 @@ const handleRemove = (item) => {
 												items included
 											</p>
 										)}
-
-									{item?.sku && (
-										<p className="mt-1 text-[10px] text-gray-400">
-											SKU: {item.sku}
-										</p>
-									)}
 
 									<div className="mt-2 flex flex-wrap items-center gap-2">
 										<span className="text-base font-bold text-[#1f5d3b]">
@@ -413,17 +430,10 @@ const handleRemove = (item) => {
 											You save ৳{formatPrice(savedAmount)}
 										</p>
 									)}
-
-									{hasStock && !isOutOfStock && (
-										<p className="mt-1 text-[10px] text-gray-400">
-											Available: {stock}
-										</p>
-									)}
 								</div>
 							</div>
 
 							{/* Quantity Controls */}
-
 							<div className="flex items-center justify-between border-t border-gray-100 pt-3 sm:justify-start sm:gap-4 lg:flex-col lg:items-center lg:justify-center lg:border-t-0 lg:pt-0">
 								<span className="text-xs font-medium text-gray-500 lg:text-sm">
 									Quantity

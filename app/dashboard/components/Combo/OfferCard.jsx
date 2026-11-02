@@ -6,7 +6,7 @@ import { ShoppingCart, PackageCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
 import OfferCountdown from './OfferCountdown';
-import { addToCart } from '@/redux/store/slices/cartSlice';
+import { addToCart } from '@/redux/store/slices/cartSliceok';
 
 export default function OfferCard({ offer }) {
 	const dispatch = useDispatch();
@@ -20,48 +20,48 @@ export default function OfferCard({ offer }) {
 				)
 			: 0;
 
-const handleAddToCart = () => {
-	if (!offer || Number(offer.stock) <= 0) {
-		toast.error('এই অফারটি বর্তমানে স্টকে নেই।');
-		return;
-	}
+	const handleAddToCart = () => {
+		if (!offer || Number(offer.stock) <= 0) {
+			toast.error('এই অফারটি বর্তমানে স্টকে নেই।');
+			return;
+		}
 
-	const offerPrice = Number(offer.offerPrice) || 0;
-	const regularPrice = Number(offer.regularPrice) || 0;
+		const offerPrice = Number(offer.offerPrice) || 0;
+		const regularPrice = Number(offer.regularPrice) || 0;
 
-	if (offerPrice <= 0) {
-		toast.error('এই অফারের মূল্য সঠিক নয়।');
-		return;
-	}
+		if (offerPrice <= 0) {
+			toast.error('এই অফারের মূল্য সঠিক নয়।');
+			return;
+		}
 
-	dispatch(
-		addToCart({
-			product: {
-				...offer,
+		dispatch(
+			addToCart({
+				product: {
+					...offer,
 
-				_id: String(offer._id),
-				type: 'combo',
+					_id: String(offer._id),
+					type: 'combo',
 
-				name: offer.name,
-				slug: offer.slug,
+					name: offer.name,
+					slug: offer.slug,
 
-				price: offerPrice,
-				regularPrice,
-				sellPrice: offerPrice,
+					price: offerPrice,
+					regularPrice,
+					sellPrice: offerPrice,
 
-				featureImg: offer.featureImg,
-				image: offer.featureImg,
+					featureImg: offer.featureImg,
+					image: offer.featureImg,
 
-				stock: Number(offer.stock),
+					stock: Number(offer.stock),
 
-				comboItems: offer.items || [],
-			},
-			quantity: 1,
-		})
-	);
+					comboItems: offer.items || [],
+				},
+				quantity: 1,
+			})
+		);
 
-	toast.success(`${offer.name} কার্টে যোগ হয়েছে`);
-};
+		toast.success(`${offer.name} কার্টে যোগ হয়েছে`);
+	};
 
 	return (
 		<article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-green-100 hover:shadow-xl">

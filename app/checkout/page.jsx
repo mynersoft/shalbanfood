@@ -32,7 +32,10 @@ import { DISTRICTS } from '@/constants';
 import { useAddOrder } from '@/hooks/useOrder';
 import useLoginUser from '@/hooks/useAuth';
 
-import { removeFromCart, updateQuantity } from '@/redux/store/slices/cartSlice';
+import {
+	removeFromCart,
+	updateQuantity,
+} from '@/redux/store/slices/cartSliceok';
 
 import { calculateShippingFee } from '@/lib/calculateShippingFee';
 
@@ -366,16 +369,16 @@ export default function CheckoutClient() {
        REMOVE CART ITEM
     ===================================================== */
 
-const handleRemove = (item) => {
-	dispatch(
-		removeFromCart({
-			productId: getProductId(item),
-			type: item?.type === 'combo' ? 'combo' : 'product',
-			variantId: item?.variantId ? String(item.variantId) : null,
-			variantKey: item?.variantKey || null,
-		})
-	);
-};
+	const handleRemove = (item) => {
+		dispatch(
+			removeFromCart({
+				productId: getProductId(item),
+				type: item?.type === 'combo' ? 'combo' : 'product',
+				variantId: item?.variantId ? String(item.variantId) : null,
+				variantKey: item?.variantKey || null,
+			})
+		);
+	};
 
 	/* =====================================================
        UPDATE QUANTITY

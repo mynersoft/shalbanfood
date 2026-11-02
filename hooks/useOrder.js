@@ -6,7 +6,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 import { useDispatch } from 'react-redux';
-import { clearCart } from '@/redux/store/slices/cartSlice';
+import { clearCart } from '@/redux/store/slices/cartSliceok';
 
 // ==========================================
 // QUERY KEYS

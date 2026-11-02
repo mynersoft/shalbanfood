@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ShoppingCart, Eye, Package } from 'lucide-react';
 
 import { useDispatch } from 'react-redux';
-import { addToCart } from '@/redux/store/slices/cartSlice';
+import { addToCart } from '@/redux/store/slices/cartSliceok';
 import toast from 'react-hot-toast';
 
 const EMPTY_VARIANTS = [];
@@ -138,10 +138,8 @@ export default function ProductCard({ product }) {
 			addToCart({
 				product: {
 					...product,
-
 					variantId,
 					variantKey,
-
 					price: finalPrice,
 					regularPrice,
 					sellPrice: finalPrice,
@@ -162,15 +160,13 @@ export default function ProductCard({ product }) {
 			})
 		);
 
-		toast.success(
-			`${product.name} (${formatSize(selected)}) কার্টে যোগ হয়েছে`
-		);
+		toast.success(`${product.name} (${formatSize(selected)}) added`);
 	};
 
 	return (
 		<article
 			className="
-                group relative flex h-full flex-col
+                group relative flex h-full flex-col p-2
                 overflow-hidden rounded-lg
                 border border-gray-300
                 bg-white
@@ -180,12 +176,13 @@ export default function ProductCard({ product }) {
             ">
 			{/* Product Image */}
 			<Link href={productHref} className="block">
-				<div className="relative aspect-square w-full h-[200px] overflow-hidden bg-white">
+				<div className="relative aspect-square w-full h-[180px] h-sm:[200px] overflow-hidden bg-white">
 					{product?.image ? (
 						<Image
 							src={product.image}
 							alt={product?.name || 'Shalban Food Product'}
 							fill
+							loading="eager"
 							sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
 							className="
 					object-contain
@@ -282,7 +279,7 @@ export default function ProductCard({ product }) {
 
 				{/* Variant Selection */}
 				{variants.length > 1 && (
-					<div >
+					<div>
 						<div className="flex flex-wrap gap-1.5">
 							{variants.map((variant, index) => {
 								const key = getVariantKey(variant, index);

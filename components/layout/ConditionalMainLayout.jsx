@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 
-import Header from '@/components/header/HeaderNew';
+import Header from '@/components/Header/HeaderNew';
 import Footer from '@/components/footer/Footer';
 
 export default function ConditionalMainLayout({ children }) {

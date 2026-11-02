@@ -54,7 +54,7 @@ export default function ShopByCategory() {
 					{categories.map((category) => (
 						<Link
 							key={category.slug}
-							href={`/category/${category.slug}`}
+							href={`/categories/${category.slug}`}
 							className="group block overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)]">
 							<div className="relative flex h-[130px] items-center justify-center overflow-hidden bg-gray-50 sm:h-[150px] lg:h-[170px]">
 								<Image

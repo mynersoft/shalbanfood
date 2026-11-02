@@ -1,6 +1,6 @@
 'use client';
 
-import { addToCart } from '@/redux/store/slices/cartSlice';
+import { addToCart } from '@/redux/store/slices/cartSliceok';
 import toast from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
 import ProductCard from '../products/ProductCard';

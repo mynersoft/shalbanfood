@@ -219,9 +219,7 @@ export default function CartPage() {
 							</h1>
 						</div>
 
-						<p className="mt-2 text-sm text-gray-500">
-							Review your products before proceeding to checkout.
-						</p>
+						
 					</div>
 
 					{!isEmpty && (
@@ -244,7 +242,7 @@ export default function CartPage() {
 							<section className="min-w-0">
 								<CartItems />
 
-								<div className="mt-5">
+								<div className="mt-5 hidden sm:block">
 									<TrustFeatures />
 								</div>
 							</section>

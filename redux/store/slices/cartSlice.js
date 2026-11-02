@@ -357,44 +357,56 @@ const cartSlice = createSlice({
 		updateQuantity: (state, action) => {
 			const {
 				productId,
+				type = 'product',
 				variantId = null,
 				variantKey = null,
 				quantity,
 			} = action.payload || {};
 
-			const key = getCartItemKey({
-				_id: productId,
-				variantId,
-				variantKey,
+			const targetId = normalizeId(productId);
+			const targetType = type === 'combo' ? 'combo' : 'product';
+
+			if (!targetId) return;
+
+			const item = state.items.find((entry) => {
+				if (getProductId(entry) !== targetId) return false;
+
+				const entryType = entry?.type === 'combo' ? 'combo' : 'product';
+
+				if (entryType !== targetType) return false;
+
+				// Combo-এর ক্ষেত্রে ID ও type-ই যথেষ্ট।
+				if (targetType === 'combo') return true;
+
+				return (
+					getVariantIdentity(entry) ===
+					getVariantIdentity({ variantId, variantKey })
+				);
 			});
 
-			const item = state.items.find(
-				(entry) => getCartItemKey(entry) === key
-			);
-
-			if (!item) return;
+			if (!item) {
+				console.warn('Cart item not found:', {
+					productId: targetId,
+					type: targetType,
+					cartItems: state.items,
+				});
+				return;
+			}
 
 			const qty = Number(quantity);
 
-			if (!Number.isFinite(qty) || qty < 1) {
-				state.items = state.items.filter(
-					(entry) => getCartItemKey(entry) !== key
-				);
-			} else {
-				const stock = getStock(item.stock);
+			if (!Number.isInteger(qty) || qty < 1) return;
 
-				item.quantity =
-					stock > 0 ? Math.min(Math.floor(qty), stock) : 0;
+			const stock = getStock(item.stock);
 
-				if (item.quantity <= 0) {
-					state.items = state.items.filter(
-						(entry) => getCartItemKey(entry) !== key
-					);
-				}
+			if (stock <= 0) {
+				console.warn('Cart item has no available stock:', item);
+				return;
 			}
 
-			state.qty = calculateQty(state.items);
+			item.quantity = Math.min(qty, stock);
 
+			state.qty = calculateQty(state.items);
 			saveStorage(state.items);
 		},
 

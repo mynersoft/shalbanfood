@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
 	selectCartTotalItems,
 	removeFromCart,
-} from '@/redux/store/slices/cartSlice';
+} from '@/redux/store/slices/cartSliceok';
 
 const formatSize = (item) => {
 	if (item.variantLabel) return item.variantLabel;
@@ -53,17 +53,16 @@ export default function CartDrawer({ open, onClose }) {
 		return total + (Number.isFinite(price) ? price : 0) * quantity;
 	}, 0);
 
-	
-const handleRemove = (item) => {
-	dispatch(
-		removeFromCart({
-			productId: String(item._id || item.slug || ''),
-			type: item.type || 'product',
-			variantId: item.variantId ? String(item.variantId) : null,
-			variantKey: item.variantKey || null,
-		})
-	);
-};
+	const handleRemove = (item) => {
+		dispatch(
+			removeFromCart({
+				productId: String(item._id || item.slug || ''),
+				type: item.type || 'product',
+				variantId: item.variantId ? String(item.variantId) : null,
+				variantKey: item.variantKey || null,
+			})
+		);
+	};
 
 	return (
 		<>
@@ -133,100 +132,174 @@ const handleRemove = (item) => {
 					) : (
 						<div className="space-y-4">
 							{items.map((item) => {
+								const isCombo =
+									item?.type === 'combo' ||
+									(Array.isArray(item?.comboItems) &&
+										item.comboItems.length > 0);
+
+								const slug = item?.slug
+									? encodeURIComponent(item.slug)
+									: '';
+
+								const productHref = slug
+									? `/${isCombo ? 'combo-offer' : 'product'}/${slug}`
+									: null;
+
 								const key = getCartKey(item);
 
 								const price = Number(
-									item.price ??
-										item.sellPrice ??
-										item.regularPrice ??
-										0
+									isCombo
+										? (item.offerPrice ??
+												item.sellPrice ??
+												item.price ??
+												0)
+										: (item.sellPrice ??
+												item.price ??
+												item.regularPrice ??
+												0)
 								);
 
-								const safePrice = Number.isFinite(price)
-									? price
-									: 0;
+								const safePrice =
+									Number.isFinite(price) && price >= 0
+										? price
+										: 0;
 
 								const imageSrc =
-									item.image || item.featureImg || '';
+									item?.image || item?.featureImg || '';
+
+								const quantity = Math.max(
+									0,
+									Number(item?.quantity) || 0
+								);
+
+								const sizeLabel = isCombo
+									? ''
+									: item?.variantLabel ||
+										(item?.size?.value != null
+											? `${item.size.value} ${
+													item.size.unit === 'gram'
+														? 'গ্রাম'
+														: item.size.unit ===
+															  'kg'
+															? 'কেজি'
+															: item.size.unit ===
+																  'milliliter'
+																? 'মিলিলিটার'
+																: item.size
+																			.unit ===
+																	  'litre'
+																	? 'লিটার'
+																	: item.size
+																				.unit ===
+																		  'piece'
+																		? 'পিস'
+																		: item
+																				.size
+																				.unit ||
+																			''
+												}`.trim()
+											: formatSize(item));
 
 								return (
 									<div
 										key={key}
-										className="flex gap-3 border-b
-                                            border-gray-100 pb-4">
-										{/* Image */}
-										<Link
-											href={`/product/${encodeURIComponent(item.slug || '')}`}
-											onClick={onClose}
-											className="flex h-[76px] w-[76px]
-                                                shrink-0 items-center
-                                                justify-center overflow-hidden
-                                                rounded-xl bg-gray-50">
-											{imageSrc ? (
-												<Image
-													src={imageSrc}
-													alt={item.name || 'Product'}
-													width={76}
-													height={76}
-													className="h-full w-full object-cover"
-												/>
-											) : (
-												<ShoppingCart
-													size={24}
-													className="text-gray-300"
-												/>
-											)}
-										</Link>
+										className="flex gap-3 border-b border-gray-100 pb-4">
+										{/* Product image */}
+										{productHref ? (
+											<Link
+												href={productHref}
+												onClick={onClose}
+												className="flex h-[76px] w-[76px] shrink-0
+							items-center justify-center overflow-hidden
+							rounded-xl bg-gray-50">
+												{imageSrc ? (
+													<Image
+														src={imageSrc}
+														alt={
+															item?.name ||
+															'Product'
+														}
+														width={76}
+														height={76}
+														className="h-full w-full object-cover"
+													/>
+												) : (
+													<ShoppingCart
+														size={24}
+														className="text-gray-300"
+													/>
+												)}
+											</Link>
+										) : (
+											<div
+												className="flex h-[76px] w-[76px] shrink-0
+							items-center justify-center overflow-hidden
+							rounded-xl bg-gray-50">
+												{imageSrc ? (
+													<Image
+														src={imageSrc}
+														alt={
+															item?.name ||
+															'Product'
+														}
+														width={76}
+														height={76}
+														className="h-full w-full object-cover"
+													/>
+												) : (
+													<ShoppingCart
+														size={24}
+														className="text-gray-300"
+													/>
+												)}
+											</div>
+										)}
 
 										{/* Product details */}
 										<div className="min-w-0 flex-1">
-											<Link
-												href={`/product/${encodeURIComponent(item.slug || '')}`}
-												onClick={onClose}
-												className="line-clamp-2 text-sm
-                                                    font-medium text-gray-900
-                                                    hover:text-[#1f5d3b]">
-												{item.name}
-											</Link>
-
-											{formatSize(item) && (
-												<p
-													className="mt-1 text-xs
-                                                    font-medium text-gray-500">
-													ওজন: {formatSize(item)}
+											{productHref ? (
+												<Link
+													href={productHref}
+													onClick={onClose}
+													className="line-clamp-2 text-sm font-medium
+								text-gray-900 hover:text-[#1f5d3b]">
+													{item?.name ||
+														'Unnamed product'}
+												</Link>
+											) : (
+												<p className="line-clamp-2 text-sm font-medium text-gray-900">
+													{item?.name ||
+														'Unnamed product'}
 												</p>
 											)}
 
-											<p
-												className="mt-1 text-sm
-                                                font-bold text-[#1f5d3b]">
+											<p className="mt-1 text-sm font-bold text-[#1f5d3b]">
 												৳
 												{safePrice.toLocaleString(
 													'en-BD'
 												)}
 											</p>
 
-											<p className="mt-1 text-xs text-gray-500">
-												Quantity: {item.quantity}
-											</p>
-
-											<p className="mt-1 text-xs text-gray-500">
-												মোট: ৳
-												{(
-													safePrice *
-													(Number(item.quantity) || 0)
-												).toLocaleString('en-BD')}
-											</p>
+											<div className="flex justify-between">
+												<p className="mt-1 text-xs text-gray-500">
+													Quantity: {quantity}
+												</p>
+												<p className="mt-1 text-xs text-gray-500">
+													মোট: ৳
+													{(
+														safePrice * quantity
+													).toLocaleString('en-BD')}
+												</p>
+											</div>
 										</div>
 
-										{/* Remove only this variant */}
+										{/* Remove item */}
 										<button
 											type="button"
 											onClick={() => handleRemove(item)}
-											aria-label={`${item.name} ${formatSize(item)} remove করুন`}
-											className="self-start rounded-lg
-                                                p-2 text-gray-400
-                                                hover:bg-red-50 hover:text-red-500">
+											aria-label={`${item?.name || 'Product'} remove করুন`}
+											className="self-start rounded-lg p-2 text-gray-400
+						hover:bg-red-50 hover:text-red-500">
 											<Trash2 size={17} />
 										</button>
 									</div>

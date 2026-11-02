@@ -3,7 +3,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { apiSlice } from './slices/apiSlice';
 
 import productReducer from './slices/productSlice';
-import cartReducer from './slices/cartSlice';
+import cartReducer from './slices/cartSliceok';
 
 import voucherReducer from './slices/voucherSlice';
 import orderReducer from './slices/orderSlice';
@@ -16,9 +16,7 @@ import notificationReducer from './slices/notificationSlice';
 import questionsReducer from './slices/questionsSlice';
 import comboReducer from './slices/comboSlice';
 
-
 import settingsReducer from '@/redux/store/slices/settingsSlice';
-
 
 import uiReducer from './slices/uiSlice';
 import categoryReducer from './slices/categorySlice';
@@ -40,21 +38,20 @@ export const store = configureStore({
 
 		cart: cartReducer,
 
-
 		user: userReducer,
 		order: orderReducer,
 		voucher: voucherReducer,
 
 		statcard: statcardReducer,
 		questions: questionsReducer,
-	
+
 		notification: notificationReducer,
 
 		blog: blogReducer,
 		combo: comboReducer,
 		shipping: shippingReducer,
 		dashboard: dashboardReducer,
-settings: settingsReducer,
+		settings: settingsReducer,
 	},
 
 	middleware: (getDefaultMiddleware) =>

@@ -13,7 +13,7 @@ import {
 import toast from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
 
-import { addToCart } from '@/redux/store/slices/cartSlice';
+import { addToCart } from '@/redux/store/slices/cartSliceok';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -131,9 +131,6 @@ export default function OfferDetailsClient({ offer }) {
 	const isExpired = timeLeft?.expired === true;
 	const isOutOfStock = offer.stock <= 0;
 	const isUnavailable = isExpired || isOutOfStock;
-
-
-
 
 	const handleAddToCart = () => {
 		if (!offer.stock || offer.stock <= 0) {

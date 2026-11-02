@@ -6,7 +6,7 @@ import { useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-import { addToCart } from '@/redux/store/slices/cartSlice';
+import { addToCart } from '@/redux/store/slices/cartSliceok';
 
 const UNIT_LABELS = {
 	gram: 'গ্রাম',
