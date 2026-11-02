@@ -358,14 +358,14 @@ export default function ProductPurchase({
 					className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-4 font-semibold text-white transition hover:bg-green-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400">
 					<ShoppingCart size={20} strokeWidth={2} />
 
-					{outOfStock ? 'স্টক শেষ' : 'কার্টে যোগ করুন'}
+					{outOfStock ? 'Stock out' : 'Add to cart'}
 				</button>
 				<button
 					type="button"
 					onClick={handleBuyNow}
 					disabled={outOfStock}
 					className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-4 font-semibold text-white transition hover:bg-green-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400">
-					<ShoppingCart size={20} strokeWidth={2} />
+				
 					Buy Now
 				</button>
 			</div>
