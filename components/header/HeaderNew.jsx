@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import {
@@ -17,36 +17,37 @@ import {
 
 import { selectCartTotalItems } from '@/redux/store/slices/cartSliceok';
 import CartDrawer from './CartDrawer';
+import NotificationDropdown from '@/components/notifications/NotificationDropdown';
 
 const menuItems = [
-	{ label: 'Home', href: '/' },
-	{ label: 'Shop', href: '/shop' },
+	{ label: 'Home', href: '/', icon: 'Home' },
+	{ label: 'Shop', href: '/shop', icon: 'ShoppingCart' },
 	{ label: 'Honey', href: '/category/honey' },
 	{ label: 'Ghee', href: '/category/ghee' },
-	{ label: 'Combo Offers', href: '/combo-offer' },
+	{ label: 'Offers', href: '/combo-offer' },
 	{ label: 'Blog', href: '/blog' },
 	{ label: 'About', href: '/about-us' },
 	{ label: 'Contact', href: '/contact-us' },
+];
+const menuItemsUserDashboard = [
+	{ label: 'Home', href: '/', icon: 'Home' },
+	{ label: 'Dashboard', href: '/user', icon: '' },
+	{ label: 'Tracking Order', href: '/tracking-order' },
+	{ label: 'Profile', href: '/user/profile' },
 ];
 
 export default function Header() {
 	const pathname = usePathname();
 	const router = useRouter();
-
 	const cartQty = useSelector(selectCartTotalItems);
 
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [cartOpen, setCartOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState('');
 
-	// const isProductPage =
-	//     pathname?.startsWith('/product/') &&
-	//     pathname.split('/').filter(Boolean).length >= 2;
-
-	const isProductPage = false;
+	const userUrl = pathname?.startsWith('/user');
 
 	const closeMenu = () => setMenuOpen(false);
-
 	const openCart = () => {
 		setMenuOpen(false);
 		setCartOpen(true);
@@ -126,6 +127,9 @@ export default function Header() {
                                     justify-center rounded-full hover:bg-gray-100 sm:flex">
 								<User size={20} />
 							</Link>
+							{/* Notification popup */}
+
+							<NotificationDropdown />
 
 							<button
 								type="button"
@@ -190,11 +194,10 @@ export default function Header() {
                         border-gray-50 py-3 md:hidden">
 						{[
 							['Shop', '/shop'],
-							['মধু', '/honey'],
-							['ঘি', '/ghee'],
-							['Combo', '/combo'],
+							['Honey', '/honey'],
+							['Ghee', '/ghee'],
+							['Offers', '/combo'],
 							['Blog', '/blog'],
-							['About', '/about'],
 						].map(([label, href]) => (
 							<Link
 								key={href}
@@ -245,19 +248,28 @@ export default function Header() {
 				</div>
 
 				<nav className="p-4">
-					{menuItems.map((item) => (
-						<Link
-							key={item.href}
-							href={item.href}
-							onClick={closeMenu}
-							className="flex items-center justify-between
-                                border-b border-gray-100 py-4 text-sm
-                                font-medium text-gray-800
-                                hover:text-[#1f5d3b]">
-							{item.label}
-							<span className="text-gray-400">›</span>
-						</Link>
-					))}
+					<nav className="items-center  lg:flex">
+						{userUrl === true
+							? menuItemsUserDashboard.map((item) => (
+									<div key={item.label}>
+										<Link
+											href={item.href}
+											className="mt-1 flex items-center gap-3
+                            rounded-xl bg-gray-50 px-4  py-1 text-sm">
+											{item.label}
+										</Link>
+									</div>
+								))
+							: menuItems.slice(0, 7).map((item) => (
+									<Link
+										className="mt-1 flex items-center gap-3
+                            rounded-xl bg-gray-50 px-4 py-1 text-sm"
+										key={item.label}
+										href={item.href}>
+										{item.label}
+									</Link>
+								))}
+					</nav>
 
 					<Link
 						href="/user"

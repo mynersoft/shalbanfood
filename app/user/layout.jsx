@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { setSidebar } from '@/redux/store/slices/uiSlice';
-import UserHeader from '@/components/user/UserHeader';
 import UserSidebar from '@/components/user/UserSidebar';
 import AuthGuard from '@/components/auth/AuthGuard';
 
@@ -67,8 +66,7 @@ export default function UserLayout({ children }) {
                         transition-[margin] duration-300 ease-in-out
                         ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'}
                     `}>
-					<UserHeader />
-
+					
 					<main className="mx-auto w-full max-w-[1600px] min-w-0 p-4 sm:p-6 lg:p-8">
 						{children}
 					</main>

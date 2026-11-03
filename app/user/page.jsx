@@ -22,7 +22,7 @@ import {
     ReceiptText,
 } from 'lucide-react';
 
-import OrderDetailsModal from '@/components/Order/OrderDetailsModal';
+
 import useLoginUser from '@/hooks/useAuth';
 import { useUserOrders } from '@/hooks/useOrder';
 import ViewInvoice from '@/components/user/ViewInvoice';
