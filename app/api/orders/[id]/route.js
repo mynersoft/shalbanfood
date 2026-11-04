@@ -287,10 +287,10 @@ export async function PATCH(request, { params }) {
 					message: `${invoiceRef} — ${statusInfo.message}`,
 					type: 'order',
 					link: order.invoiceNo
-						? `/user/tracking-order?invoiceNo=${encodeURIComponent(
+						? `/tracking-order?invoiceNo=${encodeURIComponent(
 								order.invoiceNo
 							)}`
-						: '/user/tracking-order',
+						: '/tracking-order',
 					eventKey: `order:${order._id}:${order.status}`,
 				});
 			} catch (notificationError) {

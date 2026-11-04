@@ -4,9 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/dbConnect';
 import Notification from '@/models/Notification';
 
-
 export const runtime = 'nodejs';
-
 
 export async function GET(request) {
 	try {
@@ -52,6 +50,7 @@ export async function GET(request) {
 	}
 }
 
+
 export async function PATCH(request) {
 	try {
 		const session = await getServerSession(authOptions);
@@ -64,26 +63,51 @@ export async function PATCH(request) {
 			);
 		}
 
-		const { notificationId, markAll } = await request.json();
+		const { action, notificationId } = await request.json();
 
 		await connectDB();
 
-		if (markAll === true) {
+		// Mark all notifications as read
+		if (action === 'read-all') {
 			await Notification.updateMany(
 				{ userId, isRead: false },
 				{ $set: { isRead: true } }
 			);
-		} else if (
-			typeof notificationId === 'string' &&
-			/^[a-f\d]{24}$/i.test(notificationId)
-		) {
+		}
+
+		// Mark single notification as read
+		else if (action === 'read') {
+			if (
+				typeof notificationId !== 'string' ||
+				!/^[a-f\d]{24}$/i.test(notificationId)
+			) {
+				return NextResponse.json(
+					{
+						success: false,
+						message: 'নোটিফিকেশন আইডি সঠিক নয়।',
+					},
+					{ status: 400 }
+				);
+			}
+
 			await Notification.updateOne(
-				{ _id: notificationId, userId },
-				{ $set: { isRead: true } }
+				{
+					_id: notificationId,
+					userId,
+				},
+				{
+					$set: { isRead: true },
+				}
 			);
-		} else {
+		}
+
+		// Invalid action
+		else {
 			return NextResponse.json(
-				{ success: false, message: 'নোটিফিকেশন আইডি সঠিক নয়।' },
+				{
+					success: false,
+					message: 'Invalid notification action.',
+				},
 				{ status: 400 }
 			);
 		}
@@ -93,12 +117,18 @@ export async function PATCH(request) {
 			isRead: false,
 		});
 
-		return NextResponse.json({ success: true, unreadCount });
+		return NextResponse.json({
+			success: true,
+			unreadCount,
+		});
 	} catch (error) {
 		console.error('Notifications PATCH error:', error);
 
 		return NextResponse.json(
-			{ success: false, message: 'আপডেট করা যায়নি।' },
+			{
+				success: false,
+				message: 'আপডেট করা যায়নি।',
+			},
 			{ status: 500 }
 		);
 	}

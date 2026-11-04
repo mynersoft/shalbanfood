@@ -1,190 +1,149 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-    Search,
-    Filter,
-    CalendarDays,
-    Package,
-    CheckCircle2,
-    Clock3,
-    XCircle,
-    ChevronRight,
-    Eye,
-    ShoppingBag,
-    Wallet,
-    Truck,
-    RefreshCw,
-    ShoppingCart,
-    ArrowUpRight,
-    ReceiptText,
+	Search,
+	Filter,
+	CalendarDays,
+	Package,
+	CheckCircle2,
+	Clock3,
+	XCircle,
+	ChevronRight,
+	Eye,
+	ShoppingBag,
+	Wallet,
+	Truck,
+	RefreshCw,
+	ShoppingCart,
+	ArrowUpRight,
+	ReceiptText,
 } from 'lucide-react';
-
 
 import useLoginUser from '@/hooks/useAuth';
 import { useUserOrders } from '@/hooks/useOrder';
 import ViewInvoice from '@/components/user/ViewInvoice';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 
 // --------------------------------------------------
 // Helpers
 // --------------------------------------------------
 
 const STATUS_CONFIG = {
-    pending: {
-        label: 'Pending',
-        color: 'bg-amber-50 text-amber-700 ring-amber-200',
-        icon: Clock3,
-    },
-    processing: {
-        label: 'Processing',
-        color: 'bg-blue-50 text-blue-700 ring-blue-200',
-        icon: RefreshCw,
-    },
-    shipped: {
-        label: 'Shipped',
-        color: 'bg-violet-50 text-violet-700 ring-violet-200',
-        icon: Truck,
-    },
-    delivered: {
-        label: 'Delivered',
-        color: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-        icon: CheckCircle2,
-    },
-    cancelled: {
-        label: 'Cancelled',
-        color: 'bg-red-50 text-red-700 ring-red-200',
-        icon: XCircle,
-    },
+	pending: {
+		label: 'Pending',
+		color: 'bg-amber-50 text-amber-700 ring-amber-200',
+		icon: Clock3,
+	},
+	processing: {
+		label: 'Processing',
+		color: 'bg-blue-50 text-blue-700 ring-blue-200',
+		icon: RefreshCw,
+	},
+	shipped: {
+		label: 'Shipped',
+		color: 'bg-violet-50 text-violet-700 ring-violet-200',
+		icon: Truck,
+	},
+	delivered: {
+		label: 'Delivered',
+		color: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+		icon: CheckCircle2,
+	},
+	cancelled: {
+		label: 'Cancelled',
+		color: 'bg-red-50 text-red-700 ring-red-200',
+		icon: XCircle,
+	},
 };
 
 const FILTERS = [
-    { id: 'all', label: 'All Orders' },
-    { id: 'pending', label: 'Pending' },
-    { id: 'processing', label: 'Processing' },
-    { id: 'shipped', label: 'Shipped' },
-    { id: 'delivered', label: 'Delivered' },
-    { id: 'cancelled', label: 'Cancelled' },
+	{ id: 'all', label: 'All Orders' },
+	{ id: 'pending', label: 'Pending' },
+	{ id: 'processing', label: 'Processing' },
+	{ id: 'shipped', label: 'Shipped' },
+	{ id: 'delivered', label: 'Delivered' },
+	{ id: 'cancelled', label: 'Cancelled' },
 ];
 
-const formatCurrency = (amount) => {
-    const value = Number(amount ?? 0);
 
-    if (!Number.isFinite(value)) {
-        return '৳0.00';
-    }
-
-    return `৳${value.toLocaleString('en-BD', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    })}`;
-};
-
-const formatDate = (date) => {
-    if (!date) return 'Date unavailable';
-
-    const parsed = new Date(date);
-
-    if (Number.isNaN(parsed.getTime())) {
-        return 'Date unavailable';
-    }
-
-    return parsed.toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    });
-};
 
 
 const normalizeStatus = (status) => {
-    const value = String(status || 'pending').toLowerCase().trim();
+	const value = String(status || 'pending')
+		.toLowerCase()
+		.trim();
 
-    if (value === 'complete' || value === 'completed') {
-        return 'delivered';
-    }
+	if (value === 'complete' || value === 'completed') {
+		return 'delivered';
+	}
 
-    if (value === 'in transit' || value === 'in_transit') {
-        return 'shipped';
-    }
+	if (value === 'in transit' || value === 'in_transit') {
+		return 'shipped';
+	}
 
-    if (value === 'processing' || value === 'shipped') {
-        return value;
-    }
+	if (value === 'processing' || value === 'shipped') {
+		return value;
+	}
 
-    if (value === 'delivered') {
-        return value;
-    }
+	if (value === 'delivered') {
+		return value;
+	}
 
-    if (
-        ['cancelled', 'canceled', 'failed'].includes(value)
-    ) {
-        return 'cancelled';
-    }
+	if (['cancelled', 'canceled', 'failed'].includes(value)) {
+		return 'cancelled';
+	}
 
-    return 'pending';
+	return 'pending';
 };
 
 const normalizeItems = (order) => {
-    if (Array.isArray(order?.itemsList)) return order.itemsList;
-    if (Array.isArray(order?.items)) return order.items;
-    if (Array.isArray(order?.orderItems)) return order.orderItems;
+	if (Array.isArray(order?.itemsList)) return order.itemsList;
+	if (Array.isArray(order?.items)) return order.items;
+	if (Array.isArray(order?.orderItems)) return order.orderItems;
 
-    return [];
+	return [];
 };
 
 const getOrderId = (order) =>
-    order?.orderNumber ||
-    order?.invoiceNumber ||
-    order?.orderId ||
-    order?.id ||
-    order?._id ||
-    'N/A';
+	order?.orderNumber ||
+	order?.invoiceNumber ||
+	order?.orderId ||
+	order?.id ||
+	order?._id ||
+	'N/A';
 
 const getOrderDate = (order) =>
-    order?.createdAt ||
-    order?.created_at ||
-    order?.date ||
-    null;
+	order?.createdAt || order?.created_at || order?.date || null;
 
 const getOrderTotal = (order) => {
-    const value = Number(
-        order?.grandTotal ??
-        order?.total ??
-        order?.totalAmount ??
-        0
-    );
+	const value = Number(
+		order?.grandTotal ?? order?.total ?? order?.totalAmount ?? 0
+	);
 
-    return Number.isFinite(value) ? value : 0;
+	return Number.isFinite(value) ? value : 0;
 };
 
 const getItemName = (item) =>
-    item?.name ||
-    item?.productName ||
-    item?.title ||
-    item?.product?.name ||
-    'Product';
+	item?.name ||
+	item?.productName ||
+	item?.title ||
+	item?.product?.name ||
+	'Product';
 
 const getItemQuantity = (item) => {
-    const quantity = Number(
-        item?.quantity ?? item?.qty ?? item?.count ?? 1
-    );
+	const quantity = Number(item?.quantity ?? item?.qty ?? item?.count ?? 1);
 
-    return Number.isFinite(quantity) && quantity > 0
-        ? quantity
-        : 1;
+	return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
 };
 
 const getItemPrice = (item) => {
-    const price = Number(
-        item?.price ??
-        item?.unitPrice ??
-        item?.product?.price ??
-        0
-    );
+	const price = Number(
+		item?.price ?? item?.unitPrice ?? item?.product?.price ?? 0
+	);
 
-    return Number.isFinite(price) ? price : 0;
+	return Number.isFinite(price) ? price : 0;
 };
 
 // --------------------------------------------------
@@ -192,104 +151,95 @@ const getItemPrice = (item) => {
 // --------------------------------------------------
 
 function StatusBadge({ status }) {
-    const config = STATUS_CONFIG[normalizeStatus(status)];
-    const Icon = config.icon;
+	const config = STATUS_CONFIG[normalizeStatus(status)];
+	const Icon = config.icon;
 
-    return (
-        <span
-            className={`
+	return (
+		<span
+			className={`
                 inline-flex items-center gap-1.5
                 whitespace-nowrap rounded-full px-2.5 py-1
                 text-xs font-semibold ring-1 ring-inset
                 ${config.color}
-            `}
-        >
-            <Icon size={13} />
-            {config.label}
-        </span>
-    );
+            `}>
+			<Icon size={13} />
+			{config.label}
+		</span>
+	);
 }
 
 function StatCard({
-    title,
-    value,
-    subtitle,
-    icon: Icon,
-    iconClass,
-    delay = 0,
+	title,
+	value,
+	subtitle,
+	icon: Icon,
+	iconClass,
+	delay = 0,
 }) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay }}
-            className="
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 12 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.3, delay }}
+			className="
                 min-w-0 rounded-2xl border border-slate-200
                 bg-white p-4 shadow-sm
                 sm:p-5
-            "
-        >
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-500 sm:text-sm">
-                        {title}
-                    </p>
+            ">
+			<div className="flex items-start justify-between gap-3">
+				<div className="min-w-0">
+					<p className="text-xs font-medium text-slate-500 sm:text-sm">
+						{title}
+					</p>
 
-                    <p className="mt-2 break-words text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                        {value}
-                    </p>
+					<p className="mt-2 break-words text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+						{value}
+					</p>
 
-                    {subtitle && (
-                        <p className="mt-1 text-xs text-slate-500">
-                            {subtitle}
-                        </p>
-                    )}
-                </div>
+					{subtitle && (
+						<p className="mt-1 text-xs text-slate-500 hidden sm:block">
+							{subtitle}
+						</p>
+					)}
+				</div>
 
-                <div
-                    className={`
+				<div
+					className={`
                         flex h-10 w-10 shrink-0 items-center
                         justify-center rounded-xl sm:h-11 sm:w-11
                         ${iconClass}
-                    `}
-                >
-                    <Icon size={21} />
-                </div>
-            </div>
-        </motion.div>
-    );
+                    `}>
+					<Icon size={21} />
+				</div>
+			</div>
+		</motion.div>
+	);
 }
 
 function EmptyState({ searchQuery, selectedFilter, onReset }) {
-    const hasFilters =
-        Boolean(searchQuery.trim()) || selectedFilter !== 'all';
+	const hasFilters = Boolean(searchQuery.trim()) || selectedFilter !== 'all';
 
-    return (
-        <div className="rounded-2xl border border-slate-200 bg-white px-5 py-12 text-center shadow-sm sm:py-16">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
-                <ShoppingBag
-                    size={30}
-                    className="text-slate-400"
-                />
-            </div>
+	return (
+		<div className="rounded-2xl border border-slate-200 bg-white px-5 py-12 text-center shadow-sm sm:py-16">
+			<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+				<ShoppingBag size={30} className="text-slate-400" />
+			</div>
 
-            <h3 className="mt-5 text-lg font-bold text-slate-900">
-                {hasFilters
-                    ? 'No matching orders'
-                    : 'No orders yet'}
-            </h3>
+			<h3 className="mt-5 text-lg font-bold text-slate-900">
+				{hasFilters ? 'No matching orders' : 'No orders yet'}
+			</h3>
 
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                {hasFilters
-                    ? 'Try another search term or change the selected filter.'
-                    : 'Your order history will appear here when you place your first order.'}
-            </p>
+			<p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
+				{hasFilters
+					? 'Try another search term or change the selected filter.'
+					: 'Your order history will appear here when you place your first order.'}
+			</p>
 
-            {hasFilters && (
-                <button
-                    type="button"
-                    onClick={onReset}
-                    className="
+			{hasFilters && (
+				<button
+					type="button"
+					onClick={onReset}
+					className="
                         mt-5 inline-flex min-h-11 items-center
                         justify-center gap-2 rounded-xl
                         bg-slate-900 px-5 py-2.5
@@ -297,14 +247,13 @@ function EmptyState({ searchQuery, selectedFilter, onReset }) {
                         transition hover:bg-slate-700
                         focus:outline-none focus:ring-2
                         focus:ring-slate-400 focus:ring-offset-2
-                    "
-                >
-                    <RefreshCw size={15} />
-                    Clear filters
-                </button>
-            )}
-        </div>
-    );
+                    ">
+					<RefreshCw size={15} />
+					Clear filters
+				</button>
+			)}
+		</div>
+	);
 }
 
 // --------------------------------------------------
@@ -312,192 +261,181 @@ function EmptyState({ searchQuery, selectedFilter, onReset }) {
 // --------------------------------------------------
 
 export default function OrderHistory() {
-    const { user } = useLoginUser();
+	const { user } = useLoginUser();
 
-    const userId = user?._id || user?.id;
+	const userId = user?._id || user?.id;
 
-    const {
-        data,
-        isLoading,
-        isError,
-        refetch,
-        isFetching,
-    } = useUserOrders(userId);
+	const { data, isLoading, isError, refetch, isFetching } =
+		useUserOrders(userId);
 
-   
+	const orders = useMemo(() => {
+		const list = Array.isArray(data?.orders)
+			? data.orders
+			: Array.isArray(data)
+				? data
+				: [];
 
-    const orders = useMemo(() => {
-        const list = Array.isArray(data?.orders)
-            ? data.orders
-            : Array.isArray(data)
-                ? data
-                : [];
+		return list;
+	}, [data]);
 
-        return list;
-    }, [data]);
+	const [selectedFilter, setSelectedFilter] = useState('all');
+	const [searchQuery, setSearchQuery] = useState('');
+	const [selectedOrder, setSelectedOrder] = useState(null);
+	const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const [selectedFilter, setSelectedFilter] = useState('all');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedOrder, setSelectedOrder] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+	// --------------------------------------------------
+	// Summary statistics
+	// --------------------------------------------------
 
-    // --------------------------------------------------
-    // Summary statistics
-    // --------------------------------------------------
+	const stats = useMemo(() => {
+		const delivered = orders.filter(
+			(order) => normalizeStatus(order?.status) === 'delivered'
+		).length;
 
-    const stats = useMemo(() => {
-        const delivered = orders.filter(
-            (order) => normalizeStatus(order?.status) === 'delivered'
-        ).length;
+		const inProgress = orders.filter((order) =>
+			['processing', 'shipped'].includes(normalizeStatus(order?.status))
+		).length;
 
-        const inProgress = orders.filter((order) =>
-            ['processing', 'shipped'].includes(
-                normalizeStatus(order?.status)
-            )
-        ).length;
+		const totalValue = orders.reduce((sum, order) => {
+			// Cancelled orders are excluded from total order value.
+			if (normalizeStatus(order?.status) === 'cancelled') {
+				return sum;
+			}
 
-        const totalValue = orders.reduce((sum, order) => {
-            // Cancelled orders are excluded from total order value.
-            if (normalizeStatus(order?.status) === 'cancelled') {
-                return sum;
-            }
+			return sum + getOrderTotal(order);
+		}, 0);
 
-            return sum + getOrderTotal(order);
-        }, 0);
+		return {
+			total: orders.length,
+			delivered,
+			inProgress,
+			totalValue,
+		};
+	}, [orders]);
 
-        return {
-            total: orders.length,
-            delivered,
-            inProgress,
-            totalValue,
-        };
-    }, [orders]);
+	// --------------------------------------------------
+	// Filter counts
+	// --------------------------------------------------
 
-    // --------------------------------------------------
-    // Filter counts
-    // --------------------------------------------------
+	const filterCounts = useMemo(() => {
+		const counts = { all: orders.length };
 
-    const filterCounts = useMemo(() => {
-        const counts = { all: orders.length };
+		FILTERS.forEach(({ id }) => {
+			if (id === 'all') return;
 
-        FILTERS.forEach(({ id }) => {
-            if (id === 'all') return;
+			counts[id] = orders.filter(
+				(order) => normalizeStatus(order?.status) === id
+			).length;
+		});
 
-            counts[id] = orders.filter(
-                (order) => normalizeStatus(order?.status) === id
-            ).length;
-        });
+		return counts;
+	}, [orders]);
 
-        return counts;
-    }, [orders]);
+	// --------------------------------------------------
+	// Search and filter
+	// --------------------------------------------------
 
-    // --------------------------------------------------
-    // Search and filter
-    // --------------------------------------------------
+	const filteredOrders = useMemo(() => {
+		const query = searchQuery.trim().toLowerCase();
 
-    const filteredOrders = useMemo(() => {
-        const query = searchQuery.trim().toLowerCase();
+		return orders.filter((order) => {
+			const status = normalizeStatus(order?.status);
 
-        return orders.filter((order) => {
-            const status = normalizeStatus(order?.status);
+			if (selectedFilter !== 'all' && status !== selectedFilter) {
+				return false;
+			}
 
-            if (
-                selectedFilter !== 'all' &&
-                status !== selectedFilter
-            ) {
-                return false;
-            }
+			if (!query) return true;
 
-            if (!query) return true;
+			const orderId = String(getOrderId(order)).toLowerCase();
 
-            const orderId = String(getOrderId(order)).toLowerCase();
+			const items = normalizeItems(order);
 
-            const items = normalizeItems(order);
+			const productMatch = items.some((item) =>
+				getItemName(item).toLowerCase().includes(query)
+			);
 
-            const productMatch = items.some((item) =>
-                getItemName(item).toLowerCase().includes(query)
-            );
+			return orderId.includes(query) || productMatch;
+		});
+	}, [orders, searchQuery, selectedFilter]);
+	console.log(selectedFilter);
 
-            return orderId.includes(query) || productMatch;
-        });
-    }, [orders, searchQuery, selectedFilter]);
+	// --------------------------------------------------
+	// Actions
+	// --------------------------------------------------
 
-    // --------------------------------------------------
-    // Actions
-    // --------------------------------------------------
+	const handleViewOrder = (order) => {
+		setSelectedOrder(order);
+		setIsModalOpen(true);
+	};
 
-    const handleViewOrder = (order) => {
-        setSelectedOrder(order);
-        setIsModalOpen(true);
-    };
+	const handleCloseModal = () => {
+		setIsModalOpen(false);
+		setSelectedOrder(null);
+	};
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setSelectedOrder(null);
-    };
+	const handleResetFilters = () => {
+		setSearchQuery('');
+		setSelectedFilter('all');
+	};
 
-    const handleResetFilters = () => {
-        setSearchQuery('');
-        setSelectedFilter('all');
-    };
+	// --------------------------------------------------
+	// Loading
+	// --------------------------------------------------
 
-    // --------------------------------------------------
-    // Loading
-    // --------------------------------------------------
+	if (isLoading) {
+		return (
+			<div className="mx-auto w-full max-w-7xl px-1 py-6 sm:px-2 sm:py-8">
+				<div className="mb-6 space-y-2">
+					<div className="h-7 w-44 animate-pulse rounded-lg bg-slate-200" />
+					<div className="h-4 w-64 max-w-full animate-pulse rounded bg-slate-100" />
+				</div>
 
-    if (isLoading) {
-        return (
-            <div className="mx-auto w-full max-w-7xl px-1 py-6 sm:px-2 sm:py-8">
-                <div className="mb-6 space-y-2">
-                    <div className="h-7 w-44 animate-pulse rounded-lg bg-slate-200" />
-                    <div className="h-4 w-64 max-w-full animate-pulse rounded bg-slate-100" />
-                </div>
+				<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+					{[1, 2, 3, 4].map((item) => (
+						<div
+							key={item}
+							className="h-28 animate-pulse rounded-2xl bg-white ring-1 ring-slate-200 sm:h-32"
+						/>
+					))}
+				</div>
 
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    {[1, 2, 3, 4].map((item) => (
-                        <div
-                            key={item}
-                            className="h-28 animate-pulse rounded-2xl bg-white ring-1 ring-slate-200 sm:h-32"
-                        />
-                    ))}
-                </div>
+				<div className="mt-6 flex min-h-56 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white">
+					<div className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-600" />
 
-                <div className="mt-6 flex min-h-56 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white">
-                    <div className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-600" />
+					<p className="mt-4 text-sm font-medium text-slate-600">
+						Loading your orders...
+					</p>
+				</div>
+			</div>
+		);
+	}
 
-                    <p className="mt-4 text-sm font-medium text-slate-600">
-                        Loading your orders...
-                    </p>
-                </div>
-            </div>
-        );
-    }
+	// --------------------------------------------------
+	// Error
+	// --------------------------------------------------
 
-    // --------------------------------------------------
-    // Error
-    // --------------------------------------------------
+	if (isError) {
+		return (
+			<div className="mx-auto w-full max-w-7xl px-1 py-8">
+				<div className="rounded-2xl border border-red-200 bg-white px-5 py-12 text-center sm:px-10">
+					<div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
+						<XCircle size={28} className="text-red-500" />
+					</div>
 
-    if (isError) {
-        return (
-            <div className="mx-auto w-full max-w-7xl px-1 py-8">
-                <div className="rounded-2xl border border-red-200 bg-white px-5 py-12 text-center sm:px-10">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
-                        <XCircle size={28} className="text-red-500" />
-                    </div>
+					<h2 className="mt-4 text-lg font-bold text-slate-900">
+						Unable to load your orders
+					</h2>
 
-                    <h2 className="mt-4 text-lg font-bold text-slate-900">
-                        Unable to load your orders
-                    </h2>
+					<p className="mt-2 text-sm leading-6 text-slate-500">
+						Please check your internet connection and try again.
+					</p>
 
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
-                        Please check your internet connection and try again.
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() => refetch?.()}
-                        disabled={!refetch || isFetching}
-                        className="
+					<button
+						type="button"
+						onClick={() => refetch?.()}
+						disabled={!refetch || isFetching}
+						className="
                             mt-5 inline-flex min-h-11 items-center
                             justify-center gap-2 rounded-xl
                             bg-slate-900 px-5 py-2.5
@@ -505,24 +443,23 @@ export default function OrderHistory() {
                             hover:bg-slate-700
                             disabled:cursor-not-allowed
                             disabled:opacity-60
-                        "
-                    >
-                        <RefreshCw
-                            size={16}
-                            className={isFetching ? 'animate-spin' : ''}
-                        />
-                        Try again
-                    </button>
-                </div>
-            </div>
-        );
-    }
+                        ">
+						<RefreshCw
+							size={16}
+							className={isFetching ? 'animate-spin' : ''}
+						/>
+						Try again
+					</button>
+				</div>
+			</div>
+		);
+	}
 
-    // --------------------------------------------------
-    // Main UI
-    // --------------------------------------------------
+	// --------------------------------------------------
+	// Main UI
+	// --------------------------------------------------
 
-    return (
+	return (
 		<div className="mx-auto w-full max-w-7xl min-w-0 space-y-5 py-3 sm:space-y-6 sm:py-5">
 			{/* Page heading */}
 
@@ -659,7 +596,7 @@ export default function OrderHistory() {
 
 						<div
 							className="
-                                -mx-1 flex gap-2 overflow-x-auto
+                                -mx-1 flex gap-2 flex-wrap
                                 px-1 pb-2
                             "
 							role="group"
@@ -676,15 +613,11 @@ export default function OrderHistory() {
 										}
 										aria-pressed={active}
 										className={`
-                                            inline-flex min-h-10 shrink-0
+                                            inline-flex  shrink-0
                                             items-center gap-2
-                                            rounded-xl border px-3.5 py-2
+                                            rounded-md border px-3 py-2
                                             text-xs font-semibold
                                             transition sm:text-sm
-                                            focus:outline-none
-                                            focus:ring-2
-                                            focus:ring-emerald-500
-                                            focus:ring-offset-2
                                             ${
 												active
 													? 'border-emerald-700 bg-emerald-700 text-white shadow-sm'
@@ -695,7 +628,7 @@ export default function OrderHistory() {
 
 										<span
 											className={`
-                                                rounded-md px-1.5 py-0.5
+                                                rounded-md px-1 py-0.5
                                                 text-[11px] tabular-nums
                                                 ${
 													active
@@ -729,7 +662,7 @@ export default function OrderHistory() {
 						<button
 							type="button"
 							onClick={handleResetFilters}
-							className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 sm:text-sm">
+							className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 sm:text-sm cursor-pointer">
 							Clear filters
 						</button>
 					)}
@@ -737,7 +670,6 @@ export default function OrderHistory() {
 			</section>
 
 			{/* Orders list */}
-
 			<section aria-label="Order history" className="space-y-4">
 				{filteredOrders.length === 0 ? (
 					<EmptyState
@@ -1016,8 +948,7 @@ export default function OrderHistory() {
 					order={selectedOrder}
 					onClose={() => setIsModalOpen(false)}
 				/>
-            )}
-            
+			)}
 		</div>
 	);
 }

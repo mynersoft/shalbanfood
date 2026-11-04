@@ -395,7 +395,7 @@ export default function RootLayout({ children }) {
 			<body className="bg-white text-gray-900">
 				{/* <InitialLoader> */}
 				<Toaster position="top-right" reverseOrder={false} />
-				<InternetStatus />
+				{/* <InternetStatus />  */}
 				<Providers>
 					<ConditionalMainLayout>
 						{children}

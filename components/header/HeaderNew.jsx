@@ -98,7 +98,7 @@ export default function Header() {
 							</div>
 						</Link>
 
-						<nav className="hidden items-center gap-5 lg:flex">
+						<nav className="hidden items-center gap-5 md:flex">
 							{menuItems.slice(0, 7).map((item) => (
 								<Link
 									key={item.href}
@@ -136,17 +136,15 @@ export default function Header() {
 								onClick={openCart}
 								aria-label="Open cart"
 								className="relative flex h-10 w-10
-                                    items-center justify-center rounded-full
-                                    hover:bg-gray-100">
+                                    items-center justify-center rounded-full cursor-pointer
+                                    hover:text-green-700">
 								<ShoppingCart size={21} />
 
 								{cartQty > 0 && (
 									<span
-										className="absolute right-0 top-0
-                                        flex h-[18px] min-w-[18px]
-                                        items-center justify-center rounded-full
-                                        bg-[#1f5d3b] px-1 text-[9px]
-                                        font-bold text-white">
+										className="absolute right-0.5 top-1 flex h-4 min-w-4
+              items-center justify-center rounded-full bg-green-900 px-1
+              text-[9px] font-bold text-white  hover:bg-green-700">
 										{cartQty > 99 ? '99+' : cartQty}
 									</span>
 								)}
@@ -157,11 +155,11 @@ export default function Header() {
 					{/* Mobile search */}
 					<form
 						onSubmit={handleSearch}
-						className="relative pb-3 md:hidden">
+						className="relative pb-3 sm:hidden">
 						<Search
 							size={20}
 							className="pointer-events-none
-                            absolute left-4 top-[23px] -translate-y-1/2
+                            absolute left-4 top-[18px] -translate-y-1/2
                             text-gray-400"
 						/>
 
@@ -172,7 +170,7 @@ export default function Header() {
 								setSearchValue(event.target.value)
 							}
 							placeholder="Search products..."
-							className="h-[46px] w-full rounded-full border
+							className="h-[35px] w-full rounded-full border
                                 border-[#1f5d3b] pl-11 pr-12 text-sm
                                 outline-none focus:ring-2
                                 focus:ring-[#1f5d3b]/20"
@@ -181,33 +179,12 @@ export default function Header() {
 						<button
 							type="submit"
 							aria-label="Search"
-							className="absolute right-1 top-[3px]
+							className="absolute right-1 -top-[3px]
                                 flex h-10 w-10 items-center justify-center
-                                rounded-full hover:bg-gray-100">
+                                rounded-full cursor-pointer">
 							<Search size={19} />
 						</button>
 					</form>
-
-					{/* Mobile quick links */}
-					<div
-						className="flex gap-6 overflow-x-auto border-t
-                        border-gray-50 py-3 md:hidden">
-						{[
-							['Shop', '/shop'],
-							['Honey', '/honey'],
-							['Ghee', '/ghee'],
-							['Offers', '/combo'],
-							['Blog', '/blog'],
-						].map(([label, href]) => (
-							<Link
-								key={href}
-								href={href}
-								className="whitespace-nowrap text-xs
-                                    font-medium text-gray-700">
-								{label}
-							</Link>
-						))}
-					</div>
 				</div>
 			</header>
 
@@ -232,7 +209,7 @@ export default function Header() {
                     justify-between border-b px-5">
 					<div>
 						<p className="font-bold text-[#1f5d3b]">Shalban Food</p>
-						<p className="mt-1 text-[10px] text-gray-400">
+						<p className="mt-1 text-[10px] text-gray-600">
 							Natural Food Store
 						</p>
 					</div>
@@ -253,6 +230,7 @@ export default function Header() {
 							? menuItemsUserDashboard.map((item) => (
 									<div key={item.label}>
 										<Link
+											onClick={closeMenu}
 											href={item.href}
 											className="mt-1 flex items-center gap-3
                             rounded-xl bg-gray-50 px-4  py-1 text-sm">
@@ -262,6 +240,7 @@ export default function Header() {
 								))
 							: menuItems.slice(0, 7).map((item) => (
 									<Link
+										onClick={closeMenu}
 										className="mt-1 flex items-center gap-3
                             rounded-xl bg-gray-50 px-4 py-1 text-sm"
 										key={item.label}
@@ -336,10 +315,10 @@ export default function Header() {
 					<button
 						type="button"
 						onClick={openCart}
-						className="relative flex h-full flex-col
+						className="relative flex h-full flex-col 
                                     items-center justify-center gap-1
                                     text-[11px] text-gray-400">
-						<span className="relative">
+						<span className="relative cursor-pointer">
 							<ShoppingCart size={24} />
 							{cartQty > 0 && (
 								<span

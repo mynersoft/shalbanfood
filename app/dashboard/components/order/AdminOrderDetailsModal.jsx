@@ -22,8 +22,8 @@ import {
 import toast from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
 
-import { formatCurrency } from '@/utils/formatCurrency';
-import { formatDate } from '@/utils/formatDate';
+import { formatCurrency } from '@/utils/formatters';
+import { formatDate } from '@/utils/formatters';
 
 export const ORDER_STATUSES = [
 	'pending',

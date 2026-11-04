@@ -14,6 +14,7 @@ import {
 	ExternalLink,
 	BellRing,
 } from 'lucide-react';
+import { formatDate } from '@/utils/formatters';
 
 export default function NotificationDropdown() {
 	const { data: session, status } = useSession();
@@ -30,6 +31,10 @@ export default function NotificationDropdown() {
 
 	const userType = isAdmin ? 'admin' : 'user';
 	const notiApi = `/api/notifications?${userType}`;
+
+
+	console.log(isAdmin);
+	
 
 	const unreadCount = notifications.filter(
 		(notification) => !notification.isRead
@@ -125,10 +130,8 @@ export default function NotificationDropdown() {
 	// Mark all notifications as read
 	const handleMarkAllAsRead = async () => {
 		if (!unreadCount) return;
-
 		try {
 			setMarkingAll(true);
-
 			const response = await fetch(notiApi, {
 				method: 'PATCH',
 				headers: {
@@ -189,7 +192,7 @@ export default function NotificationDropdown() {
 			<button
 				type="button"
 				onClick={() => setOpen((previous) => !previous)}
-				className="relative flex h-10 w-10 items-center justify-center rounded-full
+				className="relative group flex h-10 w-10 items-center justify-center rounded-full
           text-gray-700 transition hover:text-green-700 cursor-pointer
           "
 				aria-label="Notifications">
@@ -197,20 +200,21 @@ export default function NotificationDropdown() {
 
 				{unreadCount > 0 && (
 					<span
-						className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5
-              items-center justify-center rounded-full bg-red-500 px-1
-              text-[10px] font-bold text-white">
+						className="absolute right-0.5 top-1 flex h-4 min-w-4
+              items-center justify-center rounded-full bg-green-900 px-1
+              text-[9px] font-bold text-white  hover:bg-green-700">
 						{unreadCount > 99 ? '99+' : unreadCount}
 					</span>
 				)}
 			</button>
 
+
 			{/* Notification popup */}
 			{open && (
 				<div
-					className="absolute right-0 top-12 z-[100] w-[340px] max-w-[calc(100vw-24px)]
+					className="absolute -right-10  top-12 z-[100] w-[300px] sm:w-[300px] max-w-[calc(100vw-24px)]
             overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl
-            dark:border-gray-700 dark:bg-gray-900 sm:w-[380px]">
+            dark:border-gray-700 dark:bg-gray-900 ">
 					{/* Header */}
 					<div
 						className="flex items-center justify-between border-b
@@ -331,17 +335,7 @@ export default function NotificationDropdown() {
 										<div className="mt-2 flex items-center justify-between">
 											<span className="text-xs text-gray-400">
 												{notification.createdAt
-													? new Date(
-															notification.createdAt
-														).toLocaleString(
-															'en-BD',
-															{
-																dateStyle:
-																	'medium',
-																timeStyle:
-																	'short',
-															}
-														)
+													? formatDate(notification.createdAt)
 													: ''}
 											</span>
 
@@ -386,9 +380,9 @@ export default function NotificationDropdown() {
 							onClick={() => {
 								setOpen(false);
 								router.push(
-									isAdmin
+									userType
 										? '/dashboard/notifications'
-										: '/user/notifications'
+										: '/notifications'
 								);
 							}}
 							className="text-sm font-semibold text-green-700

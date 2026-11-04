@@ -710,23 +710,14 @@ export default function CheckoutClient() {
 						<ArrowLeft size={17} />
 						Continue Shopping
 					</Link>
-
-					<div className="flex items-center gap-2 text-sm font-semibold text-[#1f5d3b]">
-						<ShieldCheck size={18} />
-						Secure Checkout
-					</div>
 				</div>
 			</div>
 
-			<div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-7xl px-4  sm:px-6 lg:px-8">
 				{/* PAGE TITLE */}
 
-				<div className="mb-7">
-					<p className="text-xs font-bold uppercase tracking-[0.2em] text-[#1f5d3b]">
-						Shalban Food
-					</p>
-
-					<h1 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
+				<div className="">
+					<h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
 						Checkout
 					</h1>
 
@@ -832,133 +823,143 @@ export default function CheckoutClient() {
 											className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
 										/>
 									</div>
-								</div>
-							</div>
-						</section>
 
-						{/* SHIPPING INFORMATION */}
+									<div className="mt-3">
+										<label className="mb-1.5 block text-xs font-semibold text-gray-600">
+											Area / Full Address *
+										</label>
 
-						<section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-							<div className="mb-5 flex items-center gap-3">
-								<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-[#1f5d3b]">
-									<Truck size={19} />
-								</div>
-
-								<div>
-									<h2 className="font-bold text-gray-900">
-										Delivery Information
-									</h2>
-
-									<p className="text-xs text-gray-500">
-										Where should we deliver your order?
-									</p>
-								</div>
-							</div>
-
-							<div className="space-y-4">
-								{/* ADDRESS */}
-
-								<div>
-									<label className="mb-1.5 block text-xs font-semibold text-gray-600">
-										Area / Full Address *
-									</label>
-
-									<div className="relative">
-										<Building
-											size={17}
-											className="absolute left-3 top-3.5 text-gray-400"
-										/>
-
-										<input
-											type="text"
-											name="address.area"
-											value={orderData.address.area}
-											onChange={handleChange}
-											placeholder="House, road, village or area"
-											autoComplete="street-address"
-											className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
-										/>
-									</div>
-								</div>
-
-								{/* THANA */}
-
-								<div>
-									<label className="mb-1.5 block text-xs font-semibold text-gray-600">
-										Thana / Upazila *
-									</label>
-
-									<div className="relative">
-										<MapPin
-											size={17}
-											className="absolute left-3 top-3.5 text-gray-400"
-										/>
-
-										<input
-											type="text"
-											name="address.thana"
-											value={orderData.address.thana}
-											onChange={handleChange}
-											placeholder="Enter your thana or upazila"
-											className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
-										/>
-									</div>
-								</div>
-
-								{/* DISTRICT */}
-
-								<div>
-									<label className="mb-1.5 block text-xs font-semibold text-gray-600">
-										District *
-									</label>
-
-									<select
-										name="address.city"
-										value={orderData.address.city}
-										onChange={handleChange}
-										className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50">
-										<option value="">
-											Select your district
-										</option>
-
-										{DISTRICTS.map((district) => (
-											<option
-												key={district}
-												value={district}>
-												{district}
-											</option>
-										))}
-									</select>
-								</div>
-
-								{/* DELIVERY CHARGE */}
-
-								{orderData.address.city && (
-									<div className="flex items-center justify-between rounded-xl border border-green-100 bg-green-50/70 p-4">
-										<div className="flex items-center gap-3">
-											<Truck
-												size={19}
-												className="text-[#1f5d3b]"
+										<div className="relative">
+											<Building
+												size={17}
+												className="absolute left-3 top-3.5 text-gray-400"
 											/>
 
-											<div>
-												<p className="text-sm font-semibold text-gray-900">
-													Delivery Charge
-												</p>
-
-												<p className="text-xs text-gray-500">
-													{orderData.address.city}
-												</p>
-											</div>
+											<input
+												type="text"
+												name="address.area"
+												value={orderData.address.area}
+												onChange={handleChange}
+												placeholder="House, road, village or area"
+												autoComplete="street-address"
+												className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
+											/>
 										</div>
-
-										<p className="text-lg font-bold text-[#1f5d3b]">
-											{shippingSettingsLoading
-												? '...'
-												: `৳${formatPrice(deliveryCharge)}`}
-										</p>
 									</div>
-								)}
+
+									{/* THANA */}
+
+									<div>
+										<label className="mb-1.5 block text-xs font-semibold text-gray-600">
+											Thana / Upazila *
+										</label>
+
+										<div className="relative">
+											<MapPin
+												size={17}
+												className="absolute left-3 top-3.5 text-gray-400"
+											/>
+
+											<input
+												type="text"
+												name="address.thana"
+												value={orderData.address.thana}
+												onChange={handleChange}
+												placeholder="Enter your thana or upazila"
+												className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
+											/>
+										</div>
+									</div>
+
+									{/* DISTRICT */}
+
+									<div>
+										<label className="mb-1.5 block text-xs font-semibold text-gray-600">
+											District *
+										</label>
+
+										<select
+											name="address.city"
+											value={orderData.address.city}
+											onChange={handleChange}
+											className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50">
+											<option value="">
+												Select your district
+											</option>
+
+											{DISTRICTS.map((district) => (
+												<option
+													key={district}
+													value={district}>
+													{district}
+												</option>
+											))}
+										</select>
+									</div>
+
+									{/* add function delivery by */}
+									{/* <div>
+										<label className="mb-1 block text-xs font-semibold text-gray-600">
+											Percel Delivery by
+										</label>
+
+										<div>
+											<input
+												type="radio"
+												name="percel"
+												id="Courier"
+												onChange={handleChange}
+												value={orderData.deliveryBy}
+											/>
+											<label
+												htmlFor="Courier"
+												className="ml-2">
+												Courier
+											</label>
+										</div>
+										<div>
+											<input
+												type="radio"
+												name="percel"
+												id="postoffice"
+												onChange={handleChange}
+												value={orderData.deliveryBy}
+											/>
+											<label
+												htmlFor="postoffice"
+												className="ml-2">
+												Post office - spead post
+											</label>
+										</div>
+									</div>
+									 */}
+									{orderData.address.city && (
+										<div className="flex items-center justify-between rounded-xl border border-green-100 bg-green-50/70 p-4">
+											<div className="flex items-center gap-3">
+												<Truck
+													size={19}
+													className="text-[#1f5d3b]"
+												/>
+
+												<div>
+													<p className="text-sm font-semibold text-gray-900">
+														Delivery Charge
+													</p>
+
+													<p className="text-xs text-gray-500">
+														{orderData.address.city}
+													</p>
+												</div>
+											</div>
+
+											<p className="text-lg font-bold text-[#1f5d3b]">
+												{shippingSettingsLoading
+													? '...'
+													: `৳${formatPrice(deliveryCharge)}`}
+											</p>
+										</div>
+									)}
+								</div>
 							</div>
 						</section>
 
@@ -1122,11 +1123,8 @@ export default function CheckoutClient() {
 								)}
 							</button>
 
-							<p className="mt-3 text-center text-xs text-gray-400">
-								Pay cash when your order arrives.
-							</p>
-
-							<div className="mt-5 flex items-center justify-center gap-2 border-t border-gray-100 pt-4 text-xs text-gray-400">
+						
+							<div className="mt-3 flex items-center justify-center gap-2 border-t border-gray-100 pt-4 text-xs text-gray-500">
 								<ShieldCheck size={15} />
 								Your information is secure.
 							</div>
