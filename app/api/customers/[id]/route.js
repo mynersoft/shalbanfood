@@ -1,146 +1,133 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-import {connectDB} from "@/lib/dbConnect";
-import User from "@/models/User";
-import Order from "@/models/Order";
-import { checkAuthRole } from "@/lib/checkAuthRole";
+import { connectDB } from '@/lib/connectDB';
+import User from '@/models/User';
+import Order from '@/models/Order';
+import { checkAuthRole } from '@/lib/checkAuthRole';
 
 export async function GET(request, { params }) {
-    try {
-        await connectDB();
+	try {
+		await connectDB();
 
-        const { id } = await params;
+		const { id } = await params;
 
-        // --------------------------------
-        // Validate ID
-        // --------------------------------
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid customer ID",
-                },
-                {
-                    status: 400,
-                }
-            );
-        }
+		// --------------------------------
+		// Validate ID
+		// --------------------------------
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'Invalid customer ID',
+				},
+				{
+					status: 400,
+				}
+			);
+		}
 
-        // --------------------------------
-        // Find customer
-        // --------------------------------
-        const customer = await User.findOne({
-            _id: id,
-            role: "user",
-        })
-            .select(
-                "_id name email phone address role createdAt updatedAt"
-            )
-            .lean();
+		// --------------------------------
+		// Find customer
+		// --------------------------------
+		const customer = await User.findOne({
+			_id: id,
+			role: 'user',
+		})
+			.select('_id name email phone address role createdAt updatedAt')
+			.lean();
 
-        if (!customer) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Customer not found",
-                },
-                {
-                    status: 404,
-                }
-            );
-        }
-        
-        console.log(customer);
-        
-        // --------------------------------
-        // Get customer orders
-        // --------------------------------
-        const orders = await Order.find({
-            userId: id,
-        })
-            .select(
-                "invoiceNo subtotal total shippingFee discount status payment shippingAddress orderItems createdAt updatedAt"
-            )
-            .sort({
-                createdAt: -1,
-            })
-            .lean();
+		if (!customer) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'Customer not found',
+				},
+				{
+					status: 404,
+				}
+			);
+		}
 
-        // --------------------------------
-        // Exclude cancelled orders
-        // --------------------------------
-        const validOrders = orders.filter(
-            (order) => order.status !== "cancelled"
-        );
+		console.log(customer);
 
-        // --------------------------------
-        // Calculate statistics
-        // --------------------------------
-        const totalOrders = validOrders.length;
+		// --------------------------------
+		// Get customer orders
+		// --------------------------------
+		const orders = await Order.find({
+			userId: id,
+		})
+			.select(
+				'invoiceNo subtotal total shippingFee discount status payment shippingAddress orderItems createdAt updatedAt'
+			)
+			.sort({
+				createdAt: -1,
+			})
+			.lean();
 
-        const totalSpent = validOrders.reduce(
-            (sum, order) =>
-                sum + Number(order.total || 0),
-            0
-        );
+		// --------------------------------
+		// Exclude cancelled orders
+		// --------------------------------
+		const validOrders = orders.filter(
+			(order) => order.status !== 'cancelled'
+		);
 
-        const lastOrder =
-            validOrders.length > 0
-                ? validOrders[0].createdAt
-                : null;
+		// --------------------------------
+		// Calculate statistics
+		// --------------------------------
+		const totalOrders = validOrders.length;
 
-        return NextResponse.json({
-            success: true,
+		const totalSpent = validOrders.reduce(
+			(sum, order) => sum + Number(order.total || 0),
+			0
+		);
 
-            customer: {
-                _id: customer._id,
-                name: customer.name,
-               
-                email: customer.email || "",
-                phone: customer.phone || "",
-                role: customer.role,
-                address: { 
-                    area: customer.address.area,
-                    thana: customer.address.thana,
-                    city: customer.address.city,
-                },
-                createdAt: customer.createdAt,
-                updatedAt: customer.updatedAt,
-                totalOrders,
-                totalSpent,
-                lastOrder,
-                status:
-                    totalOrders > 0
-                        ? "active"
-                        : "new",
-            },
+		const lastOrder =
+			validOrders.length > 0 ? validOrders[0].createdAt : null;
 
-            orders,
-        });
-    } catch (error) {
-        console.error(
-            "GET /api/customers/[id] error:",
-            error
-        );
+		return NextResponse.json({
+			success: true,
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to fetch customer",
-                error: error.message,
-            },
-            {
-                status: 500,
-            }
-        );
-    }
+			customer: {
+				_id: customer._id,
+				name: customer.name,
+
+				email: customer.email || '',
+				phone: customer.phone || '',
+				role: customer.role,
+				address: {
+					area: customer.address.area,
+					thana: customer.address.thana,
+					city: customer.address.city,
+				},
+				createdAt: customer.createdAt,
+				updatedAt: customer.updatedAt,
+				totalOrders,
+				totalSpent,
+				lastOrder,
+				status: totalOrders > 0 ? 'active' : 'new',
+			},
+
+			orders,
+		});
+	} catch (error) {
+		console.error('GET /api/customers/[id] error:', error);
+
+		return NextResponse.json(
+			{
+				success: false,
+				message: 'Failed to fetch customer',
+				error: error.message,
+			},
+			{
+				status: 500,
+			}
+		);
+	}
 }
 
-
-
-// update customer/user info 
+// update customer/user info
 
 export async function PUT(request, { params }) {
 	try {
@@ -285,7 +272,3 @@ export async function PUT(request, { params }) {
 		);
 	}
 }
-
-
-
-

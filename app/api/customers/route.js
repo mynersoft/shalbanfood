@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import User from '@/models/User';
 import Order from '@/models/Order';
 import { checkAuthRole } from '@/lib/checkAuthRole';
@@ -436,10 +436,7 @@ export async function GET(request) {
 	}
 }
 
-
-
-
-// create customer by admin 
+// create customer by admin
 export async function POST(request) {
 	try {
 		// Admin authorization

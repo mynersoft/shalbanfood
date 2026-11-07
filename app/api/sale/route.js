@@ -1,10 +1,10 @@
 // app/api/sale/route.js
 
-import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/dbConnect";
-import Sale from "@/models/Sale";
-import Product from "@/models/Product";
-import SaleProfit from "@/models/SaleProfit";
+import { NextResponse } from 'next/server';
+import { connectDB } from '@/lib/connectDB';
+import Sale from '@/models/Sale';
+import Product from '@/models/Product';
+import SaleProfit from '@/models/SaleProfit';
 
 export async function GET() {
 	await connectDB();
@@ -13,7 +13,7 @@ export async function GET() {
 
 		return NextResponse.json({ success: true, sales }, { status: 200 });
 	} catch (error) {
-		console.error("🔥 GET SALE ERROR:", error);
+		console.error('🔥 GET SALE ERROR:', error);
 
 		return NextResponse.json(
 			{ success: false, message: error.message },
@@ -69,12 +69,12 @@ export async function POST(req) {
 		return NextResponse.json({
 			success: true,
 			sale: newSale,
-			message: "Sale & Profit stored successfully",
+			message: 'Sale & Profit stored successfully',
 		});
 	} catch (error) {
-		console.log("SALE ERROR:", error);
+		console.log('SALE ERROR:', error);
 		return NextResponse.json(
-			{ success: false, message: "Server error" },
+			{ success: false, message: 'Server error' },
 			{ status: 500 }
 		);
 	}

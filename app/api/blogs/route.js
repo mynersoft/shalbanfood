@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import {connectDB} from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import Blog from '@/models/Blog';
 
 export const runtime = 'nodejs';
@@ -246,14 +246,6 @@ export async function GET(request) {
 		return jsonError('Unable to fetch blog posts.');
 	}
 }
-
-
-
-
-
-
-
-
 
 // POST /api/blogs
 export async function POST(request) {

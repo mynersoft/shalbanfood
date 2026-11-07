@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import mongoose from 'mongoose';
 
 import { authOptions } from '@/lib/auth';
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import User from '@/models/User';
 
 export async function PUT(request) {

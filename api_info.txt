@@ -59,3 +59,19 @@ Open http://localhost:3000/api/stats?type=monthlyBreakdown&year=2025&month=11
 
 get
 /api/notifications?admin/user
+
+get
+/api/orders?orderId
+
+patch stock, soldCount , status, payment due paid 
+/api/orders/id
+
+
+
+
+
+
+
+
+
+   

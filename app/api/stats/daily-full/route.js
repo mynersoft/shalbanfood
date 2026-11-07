@@ -1,8 +1,8 @@
 // app/api/stats/daily-full/route.js
-import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/dbConnect";
-import SaleProfit from "@/models/SaleProfit";
-import ServiceRecords from "@/models/ServiceRecords";
+import { NextResponse } from 'next/server';
+import { connectDB } from '@/lib/connectDB';
+import SaleProfit from '@/models/SaleProfit';
+import ServiceRecords from '@/models/ServiceRecords';
 
 export async function GET(req) {
 	try {
@@ -10,9 +10,9 @@ export async function GET(req) {
 
 		const url = new URL(req.url);
 		const year =
-			Number(url.searchParams.get("year")) || new Date().getFullYear();
+			Number(url.searchParams.get('year')) || new Date().getFullYear();
 		const month =
-			(Number(url.searchParams.get("month")) ||
+			(Number(url.searchParams.get('month')) ||
 				new Date().getMonth() + 1) - 1;
 
 		const start = new Date(year, month, 1, 0, 0, 0, 0);
@@ -28,9 +28,9 @@ export async function GET(req) {
 			},
 			{
 				$group: {
-					_id: { day: { $dayOfMonth: "$createdAt" } },
-					sale: { $sum: "$totalSale" },
-					profit: { $sum: "$profit" },
+					_id: { day: { $dayOfMonth: '$createdAt' } },
+					sale: { $sum: '$totalSale' },
+					profit: { $sum: '$profit' },
 				},
 			},
 		]);
@@ -52,8 +52,8 @@ export async function GET(req) {
 			},
 			{
 				$group: {
-					_id: { day: { $dayOfMonth: "$createdAt" } },
-					serviceBill: { $sum: "$billAmount" },
+					_id: { day: { $dayOfMonth: '$createdAt' } },
+					serviceBill: { $sum: '$billAmount' },
 				},
 			},
 		]);
@@ -85,9 +85,9 @@ export async function GET(req) {
 			days: final,
 		});
 	} catch (err) {
-		console.error("FULL DAILY ERROR:", err);
+		console.error('FULL DAILY ERROR:', err);
 		return NextResponse.json(
-			{ success: false, message: "Server Error" },
+			{ success: false, message: 'Server Error' },
 			{ status: 500 }
 		);
 	}

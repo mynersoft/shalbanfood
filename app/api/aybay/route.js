@@ -1,24 +1,24 @@
-import {connectDB} from "@/lib/dbConnect";
-import AyBay from "@/models/AyBay";
+import { connectDB } from '@/lib/connectDB';
+import AyBay from '@/models/AyBay';
 
 export async function GET() {
-  await connectDB();
-  const data = await AyBay.find().sort({ createdAt: -1 });
+	await connectDB();
+	const data = await AyBay.find().sort({ createdAt: -1 });
 
-  return Response.json({
-    success: true,
-    data,
-  });
+	return Response.json({
+		success: true,
+		data,
+	});
 }
 
 export async function POST(req) {
-  await connectDB();
-  const body = await req.json();
+	await connectDB();
+	const body = await req.json();
 
-  const newAyBay = await AyBay.create(body);
+	const newAyBay = await AyBay.create(body);
 
-  return Response.json({
-    success: true,
-    data: newAyBay,
-  });
+	return Response.json({
+		success: true,
+		data: newAyBay,
+	});
 }

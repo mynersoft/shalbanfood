@@ -15,11 +15,12 @@ import {
 	CheckCircle2,
 } from 'lucide-react';
 import { LOW_STOCK_LIMIT } from '@/constants/dashboard';
-import { formatUnit } from '@/helper/formateUnit';
+
 import {
 	useDashboardOverview,
 	useUpdateVariantStock,
 } from '@/hooks/useDashboard';
+import { formatUnit } from '@/utils/formatters';
 
 const BRAND = '#1f5d14';
 

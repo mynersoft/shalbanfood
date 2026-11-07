@@ -1,8 +1,8 @@
 // app/api/service/stats/route.js
-import { NextResponse } from "next/server";
-import mongoose from "mongoose";
-import { connectDB } from "@/lib/dbConnect";
-import ServiceRecords from "@/models/ServiceRecords";
+import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
+import { connectDB } from '@/lib/connectDB';
+import ServiceRecords from '@/models/ServiceRecords';
 
 function getMonthRange(year, month0) {
 	// month0: 0-11
@@ -16,9 +16,9 @@ export async function GET(req) {
 		if (mongoose.connection.readyState === 0) await connectDB();
 
 		const url = new URL(req.url);
-		const type = url.searchParams.get("type") || "daily"; // daily | monthly | monthlyBreakdown
-		if (type === "daily") {
-			const dateParam = url.searchParams.get("date"); // YYYY-MM-DD
+		const type = url.searchParams.get('type') || 'daily'; // daily | monthly | monthlyBreakdown
+		if (type === 'daily') {
+			const dateParam = url.searchParams.get('date'); // YYYY-MM-DD
 			const date = dateParam ? new Date(dateParam) : new Date();
 			const start = new Date(date);
 			start.setHours(0, 0, 0, 0);
@@ -31,7 +31,7 @@ export async function GET(req) {
 					$group: {
 						_id: null,
 						totalCount: { $sum: 1 },
-						totalBills: { $sum: "$billAmount" },
+						totalBills: { $sum: '$billAmount' },
 					},
 				},
 			]);
@@ -39,12 +39,12 @@ export async function GET(req) {
 			const res = agg[0] || { totalCount: 0, totalBills: 0 };
 			return NextResponse.json({
 				success: true,
-				type: "daily",
+				type: 'daily',
 				date: start.toISOString(),
 				totalCount: res.totalCount,
 				totalBills: res.totalBills,
 			});
-		} else if (type === "weekly") {
+		} else if (type === 'weekly') {
 			const now = new Date();
 
 			// সপ্তাহের শুরু (Saturday অথবা Sunday ধরতে চাইলে adjust করতে পারেন)
@@ -63,7 +63,7 @@ export async function GET(req) {
 					$group: {
 						_id: null,
 						totalCount: { $sum: 1 },
-						totalBills: { $sum: "$billAmount" },
+						totalBills: { $sum: '$billAmount' },
 					},
 				},
 			]);
@@ -72,15 +72,15 @@ export async function GET(req) {
 
 			return NextResponse.json({
 				success: true,
-				type: "weekly",
+				type: 'weekly',
 				weekStart: start.toISOString(),
 				weekEnd: end.toISOString(),
 				totalCount: res.totalCount,
 				totalBills: res.totalBills,
 			});
-		} else if (type === "monthly") {
-			const yearParam = Number(url.searchParams.get("year"));
-			const monthParam = Number(url.searchParams.get("month")); // 1-12
+		} else if (type === 'monthly') {
+			const yearParam = Number(url.searchParams.get('year'));
+			const monthParam = Number(url.searchParams.get('month')); // 1-12
 			const now = new Date();
 			const year = !isNaN(yearParam) ? yearParam : now.getFullYear();
 			const month0 = !isNaN(monthParam) ? monthParam - 1 : now.getMonth();
@@ -93,7 +93,7 @@ export async function GET(req) {
 					$group: {
 						_id: null,
 						totalCount: { $sum: 1 },
-						totalBills: { $sum: "$billAmount" },
+						totalBills: { $sum: '$billAmount' },
 					},
 				},
 			]);
@@ -101,15 +101,15 @@ export async function GET(req) {
 			const res = agg[0] || { totalCount: 0, totalBills: 0 };
 			return NextResponse.json({
 				success: true,
-				type: "monthly",
+				type: 'monthly',
 				year,
 				month: month0 + 1,
 				totalCount: res.totalCount,
 				totalBills: res.totalBills,
 			});
-		} else if (type === "monthlyBreakdown") {
-			const yearParam = Number(url.searchParams.get("year"));
-			const monthParam = Number(url.searchParams.get("month")); // 1-12
+		} else if (type === 'monthlyBreakdown') {
+			const yearParam = Number(url.searchParams.get('year'));
+			const monthParam = Number(url.searchParams.get('month')); // 1-12
 			const now = new Date();
 			const year = !isNaN(yearParam) ? yearParam : now.getFullYear();
 			const month0 = !isNaN(monthParam) ? monthParam - 1 : now.getMonth();
@@ -120,12 +120,12 @@ export async function GET(req) {
 				{ $match: { createdAt: { $gte: start, $lte: end } } },
 				{
 					$group: {
-						_id: { day: { $dayOfMonth: "$createdAt" } },
+						_id: { day: { $dayOfMonth: '$createdAt' } },
 						count: { $sum: 1 },
-						totalBills: { $sum: "$billAmount" },
+						totalBills: { $sum: '$billAmount' },
 					},
 				},
-				{ $sort: { "_id.day": 1 } },
+				{ $sort: { '_id.day': 1 } },
 			]);
 
 			// map to days
@@ -154,11 +154,11 @@ export async function GET(req) {
 		}
 
 		return NextResponse.json(
-			{ success: false, message: "Invalid type" },
+			{ success: false, message: 'Invalid type' },
 			{ status: 400 }
 		);
 	} catch (err) {
-		console.error("GET /api/service/stats error:", err);
+		console.error('GET /api/service/stats error:', err);
 		return NextResponse.json(
 			{ success: false, message: err.message },
 			{ status: 500 }

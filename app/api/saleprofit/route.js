@@ -1,8 +1,7 @@
 // app/api/stats/route.js
-import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/dbConnect";
-import SaleProfit from "@/models/SaleProfit";
-
+import { NextResponse } from 'next/server';
+import { connectDB } from '@/lib/connectDB';
+import SaleProfit from '@/models/SaleProfit';
 
 function dayRange(date = new Date()) {
 	const start = new Date(date);
@@ -21,11 +20,11 @@ export async function GET(req) {
 		await connectDB();
 
 		const url = new URL(req.url);
-		const type = url.searchParams.get("type") || "daily";
+		const type = url.searchParams.get('type') || 'daily';
 
-		if (type === "daily") {
+		if (type === 'daily') {
 			// optional date param (YYYY-MM-DD)
-			const dateParam = url.searchParams.get("date");
+			const dateParam = url.searchParams.get('date');
 			const date = dateParam ? new Date(dateParam) : new Date();
 			const { start, end } = dayRange(date);
 
@@ -39,9 +38,9 @@ export async function GET(req) {
 				{
 					$group: {
 						_id: null,
-						totalSale: { $sum: "$totalSale" },
-						totalProfit: { $sum: "$profit" },
-						totalQty: { $sum: "$qty" },
+						totalSale: { $sum: '$totalSale' },
+						totalProfit: { $sum: '$profit' },
+						totalQty: { $sum: '$qty' },
 					},
 				},
 			]);
@@ -54,16 +53,16 @@ export async function GET(req) {
 
 			return NextResponse.json({
 				success: true,
-				type: "daily",
+				type: 'daily',
 				date: start.toISOString(),
 				totalSale: result.totalSale,
 				totalProfit: result.totalProfit,
 				totalQty: result.totalQty,
 			});
-		} else if (type === "monthly") {
+		} else if (type === 'monthly') {
 			// optional year & month (month 1-12). Defaults to current year/month
-			const yearParam = Number(url.searchParams.get("year"));
-			const monthParam = Number(url.searchParams.get("month")); // 1-12
+			const yearParam = Number(url.searchParams.get('year'));
+			const monthParam = Number(url.searchParams.get('month')); // 1-12
 			const now = new Date();
 			const year = !isNaN(yearParam) ? yearParam : now.getFullYear();
 			const month = !isNaN(monthParam) ? monthParam - 1 : now.getMonth(); // Date month is 0-index
@@ -81,9 +80,9 @@ export async function GET(req) {
 				{
 					$group: {
 						_id: null,
-						totalSale: { $sum: "$totalSale" },
-						totalProfit: { $sum: "$profit" },
-						totalQty: { $sum: "$qty" },
+						totalSale: { $sum: '$totalSale' },
+						totalProfit: { $sum: '$profit' },
+						totalQty: { $sum: '$qty' },
 					},
 				},
 			]);
@@ -96,17 +95,17 @@ export async function GET(req) {
 
 			return NextResponse.json({
 				success: true,
-				type: "monthly",
+				type: 'monthly',
 				year,
 				month: month + 1,
 				totalSale: result.totalSale,
 				totalProfit: result.totalProfit,
 				totalQty: result.totalQty,
 			});
-		} else if (type === "monthlyBreakdown") {
+		} else if (type === 'monthlyBreakdown') {
 			// returns per-day totals for a month (useful for charts)
-			const yearParam = Number(url.searchParams.get("year"));
-			const monthParam = Number(url.searchParams.get("month")); // 1-12
+			const yearParam = Number(url.searchParams.get('year'));
+			const monthParam = Number(url.searchParams.get('month')); // 1-12
 			const now = new Date();
 			const year = !isNaN(yearParam) ? yearParam : now.getFullYear();
 			const month = !isNaN(monthParam) ? monthParam - 1 : now.getMonth();
@@ -124,16 +123,16 @@ export async function GET(req) {
 				{
 					$group: {
 						_id: {
-							year: { $year: "$createdAt" },
-							month: { $month: "$createdAt" },
-							day: { $dayOfMonth: "$createdAt" },
+							year: { $year: '$createdAt' },
+							month: { $month: '$createdAt' },
+							day: { $dayOfMonth: '$createdAt' },
 						},
-						totalSale: { $sum: "$totalSale" },
-						totalProfit: { $sum: "$profit" },
+						totalSale: { $sum: '$totalSale' },
+						totalProfit: { $sum: '$profit' },
 					},
 				},
 				{
-					$sort: { "_id.day": 1 },
+					$sort: { '_id.day': 1 },
 				},
 			]);
 
@@ -162,13 +161,13 @@ export async function GET(req) {
 		}
 
 		return NextResponse.json(
-			{ success: false, message: "Invalid type" },
+			{ success: false, message: 'Invalid type' },
 			{ status: 400 }
 		);
 	} catch (err) {
-		console.error("STATS ERROR:", err);
+		console.error('STATS ERROR:', err);
 		return NextResponse.json(
-			{ success: false, message: "Server error" },
+			{ success: false, message: 'Server error' },
 			{ status: 500 }
 		);
 	}

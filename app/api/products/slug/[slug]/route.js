@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Product from '@/models/Product';
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 
 export async function GET(req, { params }) {
 	try {
 		await connectDB();
 		const { slug } = await params;
 
-		console.log(slug, "dkfj===========================================================================================================");
-		
+		console.log(
+			slug,
+			'dkfj==========================================================================================================='
+		);
 
 		const product = await Product.findOne({ slug }).lean();
 

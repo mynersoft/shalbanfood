@@ -38,6 +38,7 @@ import {
 } from '@/redux/store/slices/cartSliceok';
 
 import { calculateShippingFee } from '@/lib/calculateShippingFee';
+import { formatCurrency } from '@/utils/formatters';
 
 /* =========================================================
    CONSTANTS
@@ -76,11 +77,6 @@ const toNumber = (value, fallback = 0) => {
 
 	return Number.isFinite(number) ? number : fallback;
 };
-
-const formatPrice = (value) =>
-	toNumber(value).toLocaleString('en-BD', {
-		maximumFractionDigits: 2,
-	});
 
 const getProductId = (item) => {
 	const product = item?.product;
@@ -155,7 +151,7 @@ const getDiscountText = (item) => {
 	}
 
 	if (item?.discount?.type === 'fixed') {
-		return `৳${formatPrice(value)} OFF`;
+		return `${formatCurrency(value)} OFF`;
 	}
 
 	return null;
@@ -425,17 +421,11 @@ export default function CheckoutClient() {
 			onSuccess: (result) => {
 				setOrderPlaced(true);
 				setProcessing(false);
-
-				toast.success('অর্ডার সফল হয়েছে!');
-
-				// Keep cart until the success page has handled it.
-				// Clear cart in your order-success flow if needed.
-
-				if (result?.order?._id) {
-					router.push(`/order-success?orderId=${result.order._id}`);
+				toast.success('Order placed');
+				if (result?._id) {
+					router.push(`/checkout/success?orderId=${result._id}`);
 				}
 			},
-
 			onError: (error) => {
 				console.error('Place order error:', error);
 
@@ -469,9 +459,7 @@ export default function CheckoutClient() {
 
 		const name = orderData.customer.name.trim();
 		const email = orderData.customer.email.trim();
-
 		const phone = orderData.customer.phone.trim().replace(/[\s-]/g, '');
-
 		const area = orderData.address.area.trim();
 		const city = orderData.address.city.trim();
 		const thana = orderData.address.thana.trim();
@@ -546,7 +534,6 @@ export default function CheckoutClient() {
 		}
 
 		/* Prepare order items */
-
 		const orderItems = cart.map((item) => {
 			const isCombo = item?.type === 'combo';
 
@@ -569,33 +556,29 @@ export default function CheckoutClient() {
 
 			return orderItem;
 		});
-		/* Push notification FID */
 
+		/* Push notification FID */
 		const pushFid =
 			typeof window !== 'undefined'
 				? localStorage.getItem('shalban_push_fid')
 				: null;
-
+		
+		
 		/* Final payload */
-
 		const payload = {
 			pushFid,
-
 			userId: user?.id || user?._id || undefined,
-
 			customer: {
 				name,
 				email,
 				phone,
 			},
-
 			shippingAddress: {
 				thana,
 				area,
 				city,
 				phone,
 			},
-
 			orderItems,
 			voucherCode,
 
@@ -604,9 +587,7 @@ export default function CheckoutClient() {
 				status: 'unpaid',
 			},
 		};
-
 		setProcessing(true);
-
 		placeOrder(payload);
 	};
 
@@ -699,60 +680,60 @@ export default function CheckoutClient() {
     ===================================================== */
 
 	return (
-		<main className="min-h-screen bg-[#f8faf8] pb-12">
+		<main className="min-h-screen bg-[#f8faf8] pb-10 sm:pb-16">
 			{/* HEADER */}
-
-			<div className="border-b border-gray-200 bg-white">
-				<div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+			<div className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur-md">
+				<div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
 					<Link
 						href="/shop"
-						className="flex items-center gap-2 text-sm font-medium text-gray-600 transition hover:text-[#1f5d3b]">
-						<ArrowLeft size={17} />
-						Continue Shopping
+						className="flex items-center gap-2 text-sm font-semibold text-gray-600 transition hover:text-[#1f5d3b]">
+						<ArrowLeft size={18} />
+						<span>Continue Shopping</span>
 					</Link>
+
+					<div className="flex items-center gap-2 text-xs font-semibold text-[#1f5d3b]">
+						<Lock size={15} />
+						Secure Checkout
+					</div>
 				</div>
 			</div>
 
-			<div className="mx-auto max-w-7xl px-4  sm:px-6 lg:px-8">
-				{/* PAGE TITLE */}
-
-				<div className="">
-					<h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				{/* TITLE */}
+				<div className="py-6 sm:py-9">
+					<h1 className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
 						Checkout
 					</h1>
 
-					<p className="mt-1 text-sm text-gray-500">
+					<p className="mt-2 text-sm text-gray-500">
 						Complete your information to place your order.
 					</p>
 				</div>
 
-				<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_390px]">
+				{/* MAIN GRID */}
+				<div className="grid grid-cols-1 items-start gap-5 sm:gap-7 lg:grid-cols-[minmax(0,1fr)_370px] xl:grid-cols-[minmax(0,1fr)_400px]">
 					{/* LEFT COLUMN */}
-
-					<div className="space-y-5">
+					<div className="min-w-0 space-y-5">
 						{/* CUSTOMER INFORMATION */}
-
-						<section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-							<div className="mb-5 flex items-center gap-3">
-								<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-[#1f5d3b]">
-									<User size={19} />
+						<section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+							<div className="mb-6 flex items-center gap-3">
+								<div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-50 text-[#1f5d3b]">
+									<User size={20} />
 								</div>
 
 								<div>
 									<h2 className="font-bold text-gray-900">
 										Customer Information
 									</h2>
-
 									<p className="text-xs text-gray-500">
-										Your contact details
+										Your contact and delivery details
 									</p>
 								</div>
 							</div>
 
 							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								{/* NAME */}
-
-								<div className="sm:col-span-2">
+								<div>
 									<label className="mb-1.5 block text-xs font-semibold text-gray-600">
 										Full Name *
 									</label>
@@ -770,38 +751,12 @@ export default function CheckoutClient() {
 											onChange={handleChange}
 											placeholder="Enter your full name"
 											autoComplete="name"
-											className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
-										/>
-									</div>
-								</div>
-
-								{/* EMAIL */}
-
-								<div>
-									<label className="mb-1.5 block text-xs font-semibold text-gray-600">
-										Email Address
-									</label>
-
-									<div className="relative">
-										<Mail
-											size={17}
-											className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-										/>
-
-										<input
-											type="email"
-											name="customer.email"
-											value={orderData.customer.email}
-											onChange={handleChange}
-											placeholder="you@example.com"
-											autoComplete="email"
-											className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
+											className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm outline-none transition focus:border-[#1f5d3b] focus:bg-white focus:ring-2 focus:ring-green-100"
 										/>
 									</div>
 								</div>
 
 								{/* PHONE */}
-
 								<div>
 									<label className="mb-1.5 block text-xs font-semibold text-gray-600">
 										Phone Number *
@@ -820,13 +775,59 @@ export default function CheckoutClient() {
 											onChange={handleChange}
 											placeholder="01XXXXXXXXX"
 											autoComplete="tel"
-											className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
+											className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm outline-none transition focus:border-[#1f5d3b] focus:bg-white focus:ring-2 focus:ring-green-100"
 										/>
 									</div>
+								</div>
 
-									<div className="mt-3">
-										<label className="mb-1.5 block text-xs font-semibold text-gray-600">
-											Area / Full Address *
+								{/* EMAIL */}
+								<div className="sm:col-span-2">
+									<label className="mb-1.5 block text-xs font-semibold text-gray-600">
+										Email Address
+									</label>
+
+									<div className="relative">
+										<Mail
+											size={17}
+											className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+										/>
+
+										<input
+											type="email"
+											name="customer.email"
+											value={orderData.customer.email}
+											onChange={handleChange}
+											placeholder="you@example.com"
+											autoComplete="email"
+											className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm outline-none transition focus:border-[#1f5d3b] focus:bg-white focus:ring-2 focus:ring-green-100"
+										/>
+									</div>
+								</div>
+							</div>
+
+							{/* ADDRESS */}
+							<div className="mb-5 mt-7 border-t border-gray-100 pt-6">
+								<div className="mb-5 flex items-center gap-3">
+									<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-[#1f5d3b]">
+										<MapPin size={19} />
+									</div>
+
+									<div>
+										<h3 className="font-bold text-gray-900">
+											Delivery Address
+										</h3>
+										<p className="text-xs text-gray-500">
+											Where should we deliver your order?
+										</p>
+									</div>
+								</div>
+
+								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+									<div className="">
+										<label
+											className="mb-1.5 block text-xs font-semibold text-gray-600"
+											htmlFor="area">
+											Area
 										</label>
 
 										<div className="relative">
@@ -835,44 +836,34 @@ export default function CheckoutClient() {
 												className="absolute left-3 top-3.5 text-gray-400"
 											/>
 
-											<input
-												type="text"
+											<textarea
 												name="address.area"
 												value={orderData.address.area}
+												id="area"
 												onChange={handleChange}
 												placeholder="House, road, village or area"
-												autoComplete="street-address"
-												className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
+												rows={3}
+												className="w-full resize-y rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-3 text-sm outline-none focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-100"
 											/>
 										</div>
 									</div>
-
-									{/* THANA */}
-
 									<div>
-										<label className="mb-1.5 block text-xs font-semibold text-gray-600">
+										<label
+											className="mb-1.5 block text-xs font-semibold text-gray-600"
+											htmlFor="thana">
 											Thana / Upazila *
 										</label>
 
-										<div className="relative">
-											<MapPin
-												size={17}
-												className="absolute left-3 top-3.5 text-gray-400"
-											/>
-
-											<input
-												type="text"
-												name="address.thana"
-												value={orderData.address.thana}
-												onChange={handleChange}
-												placeholder="Enter your thana or upazila"
-												className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50"
-											/>
-										</div>
+										<input
+											type="text"
+											name="address.thana"
+											value={orderData.address.thana}
+											id="thana"
+											onChange={handleChange}
+											placeholder="Enter thana or upazila"
+											className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-100"
+										/>
 									</div>
-
-									{/* DISTRICT */}
-
 									<div>
 										<label className="mb-1.5 block text-xs font-semibold text-gray-600">
 											District *
@@ -882,7 +873,7 @@ export default function CheckoutClient() {
 											name="address.city"
 											value={orderData.address.city}
 											onChange={handleChange}
-											className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none transition focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-50">
+											className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-[#1f5d3b] focus:ring-2 focus:ring-green-100">
 											<option value="">
 												Select your district
 											</option>
@@ -896,89 +887,51 @@ export default function CheckoutClient() {
 											))}
 										</select>
 									</div>
-
-									{/* add function delivery by */}
-									{/* <div>
-										<label className="mb-1 block text-xs font-semibold text-gray-600">
-											Percel Delivery by
-										</label>
-
-										<div>
-											<input
-												type="radio"
-												name="percel"
-												id="Courier"
-												onChange={handleChange}
-												value={orderData.deliveryBy}
-											/>
-											<label
-												htmlFor="Courier"
-												className="ml-2">
-												Courier
-											</label>
-										</div>
-										<div>
-											<input
-												type="radio"
-												name="percel"
-												id="postoffice"
-												onChange={handleChange}
-												value={orderData.deliveryBy}
-											/>
-											<label
-												htmlFor="postoffice"
-												className="ml-2">
-												Post office - spead post
-											</label>
-										</div>
-									</div>
-									 */}
-									{orderData.address.city && (
-										<div className="flex items-center justify-between rounded-xl border border-green-100 bg-green-50/70 p-4">
-											<div className="flex items-center gap-3">
-												<Truck
-													size={19}
-													className="text-[#1f5d3b]"
-												/>
-
-												<div>
-													<p className="text-sm font-semibold text-gray-900">
-														Delivery Charge
-													</p>
-
-													<p className="text-xs text-gray-500">
-														{orderData.address.city}
-													</p>
-												</div>
-											</div>
-
-											<p className="text-lg font-bold text-[#1f5d3b]">
-												{shippingSettingsLoading
-													? '...'
-													: `৳${formatPrice(deliveryCharge)}`}
-											</p>
-										</div>
-									)}
 								</div>
+
+								{/* DELIVERY CHARGE */}
+								{orderData.address.city && (
+									<div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-green-100 bg-green-50/70 p-4">
+										<div className="flex items-center gap-3">
+											<Truck
+												size={20}
+												className="text-[#1f5d3b]"
+											/>
+
+											<div>
+												<p className="text-sm font-bold text-gray-900">
+													Delivery Charge
+												</p>
+												<p className="text-xs text-gray-500">
+													{orderData.address.city}
+												</p>
+											</div>
+										</div>
+
+										<p className="text-lg font-extrabold text-[#1f5d3b]">
+											{shippingSettingsLoading
+												? '...'
+												: `${formatCurrency(deliveryCharge)}`}
+										</p>
+									</div>
+								)}
 							</div>
 						</section>
 
 						{/* MOBILE CART */}
-
-						<section className="rounded-2xl border border-gray-200 bg-white p-5 lg:hidden">
+						<section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:hidden sm:p-6">
 							<div className="mb-5 flex items-center justify-between">
 								<div className="flex items-center gap-3">
 									<ShoppingBag
-										size={19}
+										size={20}
 										className="text-[#1f5d3b]"
 									/>
-
 									<h2 className="font-bold text-gray-900">
 										Your Items
 									</h2>
 								</div>
 
-								<span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-[#1f5d3b]">
+								<span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-[#1f5d3b]">
 									{cart.length} items
 								</span>
 							</div>
@@ -992,17 +945,15 @@ export default function CheckoutClient() {
 					</div>
 
 					{/* RIGHT COLUMN */}
-
-					<aside className="space-y-5">
+					<aside className="min-w-0 space-y-5">
 						{/* DESKTOP CART */}
-
-						<section className="hidden rounded-2xl border border-gray-200 bg-white p-5 lg:block">
+						<section className="hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:block">
 							<div className="mb-5 flex items-center justify-between">
 								<h2 className="font-bold text-gray-900">
 									Your Items
 								</h2>
 
-								<span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-[#1f5d3b]">
+								<span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-[#1f5d3b]">
 									{cart.length} items
 								</span>
 							</div>
@@ -1015,32 +966,28 @@ export default function CheckoutClient() {
 						</section>
 
 						{/* ORDER SUMMARY */}
-
-						<section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 lg:sticky lg:top-6">
-							<h2 className="mb-5 text-lg font-bold text-gray-900">
+						<section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-20">
+							<h2 className="mb-5 text-lg font-extrabold text-gray-900">
 								Order Summary
 							</h2>
 
-							<div className="space-y-3 text-sm">
+							<div className="space-y-4 text-sm">
 								<div className="flex justify-between gap-3">
 									<span className="text-gray-500">
 										Subtotal
 									</span>
-
-									<span className="font-semibold text-gray-900">
-										৳{formatPrice(subtotal)}
+									<span className="font-bold text-gray-900">
+										{formatCurrency(subtotal)}
 									</span>
 								</div>
 
 								{discount > 0 && (
 									<div className="flex justify-between gap-3">
-										<span className="flex items-center gap-1.5 text-gray-500">
-											<Tag size={14} />
+										<span className="text-gray-500">
 											Discount
 										</span>
-
-										<span className="font-semibold text-green-700">
-											-৳{formatPrice(discount)}
+										<span className="font-bold text-green-700">
+											-{formatCurrency(discount)}
 										</span>
 									</div>
 								)}
@@ -1050,14 +997,14 @@ export default function CheckoutClient() {
 										Delivery
 									</span>
 
-									<span className="font-semibold text-gray-900">
+									<span className="font-bold text-gray-900">
 										{shippingSettingsLoading
 											? 'Loading...'
 											: deliveryCharge === 0
 												? orderData.address.city
 													? 'FREE'
 													: 'Select district'
-												: `৳${formatPrice(deliveryCharge)}`}
+												: `${formatCurrency(deliveryCharge)}`}
 									</span>
 								</div>
 
@@ -1066,7 +1013,7 @@ export default function CheckoutClient() {
 										Number(
 											shippingSettings.freeDeliveryMinimum
 										) && (
-										<p className="rounded-lg bg-green-50 p-2 text-xs text-green-700">
+										<p className="rounded-lg bg-green-50 p-3 text-xs font-medium text-green-700">
 											আপনার অর্ডারে ফ্রি ডেলিভারি
 											প্রযোজ্য।
 										</p>
@@ -1075,20 +1022,20 @@ export default function CheckoutClient() {
 
 							<div className="my-5 border-t border-dashed border-gray-200" />
 
-							<div className="flex items-end justify-between gap-3">
+							<div className="flex items-center justify-between gap-3">
 								<div>
 									<p className="text-xs text-gray-500">
 										Total Amount
 									</p>
 
 									<p className="mt-1 text-2xl font-extrabold text-gray-900">
-										৳{formatPrice(grandTotal)}
+										{formatCurrency(grandTotal)}
 									</p>
 								</div>
 
-								<div className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-xs font-bold text-[#1f5d3b]">
+								<div className="flex items-center gap-1.5 rounded-xl bg-green-50 px-3 py-2 text-xs font-bold text-[#1f5d3b]">
 									<Truck size={15} />
-									Cash on Delivery
+									COD
 								</div>
 							</div>
 
@@ -1101,7 +1048,7 @@ export default function CheckoutClient() {
 									!cart.length ||
 									shippingSettingsLoading
 								}
-								className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#1f5d3b] px-5 py-4 text-sm font-bold text-white transition hover:bg-[#17472d] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50">
+								className="mt-6 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#1f5d3b] px-5 py-4 text-sm font-bold text-white transition hover:bg-[#17472d] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50">
 								{processing ? (
 									<>
 										<Loader2
@@ -1123,8 +1070,7 @@ export default function CheckoutClient() {
 								)}
 							</button>
 
-						
-							<div className="mt-3 flex items-center justify-center gap-2 border-t border-gray-100 pt-4 text-xs text-gray-500">
+							<div className="mt-4 flex items-center justify-center gap-2 border-t border-gray-100 pt-4 text-xs text-gray-500">
 								<ShieldCheck size={15} />
 								Your information is secure.
 							</div>
@@ -1135,11 +1081,6 @@ export default function CheckoutClient() {
 		</main>
 	);
 }
-
-/* =========================================================
-   CART LIST
-   Same page - no separate component file required.
-========================================================= */
 
 function CartList({ items, onRemove, onQuantityChange }) {
 	if (!items?.length) {
@@ -1235,12 +1176,12 @@ function CartList({ items, onRemove, onQuantityChange }) {
 								</div>
 								<div className=" flex flex-wrap items-center gap-2">
 									<span className="text-sm font-bold text-[#1f5d3b]">
-										৳{formatPrice(price)}
+										{formatCurrency(price)}
 									</span>
 
 									{originalPrice > price && (
 										<span className="text-xs text-gray-400 line-through">
-											৳{formatPrice(originalPrice)}
+											{formatCurrency(originalPrice)}
 										</span>
 									)}
 
@@ -1255,7 +1196,8 @@ function CartList({ items, onRemove, onQuantityChange }) {
 								<div className="flex justify-between gap-2">
 									{savedAmount > 0 && (
 										<p className="text-[11px] font-medium text-green-700">
-											You save ৳{formatPrice(savedAmount)}
+											You save 
+											{formatCurrency(savedAmount)}
 										</p>
 									)}
 									{hasStock && (
@@ -1315,7 +1257,7 @@ function CartList({ items, onRemove, onQuantityChange }) {
 								</p>
 
 								<p className="text-sm font-bold text-gray-900">
-									৳{formatPrice(itemTotal)}
+									{formatCurrency(itemTotal)}
 								</p>
 							</div>
 						</div>

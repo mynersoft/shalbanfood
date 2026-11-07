@@ -6,11 +6,10 @@ import { notFound } from 'next/navigation';
 
 import { ChevronRight, Truck, ShieldCheck, BadgeCheck } from 'lucide-react';
 
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import Product from '@/models/Product';
 
 import ProductPurchase from './ProductPurchase';
-
 
 export const revalidate = 300;
 
@@ -399,8 +398,6 @@ export default async function ProductPage({ params }) {
 					{/* INFORMATION */}
 
 					<div>
-						
-
 						<h1 className="mt-2 text-3xl font-bold leading-tight text-gray-900 sm:text-xl">
 							{product.name}
 						</h1>
@@ -416,15 +413,13 @@ export default async function ProductPage({ params }) {
 							{/* {totalSold > 0 && <span>{totalSold}+ sold</span>} */}
 						</div>
 
-
-
 						<ProductPurchase
-    productId={String(product._id)}
-    name={product.name}
-    slug={product.slug}
-    image={product.image || ''}
-    variants={variants}
-/>
+							productId={String(product._id)}
+							name={product.name}
+							slug={product.slug}
+							image={product.image || ''}
+							variants={variants}
+						/>
 
 						{/* TRUST */}
 

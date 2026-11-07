@@ -43,6 +43,7 @@ import AdminOrderDetailsModal, {
 
 import { STATUS_ICON } from '@/constants/icons';
 import AdminDiscountModal from '@/components/Dashboard/AdminDiscountModal';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 
 const PAGE_SIZE = 10;
 
@@ -72,28 +73,6 @@ function getPaymentInfo(order) {
 		status: order?.payment?.status || 'unpaid',
 		method: order?.payment?.method || 'COD',
 	};
-}
-
-function formatCurrency(value) {
-	return new Intl.NumberFormat('en-BD', {
-		style: 'currency',
-		currency: 'BDT',
-		currencyDisplay: 'narrowSymbol',
-		maximumFractionDigits: 0,
-	}).format(Number(value || 0));
-}
-
-function formatDate(value) {
-	if (!value) return '—';
-
-	try {
-		return new Intl.DateTimeFormat('en-BD', {
-			dateStyle: 'medium',
-			timeStyle: 'short',
-		}).format(new Date(value));
-	} catch {
-		return '—';
-	}
 }
 
 function StatusBadge({ status }) {
@@ -183,10 +162,8 @@ function PaymentDisplay({ order, onEdit }) {
 				</button>
 			</div>
 
-		
-
 			<div className="flex items-center  gap-2 text-[12px]">
-				<span className="text-gray-500">Due  </span>
+				<span className="text-gray-500">Due </span>
 				<span className="font-semibold text-yellow-400">
 					{formatCurrency(payment.due)}
 				</span>
@@ -257,11 +234,7 @@ function PaymentEditorModal({ order, onClose, onSave, busy }) {
 				parsedPaid <= 0 ||
 				parsedPaid >= payment.total
 			) {
-				setPaidAmount(
-					payment.total > 1
-						? '1'
-						: '0'
-				);
+				setPaidAmount(payment.total > 1 ? '1' : '0');
 			}
 		}
 	};
@@ -280,10 +253,14 @@ function PaymentEditorModal({ order, onClose, onSave, busy }) {
 		try {
 			setSaving(true);
 
-			await onSave(order._id, {
-				paidAmount: parsedPaid,
-				paymentStatus,
-			});
+		
+await onSave(order._id, {
+	payment: {
+		paidAmount: parsedPaid,
+		status: paymentStatus,
+	},
+});
+
 
 			onClose();
 		} catch (error) {
@@ -326,9 +303,7 @@ function PaymentEditorModal({ order, onClose, onSave, busy }) {
 					{/* SUMMARY */}
 					<div className="grid grid-cols-2 gap-3">
 						<div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-							<p className="text-sm text-gray-500">
-								Order Total
-							</p>
+							<p className="text-sm text-gray-500">Order Total</p>
 
 							<p className="mt-1 text-lg font-bold text-white">
 								{formatCurrency(payment.total)}
@@ -369,9 +344,7 @@ function PaymentEditorModal({ order, onClose, onSave, busy }) {
 							max={payment.total}
 							step="any"
 							value={paidAmount}
-							onChange={(e) =>
-								handlePaidChange(e.target.value)
-							}
+							onChange={(e) => handlePaidChange(e.target.value)}
 							placeholder="Enter paid amount"
 							className="h-11 w-full rounded-lg border border-white/10 bg-[#0d0d11] px-3 text-sm text-white outline-none focus:border-green-500"
 						/>
@@ -385,9 +358,7 @@ function PaymentEditorModal({ order, onClose, onSave, busy }) {
 
 						<select
 							value={paymentStatus}
-							onChange={(e) =>
-								handleStatusChange(e.target.value)
-							}
+							onChange={(e) => handleStatusChange(e.target.value)}
 							className="h-11 w-full rounded-lg border border-white/10 bg-[#0d0d11] px-3 text-sm text-white outline-none focus:border-green-500">
 							{PAYMENT_STATUSES.map((status) => (
 								<option key={status} value={status}>
@@ -434,17 +405,11 @@ function PaymentEditorModal({ order, onClose, onSave, busy }) {
 						type="button"
 						onClick={handleSave}
 						disabled={
-							!validAmount ||
-							!validStatus ||
-							busy ||
-							saving
+							!validAmount || !validStatus || busy || saving
 						}
 						className="inline-flex items-center gap-2 rounded-lg bg-[#1f5d3b] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#17482d] disabled:cursor-not-allowed disabled:opacity-40">
 						{saving && (
-							<LoaderCircle
-								size={15}
-								className="animate-spin"
-							/>
+							<LoaderCircle size={15} className="animate-spin" />
 						)}
 						{saving ? 'Saving...' : 'Save Payment'}
 					</button>
@@ -635,18 +600,12 @@ export default function AdminOrders() {
 
 		try {
 			setBusyId(id);
-
 			await updateOrder.mutateAsync({
 				id,
 				payload,
 			});
-
-			toast.success('Order updated successfully');
-
 			return true;
 		} catch (err) {
-			console.error('Update order error:', err);
-
 			toast.error(
 				err?.response?.data?.message ||
 					err?.message ||
@@ -677,9 +636,9 @@ export default function AdminOrders() {
 
 			if (!confirmed) return;
 		}
-
 		await handleUpdate(order._id, {
 			status: newStatus,
+			orderItems: order.orderItems,
 		});
 	};
 
@@ -1193,12 +1152,10 @@ export default function AdminOrders() {
 														'COD'}
 												</div>
 
-												
-													<PaymentDisplay
-														order={order}
-														onEdit={setPaymentOrder}
-													/>
-												
+												<PaymentDisplay
+													order={order}
+													onEdit={setPaymentOrder}
+												/>
 											</td>
 
 											{/* ORDER STATUS */}
@@ -1399,14 +1356,14 @@ export default function AdminOrders() {
 			)}
 			{/* PAYMENT MODAL */}
 
-{paymentOrder && (
-	<PaymentEditorModal
-		order={paymentOrder}
-		onClose={() => setPaymentOrder(null)}
-		onSave={handleUpdate}
-		busy={busyId === paymentOrder._id}
-	/>
-)}
+			{paymentOrder && (
+				<PaymentEditorModal
+					order={paymentOrder}
+					onClose={() => setPaymentOrder(null)}
+					onSave={handleUpdate}
+					busy={busyId === paymentOrder._id}
+				/>
+			)}
 		</div>
 	);
 }

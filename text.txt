@@ -1,17 +1,12 @@
 
 user
 	^update profile -updated data not show
-	not search by invoice
-	button scroll
 
 product
 	edit sku not update 
 
 
-
-	tracking order fix from url query
-
-
+invoice check by add more items
 
   
 upcoming feature-- 

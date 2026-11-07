@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight, ChevronRight, Package, ShoppingBag } from 'lucide-react';
 
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import Product from '@/models/Product';
 
 import ProductCard from '@/components/products/ProductCard';
@@ -107,79 +107,74 @@ export default async function CategoryPage({ params }) {
 		})
 		.lean();
 
+	if (!products.length) {
+		return (
+			<div className="flex min-h-[320px] items-center justify-center px-4 py-10">
+				<div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+					<div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
+						<ShoppingBag className="h-8 w-8 text-green-600" />
+					</div>
 
-if (!products.length) {
-	return (
-		<div className="flex min-h-[320px] items-center justify-center px-4 py-10">
-			<div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-				<div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
-					<ShoppingBag className="h-8 w-8 text-green-600" />
+					<h2 className="text-xl font-semibold text-gray-900">
+						এই ক্যাটাগরিতে এখনো কোনো পণ্য নেই
+					</h2>
+
+					<p className="mt-2 text-sm leading-6 text-gray-500">
+						এই ক্যাটাগরিতে নতুন পণ্য খুব শীঘ্রই যোগ করা হবে। এখনই
+						আমাদের অন্যান্য পণ্যগুলো দেখে নিতে পারেন।
+					</p>
+
+					<Link
+						href="/shop"
+						className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-700">
+						<ShoppingBag className="h-4 w-4" />
+						Shop Now
+						<ArrowRight className="h-4 w-4" />
+					</Link>
 				</div>
-
-				<h2 className="text-xl font-semibold text-gray-900">
-					এই ক্যাটাগরিতে এখনো কোনো পণ্য নেই
-				</h2>
-
-				<p className="mt-2 text-sm leading-6 text-gray-500">
-					এই ক্যাটাগরিতে নতুন পণ্য খুব শীঘ্রই যোগ করা হবে। এখনই আমাদের
-					অন্যান্য পণ্যগুলো দেখে নিতে পারেন।
-				</p>
-
-				<Link
-					href="/shop"
-					className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-700">
-					<ShoppingBag className="h-4 w-4" />
-					Shop Now
-					<ArrowRight className="h-4 w-4" />
-				</Link>
 			</div>
-		</div>
-	);
-}
+		);
+	}
 
 	const categoryName = getCategoryName(slug);
 	const description = getCategoryDescription(slug, categoryName);
 
 	const canonicalUrl = `${SITE_URL}/category/${slug}`;
 
+	function serializeData(value) {
+		if (value === null || value === undefined) {
+			return value;
+		}
 
+		// MongoDB ObjectId
+		if (value?._bsontype === 'ObjectId') {
+			return value.toString();
+		}
 
+		// Date
+		if (value instanceof Date) {
+			return value.toISOString();
+		}
 
+		// Array
+		if (Array.isArray(value)) {
+			return value.map(serializeData);
+		}
 
+		// Object
+		if (typeof value === 'object') {
+			return Object.fromEntries(
+				Object.entries(value).map(([key, val]) => [
+					key,
+					serializeData(val),
+				])
+			);
+		}
 
-function serializeData(value) {
-	if (value === null || value === undefined) {
 		return value;
 	}
 
-	// MongoDB ObjectId
-	if (value?._bsontype === 'ObjectId') {
-		return value.toString();
-	}
-
-	// Date
-	if (value instanceof Date) {
-		return value.toISOString();
-	}
-
-	// Array
-	if (Array.isArray(value)) {
-		return value.map(serializeData);
-	}
-
-	// Object
-	if (typeof value === 'object') {
-		return Object.fromEntries(
-			Object.entries(value).map(([key, val]) => [key, serializeData(val)])
-		);
-	}
-
-	return value;
-}
-
-
-
-const safeProducts = products.map((product) => serializeData(product));
+	const safeProducts = products.map((product) => serializeData(product));
 
 	/* ---------------------------------------------------
        ItemList Schema

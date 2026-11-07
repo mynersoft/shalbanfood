@@ -1,26 +1,26 @@
 // app/api/stats/daily-table/route.js
-import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/dbConnect";
-import SaleProfit from "@/models/SaleProfit";
-import ServiceRecords from "@/models/ServiceRecords";
+import { NextResponse } from 'next/server';
+import { connectDB } from '@/lib/connectDB';
+import SaleProfit from '@/models/SaleProfit';
+import ServiceRecords from '@/models/ServiceRecords';
 
 export async function GET(req) {
 	await connectDB();
 	try {
 		const url = new URL(req.url);
-		const type = url.searchParams.get("type") || "monthly"; // daily | weekly | monthly
+		const type = url.searchParams.get('type') || 'monthly'; // daily | weekly | monthly
 		const year =
-			parseInt(url.searchParams.get("year")) || new Date().getFullYear();
+			parseInt(url.searchParams.get('year')) || new Date().getFullYear();
 		const month =
-			parseInt(url.searchParams.get("month")) ||
+			parseInt(url.searchParams.get('month')) ||
 			new Date().getMonth() + 1;
 
 		let start, end;
 
-		if (type === "daily" || type === "monthly") {
+		if (type === 'daily' || type === 'monthly') {
 			start = new Date(year, month - 1, 1, 0, 0, 0, 0);
 			end = new Date(year, month, 0, 23, 59, 59, 999);
-		} else if (type === "weekly") {
+		} else if (type === 'weekly') {
 			const now = new Date();
 			const day = now.getDay();
 			start = new Date(now);
@@ -38,9 +38,9 @@ export async function GET(req) {
 			{ $match: { createdAt: { $gte: start, $lte: end } } },
 			{
 				$group: {
-					_id: { day: { $dayOfMonth: "$createdAt" } },
-					totalSale: { $sum: "$totalSale" },
-					totalProfit: { $sum: "$profit" },
+					_id: { day: { $dayOfMonth: '$createdAt' } },
+					totalSale: { $sum: '$totalSale' },
+					totalProfit: { $sum: '$profit' },
 				},
 			},
 		]);
@@ -57,8 +57,8 @@ export async function GET(req) {
 			{ $match: { createdAt: { $gte: start, $lte: end } } },
 			{
 				$group: {
-					_id: { day: { $dayOfMonth: "$createdAt" } },
-					totalBill: { $sum: "$billAmount" },
+					_id: { day: { $dayOfMonth: '$createdAt' } },
+					totalBill: { $sum: '$billAmount' },
 				},
 			},
 		]);

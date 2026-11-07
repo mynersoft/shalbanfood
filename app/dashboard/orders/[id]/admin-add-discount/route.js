@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 
 import Order from '@/models/Order';
 import { checkAuthRole } from '@/lib/checkAuthRole';
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 
 export const dynamic = 'force-dynamic';
 

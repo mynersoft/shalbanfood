@@ -1,13 +1,12 @@
-import { NextResponse } from "next/server";
-import mongoose from "mongoose";
+import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 
-import {connectDB} from "@/lib/dbConnect";
-import ComboOffer from "@/models/ComboOffer";
+import { connectDB } from '@/lib/connectDB';
+import ComboOffer from '@/models/ComboOffer';
 
 /* =========================
    GET SINGLE OFFER
 ========================= */
-
 
 export async function GET(request, { params }) {
 	try {
@@ -95,7 +94,6 @@ export async function GET(request, { params }) {
 /* =========================
    UPDATE OFFER
 ========================= */
-
 
 export async function PUT(request, { params }) {
 	try {
@@ -308,64 +306,56 @@ export async function PUT(request, { params }) {
 	}
 }
 
-
-
 /* =========================
    DELETE OFFER
 ========================= */
 
-export async function DELETE(
-    request,
-    { params }
-) {
-    try {
-        await connectDB();
+export async function DELETE(request, { params }) {
+	try {
+		await connectDB();
 
-        const { id } = await params;
+		const { id } = await params;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid offer ID",
-                },
-                { status: 400 }
-            );
-        }
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'Invalid offer ID',
+				},
+				{ status: 400 }
+			);
+		}
 
-        const offer =
-            await ComboOffer.findById(id);
+		const offer = await ComboOffer.findById(id);
 
-        if (!offer) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Offer not found",
-                },
-                { status: 404 }
-            );
-        }
+		if (!offer) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: 'Offer not found',
+				},
+				{ status: 404 }
+			);
+		}
 
-        await ComboOffer.findByIdAndDelete(id);
+		await ComboOffer.findByIdAndDelete(id);
 
-        return NextResponse.json(
-            {
-                success: true,
-                message:
-                    "Combo offer deleted successfully",
-            },
-            { status: 200 }
-        );
-    } catch (error) {
-        console.error("DELETE OFFER ERROR:", error);
+		return NextResponse.json(
+			{
+				success: true,
+				message: 'Combo offer deleted successfully',
+			},
+			{ status: 200 }
+		);
+	} catch (error) {
+		console.error('DELETE OFFER ERROR:', error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message:
-                    "Failed to delete offer",
-            },
-            { status: 500 }
-        );
-    }
+		return NextResponse.json(
+			{
+				success: false,
+				message: 'Failed to delete offer',
+			},
+			{ status: 500 }
+		);
+	}
 }

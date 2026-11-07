@@ -12,7 +12,10 @@ const orderSchema = new mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'User',
 		},
-
+		stockDeducted: {
+			type: Boolean,
+			default: false,
+		},
 		customer: {
 			name: { type: String, required: true },
 			email: String,
@@ -88,7 +91,6 @@ const orderSchema = new mongoose.Schema(
 				default: 0,
 				min: 0,
 			},
-
 			transactionId: {
 				type: String,
 				default: '',

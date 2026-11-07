@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import Order from '@/models/Order';
 import User from '@/models/User';
 import { checkAuthRole } from '@/lib/checkAuthRole';

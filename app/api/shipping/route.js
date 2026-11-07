@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import ShippingCost from '@/models/ShippingCost';
 import { checkAuthRole } from '@/lib/checkAuthRole';
 
@@ -22,7 +22,6 @@ async function authorize() {
 
 	return null;
 }
-
 
 function validateSettings(body) {
 	if (
@@ -58,11 +57,6 @@ function validateSettings(body) {
 
 	return true;
 }
-
-
-
-
-
 
 export async function GET() {
 	try {

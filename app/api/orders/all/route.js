@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import Order from '@/models/Order';
 import { checkAuthRole } from '@/lib/checkAuthRole';
 
@@ -11,8 +11,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
 	try {
-
-		const {isAdmin} = await checkAuthRole();
+		const { isAdmin } = await checkAuthRole();
 
 		if (!isAdmin) {
 			return NextResponse.json(

@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import ComboOffer from '@/models/ComboOffer';
 import { checkAuthRole } from '@/lib/checkAuthRole';
-
-
-
-
-
 
 function validateOffer(body) {
 	const {

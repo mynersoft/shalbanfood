@@ -1,4 +1,4 @@
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import Brand from '@/models/Brand';
 
 export async function GET() {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import Settings from '@/models/Settings';
 import { checkAuthRole } from '@/lib/checkAuthRole';
 

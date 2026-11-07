@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import {connectDB} from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import User from '@/models/User';
 
 function normalizeEmail(email) {

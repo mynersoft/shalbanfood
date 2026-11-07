@@ -31,11 +31,9 @@
 // 	}
 // }
 
-
-
-import { connectDB } from "@/lib/dbConnect";
-import SaleProfit from "@/models/SaleProfit";
-import { NextResponse } from "next/server";
+import { connectDB } from '@/lib/connectDB';
+import SaleProfit from '@/models/SaleProfit';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
 	try {
@@ -74,7 +72,7 @@ export async function GET() {
 			data: dailyData,
 		});
 	} catch (err) {
-		console.log("DAILY STATS ERROR:", err);
+		console.log('DAILY STATS ERROR:', err);
 		return NextResponse.json({ success: false }, { status: 500 });
 	}
 }

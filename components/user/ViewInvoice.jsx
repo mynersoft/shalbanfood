@@ -1,26 +1,15 @@
 'use client';
 
+import { formatCurrency, formatDate } from '@/utils/formatters';
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-
-const money = (n = 0) => `৳${Number(n || 0).toLocaleString('en-US')}`;
-
-const fmtDate = (d) => {
-	if (!d || Number.isNaN(new Date(d).getTime())) return '—';
-
-	return new Intl.DateTimeFormat('en-GB', {
-		dateStyle: 'medium',
-		timeStyle: 'short',
-		timeZone: 'Asia/Dhaka',
-	}).format(new Date(d));
-};
 
 const cap = (s = '') =>
 	s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Unknown';
 
 function Detail({ label, children }) {
 	return (
-		<div className="flex justify-between gap-4 py-2">
+		<div className="flex justify-between gap-4 py-1">
 			<dt className="text-sm text-neutral-500">{label}</dt>
 			<dd className="text-right text-sm font-medium text-neutral-900">
 				{children}
@@ -91,7 +80,7 @@ export default function ViewInvoice({ order, onClose }) {
 				className="invoice-paper mx-auto max-w-[800px] bg-white text-neutral-900"
 				onClick={(e) => e.stopPropagation()}>
 				{/* Header */}
-				<header className="flex flex-wrap items-start justify-between gap-6 border-b border-neutral-300 pb-6">
+				<section className="flex flex-wrap items-start justify-between gap-6 border-b border-neutral-300 pb-6">
 					<div>
 						<h1 className="text-2xl font-bold tracking-tight">
 							Shalban Food
@@ -110,21 +99,21 @@ export default function ViewInvoice({ order, onClose }) {
 					<div className="text-left sm:text-right">
 						<p className="text-sm text-neutral-500">Invoice date</p>
 						<p className="mt-1 text-sm font-medium">
-							{fmtDate(createdAt)}
+							{formatDate(createdAt)}
 						</p>
-						<p className="mt-4 text-sm text-neutral-500">
+						<p className="mt-4 text-sm text-neutral-800">
 							Order status
 						</p>
 						<p className="mt-1 text-sm font-semibold">
 							{cap(status)}
 						</p>
 					</div>
-				</header>
+				</section>
 
 				{/* Customer & Seller */}
-				<section className="grid gap-8 border-b border-neutral-200 py-7 sm:grid-cols-2 justify-between">
+				<section className="grid gap-8 border-b border-neutral-200  sm:grid-cols-2 justify-between">
 					<div>
-						<h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+						<h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-neutral-800">
 							Bill & Ship To
 						</h2>
 						<p className="font-semibold">
@@ -145,7 +134,7 @@ export default function ViewInvoice({ order, onClose }) {
 					</div>
 
 					<div className="sm:text-right">
-						<h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+						<h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-neutral-800">
 							Sold By
 						</h2>
 						<p className="font-semibold">Shalban Food</p>
@@ -166,7 +155,7 @@ export default function ViewInvoice({ order, onClose }) {
 					<div className="overflow-x-auto">
 						<table className="w-full min-w-[500px] text-left">
 							<thead>
-								<tr className="border-y border-neutral-300 text-xs text-neutral-500">
+								<tr className="border-y border-neutral-300 text-xs text-neutral-800">
 									<th className="py-3 pr-3 font-medium">
 										Product
 									</th>
@@ -189,7 +178,7 @@ export default function ViewInvoice({ order, onClose }) {
 											item._id || `${item.name}-${index}`
 										}
 										className="break-inside-avoid">
-										<td className="py-4 pr-3">
+										<td className="py-2 pr-3">
 											<div className="flex items-center gap-3">
 												{item.image && (
 													<img
@@ -199,18 +188,19 @@ export default function ViewInvoice({ order, onClose }) {
 													/>
 												)}
 												<span className="text-sm font-medium">
-													{item.name || 'Product'}
+													{item.name || 'Product'} -
+													{item.variantLabel}
 												</span>
 											</div>
 										</td>
-										<td className="px-3 py-4 text-right text-sm tabular-nums">
-											{money(item.price)}
+										<td className="px-3 py-2 text-right text-sm tabular-nums">
+											{formatCurrency(item.price)}
 										</td>
 										<td className="px-3 py-4 text-right text-sm tabular-nums">
 											{item.quantity ?? 0}
 										</td>
 										<td className="py-4 pl-3 text-right text-sm font-medium tabular-nums">
-											{money(
+											{formatCurrency(
 												Number(item.price || 0) *
 													Number(item.quantity || 0)
 											)}
@@ -232,15 +222,17 @@ export default function ViewInvoice({ order, onClose }) {
 					</div>
 
 					{/* Totals */}
-					<div className="ml-auto mt-6 w-full max-w-sm">
+					<div className="ml-auto mt-4 w-full max-w-sm">
 						<dl>
-							<Detail label="Subtotal">{money(subtotal)}</Detail>
+							<Detail label="Subtotal">
+								{formatCurrency(subtotal)}
+							</Detail>
 							<Detail label="Shipping fee">
-								{money(shippingFee)}
+								{formatCurrency(shippingFee)}
 							</Detail>
 							{Number(discount) > 0 && (
 								<Detail label="Discount">
-									−{money(discount)}
+									−{formatCurrency(discount)}
 								</Detail>
 							)}
 						</dl>
@@ -259,7 +251,7 @@ export default function ViewInvoice({ order, onClose }) {
 								</p>
 							</div>
 							<p className="text-2xl font-bold tabular-nums">
-								{money(total)}
+								{formatCurrency(total)}
 							</p>
 						</div>
 					</div>

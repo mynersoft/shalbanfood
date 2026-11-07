@@ -1,4 +1,4 @@
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import Cart from '@/models/Cart';
 import Product from '@/models/Product';
 

@@ -327,7 +327,7 @@ export default function NotificationDropdown() {
 										</div>
 
 										<p
-											className="mt-1 line-clamp-2 text-sm text-gray-600
+											className="mt-1 line-clamp-4 text-sm text-gray-600
                       dark:text-gray-400">
 											{notification.message}
 										</p>

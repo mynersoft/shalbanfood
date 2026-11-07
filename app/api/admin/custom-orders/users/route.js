@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import User from '@/models/User';
 import { checkAuthRole } from '@/lib/checkAuthRole';
 
 export async function GET(request) {
 	try {
-		const {isAdmin} = await checkAuthRole();
+		const { isAdmin } = await checkAuthRole();
 
 		if (!isAdmin) {
 			return NextResponse.json(
@@ -14,7 +14,6 @@ export async function GET(request) {
 			);
 		}
 
-		
 		await connectDB();
 
 		const { searchParams } = new URL(request.url);

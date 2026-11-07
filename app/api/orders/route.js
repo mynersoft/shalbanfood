@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import Order from '@/models/Order';
 import Product from '@/models/Product';
 import { withErrorHandler } from '@/lib/withErrorHandler';
@@ -19,11 +19,12 @@ export const runtime = 'nodejs';
 // ============================================
 // GET ORDER BY ID
 // ============================================
-
 export async function GET(req) {
 	try {
 		const url = new URL(req.url);
 		const orderId = url.searchParams.get('orderId');
+
+		console.log(orderId, '===================');
 
 		if (!orderId) {
 			return NextResponse.json(
@@ -61,7 +62,7 @@ export async function GET(req) {
 
 		return NextResponse.json({
 			success: true,
-			orders: order,
+			order,
 		});
 	} catch (error) {
 		console.error('Get order error:', error);
@@ -79,6 +80,7 @@ export async function GET(req) {
 // ============================================
 // CREATE CUSTOMER ORDER
 // ============================================
+
 
 export const POST = withErrorHandler(async (req) => {
 	let body;
@@ -117,10 +119,8 @@ export const POST = withErrorHandler(async (req) => {
 	await connectDB();
 
 	const formattedOrderItems = [];
-	const formattedProductItems = [];
-	const formattedComboItems = [];
 
-	// 4. Validate Product and Combo Offer separately
+	// 4. Validate Product and Combo Offer
 	for (const item of orderItems) {
 		const type = item.type === 'combo' ? 'combo' : 'product';
 
@@ -135,7 +135,6 @@ export const POST = withErrorHandler(async (req) => {
 		if (!Number.isInteger(quantity) || quantity <= 0) {
 			throw new ApiError('Invalid product quantity', 400);
 		}
-		
 
 		// --------------------------------
 		// COMBO OFFER
@@ -150,15 +149,7 @@ export const POST = withErrorHandler(async (req) => {
 				throw new ApiError('Combo offer not found or unavailable', 404);
 			}
 
-			const stock = Number(comboOffer.stock);
 			const price = Number(comboOffer.offerPrice);
-
-			if (!Number.isFinite(stock) || stock < quantity) {
-				throw new ApiError(
-					`Insufficient stock for ${comboOffer.name}`,
-					400
-				);
-			}
 
 			if (!Number.isFinite(price) || price <= 0) {
 				throw new ApiError(`Invalid price for ${comboOffer.name}`, 400);
@@ -168,12 +159,15 @@ export const POST = withErrorHandler(async (req) => {
 				type: 'combo',
 				productId: String(comboOffer._id),
 				comboOfferId: String(comboOffer._id),
+
 				comboItems: (comboOffer.items || []).map((comboItem) => ({
 					name: comboItem.name || '',
 					quantity: String(comboItem.quantity || ''),
 				})),
+
 				variantId: null,
 				variantLabel: '',
+
 				name: comboOffer.name,
 				quantity,
 				price,
@@ -181,7 +175,6 @@ export const POST = withErrorHandler(async (req) => {
 			};
 
 			formattedOrderItems.push(formattedItem);
-			formattedComboItems.push(formattedItem);
 
 			continue;
 		}
@@ -226,6 +219,7 @@ export const POST = withErrorHandler(async (req) => {
 			productId: String(product._id),
 			variantId: String(variant._id),
 			variantLabel: `${variant.value} ${variant.unit}`,
+
 			name: product.name,
 			quantity,
 			price,
@@ -233,7 +227,6 @@ export const POST = withErrorHandler(async (req) => {
 		};
 
 		formattedOrderItems.push(formattedItem);
-		formattedProductItems.push(formattedItem);
 	}
 
 	// 5. Calculate subtotal using database prices
@@ -329,6 +322,7 @@ export const POST = withErrorHandler(async (req) => {
 	// 10. Prepare order payload
 	const orderPayload = {
 		invoiceNo,
+
 		pushFid: matchingDevice?.fid || null,
 
 		customer: {
@@ -340,6 +334,7 @@ export const POST = withErrorHandler(async (req) => {
 		subtotal,
 		total,
 		shippingFee,
+
 		status: 'pending',
 		discount: discountAmount,
 
@@ -357,82 +352,19 @@ export const POST = withErrorHandler(async (req) => {
 		},
 
 		orderItems: formattedOrderItems,
+
+		// Inventory will be updated from PATCH route
+		stockDeducted: false,
 	};
 
 	if (userId) {
 		orderPayload.userId = userId;
 	}
 
-	// 11. Deduct stock and create order
-	let deductedProductItems = [];
-	const deductedComboItems = [];
-	let order;
+	// 11. Create order ONLY
+	const order = await Order.create(orderPayload);
 
-	try {
-		// Deduct normal product stock only
-		if (formattedProductItems.length > 0) {
-			deductedProductItems = await deductOrderStock(
-				formattedProductItems
-			);
-		}
-
-		// Deduct combo stock atomically
-		for (const item of formattedComboItems) {
-			const updatedCombo = await ComboOffer.findOneAndUpdate(
-				{
-					_id: item.comboOfferId,
-					isActive: true,
-					stock: { $gte: item.quantity },
-				},
-				{
-					$inc: { stock: -item.quantity },
-				},
-				{ new: true }
-			);
-
-			if (!updatedCombo) {
-				throw new ApiError(
-					`Insufficient combo stock for ${item.name}`,
-					400
-				);
-			}
-
-			deductedComboItems.push({
-				comboOfferId: item.comboOfferId,
-				quantity: item.quantity,
-			});
-		}
-
-		const createdOrders = await Order.create([orderPayload]);
-		order = createdOrders[0];
-	} catch (error) {
-		console.error('Order creation error:', error);
-
-		// Rollback normal product stock
-		if (deductedProductItems.length > 0) {
-			try {
-				await rollbackOrderStock(deductedProductItems);
-			} catch (rollbackError) {
-				console.error('Product stock rollback failed:', rollbackError);
-			}
-		}
-
-		// Rollback combo stock
-		for (const item of deductedComboItems) {
-			try {
-				await ComboOffer.updateOne(
-					{ _id: item.comboOfferId },
-					{ $inc: { stock: item.quantity } }
-				);
-			} catch (rollbackError) {
-				console.error('Combo stock rollback failed:', rollbackError);
-			}
-		}
-
-		throw error;
-	}
-
-	// 12. Success
+	// 12. Success response
 	return NextResponse.json(
 		{
 			success: true,

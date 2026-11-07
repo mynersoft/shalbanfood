@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import { checkAuthRole } from '@/lib/checkAuthRole';
 import Product from '@/models/Product';
 

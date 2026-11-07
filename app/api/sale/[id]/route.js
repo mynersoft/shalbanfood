@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/dbConnect";
-import Sale from "@/models/Sale";
-import Product from "@/models/Product";
-import SaleProfit from "@/models/SaleProfit";
+import { NextResponse } from 'next/server';
+import { connectDB } from '@/lib/connectDB';
+import Sale from '@/models/Sale';
+import Product from '@/models/Product';
+import SaleProfit from '@/models/SaleProfit';
 
 export async function GET(req, { params }) {
 	await connectDB();
@@ -19,7 +19,7 @@ export async function DELETE(req, { params }) {
 
 		if (!sale) {
 			return NextResponse.json(
-				{ success: false, message: "Sale not found" },
+				{ success: false, message: 'Sale not found' },
 				{ status: 404 }
 			);
 		}
@@ -43,10 +43,10 @@ export async function DELETE(req, { params }) {
 
 		return NextResponse.json({
 			success: true,
-			message: "Sale deleted successfully",
+			message: 'Sale deleted successfully',
 		});
 	} catch (error) {
-		console.error("DELETE SALE ERROR:", error);
+		console.error('DELETE SALE ERROR:', error);
 		return NextResponse.json(
 			{ success: false, message: error.message },
 			{ status: 500 }

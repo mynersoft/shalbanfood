@@ -10,7 +10,7 @@ import {
 	SearchX,
 } from 'lucide-react';
 
-import { connectDB } from '@/lib/dbConnect';
+import { connectDB } from '@/lib/connectDB';
 import ComboOffer from '@/models/ComboOffer';
 
 import OfferDetailsClient from './OfferDetailsClient';
@@ -54,7 +54,6 @@ export async function generateMetadata({ params }) {
 			`${offer.name}, Shalban Food, combo offer`,
 	};
 }
-
 
 function NotFoundState() {
 	return (
@@ -134,7 +133,6 @@ export default async function OfferDetailsPage({ params }) {
 				</nav>
 
 				<OfferDetailsClient offer={offer} />
-				
 
 				{/* Mobile back link */}
 				<div className="mt-6 sm:hidden">

@@ -67,9 +67,6 @@ const FILTERS = [
 	{ id: 'cancelled', label: 'Cancelled' },
 ];
 
-
-
-
 const normalizeStatus = (status) => {
 	const value = String(status || 'pending')
 		.toLowerCase()
@@ -108,7 +105,7 @@ const normalizeItems = (order) => {
 
 const getOrderId = (order) =>
 	order?.orderNumber ||
-	order?.invoiceNumber ||
+	order?.invoiceNo ||
 	order?.orderId ||
 	order?.id ||
 	order?._id ||
@@ -615,7 +612,7 @@ export default function OrderHistory() {
 										className={`
                                             inline-flex  shrink-0
                                             items-center gap-2
-                                            rounded-md border px-3 py-2
+                                            rounded-md border px-1 py-1 sm:px-3 sm:py-2
                                             text-xs font-semibold
                                             transition sm:text-sm
                                             ${
