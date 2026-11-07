@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
 	Search,
@@ -13,8 +13,6 @@ import {
 	LoaderCircle,
 	ArrowRight,
 	ShoppingBag,
-	ShieldCheck,
-	RefreshCw,
 } from 'lucide-react';
 
 const ORDER_STEPS = [
@@ -70,7 +68,7 @@ function normalizeStatus(status) {
 	);
 }
 
-export default function TrackOrderPage() {
+function TrackingOrderClient() {
 	const searchParams = useSearchParams();
 
 	const [invoiceNo, setInvoiceNo] = useState('');
@@ -156,18 +154,13 @@ export default function TrackOrderPage() {
 						<ShoppingBag size={30} />
 					</div>
 
-			
 					<h1 className="text-3xl font-extrabold tracking-tight text-gray-900 ">
 						অর্ডার ট্র্যাক করুন
 					</h1>
-
-				
 				</header>
 
 				{/* Search Card */}
 				<section className="rounded-3xl border border-gray-100 bg-white p-5 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8">
-					
-
 					<form onSubmit={onSubmit}>
 						<label
 							htmlFor="invoiceNo"
@@ -240,7 +233,6 @@ export default function TrackOrderPage() {
 						aria-live="polite"
 						className="mt-7 overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_8px_40px_rgba(0,0,0,0.04)]">
 						{/* Invoice Header */}
-					
 
 						{/* Cancelled */}
 						{isCancelled ? (
@@ -458,5 +450,13 @@ export default function TrackOrderPage() {
 				</footer>
 			</div>
 		</main>
+	);
+}
+
+export default function TrackingOrderPage() {
+	return (
+		<Suspense fallback={<div>Loading tracking...</div>}>
+			<TrackingOrderClient />
+		</Suspense>
 	);
 }

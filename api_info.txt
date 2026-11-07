@@ -3,75 +3,8 @@ use all time / page
  const {data, isLoading, isFetching } = useProducts();
 
 
-
-
-slice
-export const createCategory = createAsyncThunk(
-    'categories/createCategory',
-    async (categoryData, { rejectWithValue }) => {
-        try {
-            const res = await axios.post(
-                '/api/categories',
-                categoryData
-            );
-
-            return res.data.category;
-        } catch (error) {
-            return rejectWithValue(
-                error.response?.data?.message ||
-                'Failed to create category'
-            );
-        }
-    }
-);
-
-     .addCase(createCategory.fulfilled, (state, action) => {
-                state.creating = false;
-                state.success = true;
-
-                state.categories.unshift(action.payload);
-            })
-
-
-
-
-
-
-
-
 	const deleteOrder = useDeleteOrder();
 
 
 
 
-
-) Quick tests you can run (Postman / browser)
-
-Add some SaleProfit docs (তুমি ইতিমধ্যেই sale creation করে ফেললে এই collection পূর্ণ থাকবে)
-
-Open (browser) http://localhost:3000/api/stats?type=daily
-
-Open http://localhost:3000/api/stats?type=monthly&year=2025&month=11
-
-Open http://localhost:3000/api/stats?type=monthlyBreakdown&year=2025&month=11
-
-
-
-get
-/api/notifications?admin/user
-
-get
-/api/orders?orderId
-
-patch stock, soldCount , status, payment due paid 
-/api/orders/id
-
-
-
-
-
-
-
-
-
-   
