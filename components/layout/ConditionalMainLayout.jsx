@@ -2,8 +2,9 @@
 
 import { usePathname } from 'next/navigation';
 
-import Header from '@/components/Header/HeaderNew';
+
 import Footer from '@/components/footer/Footer';
+import Header from '@/components/Header/HeaderNew';
 
 export default function ConditionalMainLayout({ children }) {
 	const pathname = usePathname();
