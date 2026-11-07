@@ -1,10 +1,8 @@
 import './globals.css';
-
-import InternetStatus from '@/components/InternetStatus';
 import { Toaster } from 'react-hot-toast';
 import Providers from './providers';
 import ConditionalMainLayout from '@/components/layout/ConditionalMainLayout';
-import MaintenanceToast from '@/components/MaintenanceToast';
+
 
 /* =============sggs============================================
    SITE CONFIGURATION
