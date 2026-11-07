@@ -1,7 +1,7 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import Footer from '@/components/footer/Footer';
-import Header from '../Header/HeaderNew';
+import Header from '../Header/Header';
 
 
 export default function ConditionalMainLayout({ children }) {
